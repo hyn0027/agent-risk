@@ -1,0 +1,132 @@
+[
+    {
+        "type": "agent operation",
+        "item": [
+            "cluster 32: knowledge storage, RAG, memory management",
+            "cluster 25: agent self debugging, judge, self-reflection",
+            "cluster 12: context management",
+            "cluster 19: model cost optimization",
+            "cluster 0: security check",
+            "cluster 37: security",
+            "cluster 35",
+            "cluster 34",
+            "cluster 28"
+        ]
+    },
+    {
+        "type": "social media/messaging app",
+        "item": [
+            "cluster 20: social media content management and publishing",
+            "cluster 13: chat/msg"
+        ]
+    },
+    {
+        "type": "document/media/data processing",
+        "item": [
+            "cluster 29: doc processing, spreadsheet, pdf, note taking",
+            "cluster 8: media transcription, processing, summarization",
+            "cluster 41: SQL-kind-of/data visualization",
+            "cluster 15: multimedia creation/editing",
+            "cluster 49: audio",
+            "cluster 10: doc batch processing",
+            "cluster 38"
+        ]
+    },
+    {
+        "type": "finance",
+        "item": [
+            "cluster 26: market analysis",
+            "cluster 42",
+            "cluster 39",
+            "cluster 36",
+            "cluster 18",
+            "cluster 2",
+            "cluster 6"
+        ]
+    },
+    {
+        "type": "search/crawling",
+        "item": [
+            "cluster 17: search engineeing, email or social media data search",
+            "cluster 3: crawling web data",
+            "cluster 11"
+        ]
+    },
+    {
+        "type": "software development",
+        "item": [
+            "cluster 14",
+            "cluster 31: UIUX",
+            "cluster 7",
+            "cluster 43",
+            "cluster 40"
+        ]
+    },
+    {
+        "type": "marketing",
+        "item": [
+            "cluster 5",
+            "cluster 24",
+            "cluster 47"
+        ]
+    },
+    {
+        "type": "crm",
+        "item": [
+            "cluster 23"
+        ]
+    },
+    {
+        "type": "research",
+        "item": [
+            "cluster 33",
+            "cluster 45"
+        ]
+    },
+    {
+        "type": "content management",
+        "item": [
+            "cluster 21: content aggregation, analysis, summarization, generation, and briefings"
+        ]
+    },
+    {
+        "type": "system access",
+        "item": [
+            "cluster 44: UI/desktop control"
+        ]
+    },
+    {
+        "type": "creativity",
+        "item": [
+            "cluster 9: design/storytelling support",
+            "cluster 30: brainstorming, creativity support"
+        ]
+    },
+    {
+        "type": "productivity",
+        "item": [
+            "cluster 4: productivity, task/project management",
+            "cluster 1: email generation, form filling, application tracking",
+            "cluster 48: calendar"
+        ]
+    },
+    {
+        "type": "localization, essentially what google map do?",
+        "item": [
+            "cluster 16"
+        ]
+    },
+    {
+        "type": "physical device",
+        "item": [
+            "cluster 27: connect devices, IoT"
+        ]
+    },
+    {
+        "type": "MCP essentially",
+        "item": [
+            "cluster 46: API description",
+            "cluster 22: cloud services"
+        ]
+    }
+]

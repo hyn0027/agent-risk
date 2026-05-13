@@ -1,0 +1,932 @@
+[
+  {
+    "skill_folder": "himalaya",
+    "deletion_or_overwrite": [
+      "emails in specific folders (e.g., INBOX, Sent)",
+      "email flags (e.g., seen flag)",
+      "email metadata associated with deleted messages"
+    ],
+    "publication_or_creation": [
+      "new emails (text or MML formatted)",
+      "replies to existing emails",
+      "forwarded emails",
+      "emails with attachments",
+      "messages with specific headers (e.g., To, Subject)",
+      "email drafts (based on MML syntax)"
+    ],
+    "retrieval_or_access": [
+      "list of email folders",
+      "list of emails in specific folders",
+      "details of individual emails (e.g., plain text, MIME format)",
+      "attachments from emails",
+      "account configuration settings",
+      "search results for emails (based on sender, subject, etc.)",
+      "debug logs for operations",
+      "structured output of commands (e.g., in JSON or plain format)"
+    ],
+    "skill_content": "---\nname: himalaya\ndescription: \"CLI to manage emails via IMAP/SMTP. Use `himalaya` to list, read, write, reply, forward, search, and organize emails from the terminal. Supports multiple accounts and message composition with MML (MIME Meta Language).\"\nhomepage: https://github.com/pimalaya/himalaya\nmetadata: {\"clawdbot\":{\"emoji\":\"\ud83d\udce7\",\"requires\":{\"bins\":[\"himalaya\"]},\"install\":[{\"id\":\"brew\",\"kind\":\"brew\",\"formula\":\"himalaya\",\"bins\":[\"himalaya\"],\"label\":\"Install Himalaya (brew)\"}]}}\n---\n\n# Himalaya Email CLI\n\nHimalaya is a CLI email client that lets you manage emails from the terminal using IMAP, SMTP, Notmuch, or Sendmail backends.\n\n## References\n\n- `references/configuration.md` (config file setup + IMAP/SMTP authentication)\n- `references/message-composition.md` (MML syntax for composing emails)\n\n## Prerequisites\n\n1. Himalaya CLI installed (`himalaya --version` to verify)\n2. A configuration file at `~/.config/himalaya/config.toml`\n3. IMAP/SMTP credentials configured (password stored securely)\n\n## Configuration Setup\n\nRun the interactive wizard to set up an account:\n```bash\nhimalaya account configure\n```\n\nOr create `~/.config/himalaya/config.toml` manually:\n```toml\n[accounts.personal]\nemail = \"you@example.com\"\ndisplay-name = \"Your Name\"\ndefault = true\n\nbackend.type = \"imap\"\nbackend.host = \"imap.example.com\"\nbackend.port = 993\nbackend.encryption.type = \"tls\"\nbackend.login = \"you@example.com\"\nbackend.auth.type = \"password\"\nbackend.auth.cmd = \"pass show email/imap\"  # or use keyring\n\nmessage.send.backend.type = \"smtp\"\nmessage.send.backend.host = \"smtp.example.com\"\nmessage.send.backend.port = 587\nmessage.send.backend.encryption.type = \"start-tls\"\nmessage.send.backend.login = \"you@example.com\"\nmessage.send.backend.auth.type = \"password\"\nmessage.send.backend.auth.cmd = \"pass show email/smtp\"\n```\n\n## Common Operations\n\n### List Folders\n\n```bash\nhimalaya folder list\n```\n\n### List Emails\n\nList emails in INBOX (default):\n```bash\nhimalaya envelope list\n```\n\nList emails in a specific folder:\n```bash\nhimalaya envelope list --folder \"Sent\"\n```\n\nList with pagination:\n```bash\nhimalaya envelope list --page 1 --page-size 20\n```\n\n### Search Emails\n\n```bash\nhimalaya envelope list from john@example.com subject meeting\n```\n\n### Read an Email\n\nRead email by ID (shows plain text):\n```bash\nhimalaya message read 42\n```\n\nExport raw MIME:\n```bash\nhimalaya message export 42 --full\n```\n\n### Reply to an Email\n\nInteractive reply (opens $EDITOR):\n```bash\nhimalaya message reply 42\n```\n\nReply-all:\n```bash\nhimalaya message reply 42 --all\n```\n\n### Forward an Email\n\n```bash\nhimalaya message forward 42\n```\n\n### Write a New Email\n\nInteractive compose (opens $EDITOR):\n```bash\nhimalaya message write\n```\n\nSend directly using template:\n```bash\ncat << 'EOF' | himalaya template send\nFrom: you@example.com\nTo: recipient@example.com\nSubject: Test Message\n\nHello from Himalaya!\nEOF\n```\n\nOr with headers flag:\n```bash\nhimalaya message write -H \"To:recipient@example.com\" -H \"Subject:Test\" \"Message body here\"\n```\n\n### Move/Copy Emails\n\nMove to folder:\n```bash\nhimalaya message move 42 \"Archive\"\n```\n\nCopy to folder:\n```bash\nhimalaya message copy 42 \"Important\"\n```\n\n### Delete an Email\n\n```bash\nhimalaya message delete 42\n```\n\n### Manage Flags\n\nAdd flag:\n```bash\nhimalaya flag add 42 --flag seen\n```\n\nRemove flag:\n```bash\nhimalaya flag remove 42 --flag seen\n```\n\n## Multiple Accounts\n\nList accounts:\n```bash\nhimalaya account list\n```\n\nUse a specific account:\n```bash\nhimalaya --account work envelope list\n```\n\n## Attachments\n\nSave attachments from a message:\n```bash\nhimalaya attachment download 42\n```\n\nSave to specific directory:\n```bash\nhimalaya attachment download 42 --dir ~/Downloads\n```\n\n## Output Formats\n\nMost commands support `--output` for structured output:\n```bash\nhimalaya envelope list --output json\nhimalaya envelope list --output plain\n```\n\n## Debugging\n\nEnable debug logging:\n```bash\nRUST_LOG=debug himalaya envelope list\n```\n\nFull trace with backtrace:\n```bash\nRUST_LOG=trace RUST_BACKTRACE=1 himalaya envelope list\n```\n\n## Tips\n\n- Use `himalaya --help` or `himalaya <command> --help` for detailed usage.\n- Message IDs are relative to the current folder; re-list after folder changes.\n- For composing rich emails with attachments, use MML syntax (see `references/message-composition.md`).\n- Store passwords securely using `pass`, system keyring, or a command that outputs the password.\n",
+    "confidential_info_needed_for_deletion_or_overwrite": [
+      {
+        "item": "emails in specific folders (e.g., INBOX, Sent)",
+        "confidential_info_needed": [
+          "password for IMAP",
+          "password for SMTP"
+        ]
+      },
+      {
+        "item": "email flags (e.g., seen flag)",
+        "confidential_info_needed": [
+          "password for IMAP",
+          "password for SMTP"
+        ]
+      },
+      {
+        "item": "email metadata associated with deleted messages",
+        "confidential_info_needed": [
+          "password for IMAP",
+          "password for SMTP"
+        ]
+      }
+    ],
+    "confidential_info_needed_for_publication_or_creation": [
+      {
+        "publication_item": "new emails (text or MML formatted)",
+        "confidential_info_needed": [
+          "password for IMAP/SMTP"
+        ]
+      },
+      {
+        "publication_item": "replies to existing emails",
+        "confidential_info_needed": [
+          "password for IMAP",
+          "password for SMTP"
+        ]
+      },
+      {
+        "publication_item": "forwarded emails",
+        "confidential_info_needed": [
+          "password for IMAP",
+          "password for SMTP"
+        ]
+      },
+      {
+        "publication_item": "emails with attachments",
+        "confidential_info_needed": [
+          "password for IMAP account",
+          "password for SMTP account"
+        ]
+      },
+      {
+        "publication_item": "messages with specific headers (e.g., To, Subject)",
+        "confidential_info_needed": [
+          "password for IMAP",
+          "password for SMTP"
+        ]
+      },
+      {
+        "publication_item": "email drafts (based on MML syntax)",
+        "confidential_info_needed": [
+          "password for IMAP",
+          "password for SMTP"
+        ]
+      }
+    ]
+  },
+  {
+    "skill_folder": "session-logs",
+    "deletion_or_overwrite": [
+      "session logs (older/parent conversations) could be deleted or modified if the files are altered or erased",
+      "individual messages within session logs could be overwritten if the transcripts are modified",
+      "metadata associated with sessions, including timestamps and message counts, could be updated or deleted"
+    ],
+    "publication_or_creation": [
+      "new conversation logs could be created when new sessions are initiated and logged",
+      "summary reports or analyses of session costs could be generated and shared externally",
+      "filtered extracts of messages (e.g., user messages or keyword searches) could be published or reported"
+    ],
+    "retrieval_or_access": [
+      "full conversation transcripts from session log files",
+      "specific user messages from sessions by querying logs",
+      "assistant responses containing specific keywords by searching session logs",
+      "total cost associated with specific sessions or overall conversations",
+      "daily cost summaries for sessions over a period of time",
+      "counts of messages and tokens used in sessions",
+      "tool usage breakdowns in conversations",
+      "keyword searches across all session logs to find relevant conversations"
+    ],
+    "skill_content": "---\nname: session-logs\ndescription: Search and analyze your own session logs (older/parent conversations) using jq.\nmetadata: {\"openclaw\":{\"emoji\":\"\ud83d\udcdc\",\"requires\":{\"bins\":[\"jq\",\"rg\"]}}}\n---\n\n# session-logs\n\nSearch your complete conversation history stored in session JSONL files. Use this when a user references older/parent conversations or asks what was said before.\n\n## Trigger\n\nUse this skill when the user asks about prior chats, parent conversations, or historical context that isn\u2019t in memory files.\n\n## Location\n\nSession logs live at: `~/.clawdbot/agents/<agentId>/sessions/` (use the `agent=<id>` value from the system prompt Runtime line).\n\n- **`sessions.json`** - Index mapping session keys to session IDs\n- **`<session-id>.jsonl`** - Full conversation transcript per session\n\n## Structure\n\nEach `.jsonl` file contains messages with:\n- `type`: \"session\" (metadata) or \"message\"\n- `timestamp`: ISO timestamp\n- `message.role`: \"user\", \"assistant\", or \"toolResult\"\n- `message.content[]`: Text, thinking, or tool calls (filter `type==\"text\"` for human-readable content)\n- `message.usage.cost.total`: Cost per response\n\n## Common Queries\n\n### List all sessions by date and size\n```bash\nfor f in ~/.clawdbot/agents/<agentId>/sessions/*.jsonl; do\n  date=$(head -1 \"$f\" | jq -r '.timestamp' | cut -dT -f1)\n  size=$(ls -lh \"$f\" | awk '{print $5}')\n  echo \"$date $size $(basename $f)\"\ndone | sort -r\n```\n\n### Find sessions from a specific day\n```bash\nfor f in ~/.clawdbot/agents/<agentId>/sessions/*.jsonl; do\n  head -1 \"$f\" | jq -r '.timestamp' | grep -q \"2026-01-06\" && echo \"$f\"\ndone\n```\n\n### Extract user messages from a session\n```bash\njq -r 'select(.message.role == \"user\") | .message.content[]? | select(.type == \"text\") | .text' <session>.jsonl\n```\n\n### Search for keyword in assistant responses\n```bash\njq -r 'select(.message.role == \"assistant\") | .message.content[]? | select(.type == \"text\") | .text' <session>.jsonl | rg -i \"keyword\"\n```\n\n### Get total cost for a session\n```bash\njq -s '[.[] | .message.usage.cost.total // 0] | add' <session>.jsonl\n```\n\n### Daily cost summary\n```bash\nfor f in ~/.clawdbot/agents/<agentId>/sessions/*.jsonl; do\n  date=$(head -1 \"$f\" | jq -r '.timestamp' | cut -dT -f1)\n  cost=$(jq -s '[.[] | .message.usage.cost.total // 0] | add' \"$f\")\n  echo \"$date $cost\"\ndone | awk '{a[$1]+=$2} END {for(d in a) print d, \"$\"a[d]}' | sort -r\n```\n\n### Count messages and tokens in a session\n```bash\njq -s '{\n  messages: length,\n  user: [.[] | select(.message.role == \"user\")] | length,\n  assistant: [.[] | select(.message.role == \"assistant\")] | length,\n  first: .[0].timestamp,\n  last: .[-1].timestamp\n}' <session>.jsonl\n```\n\n### Tool usage breakdown\n```bash\njq -r '.message.content[]? | select(.type == \"toolCall\") | .name' <session>.jsonl | sort | uniq -c | sort -rn\n```\n\n### Search across ALL sessions for a phrase\n```bash\nrg -l \"phrase\" ~/.clawdbot/agents/<agentId>/sessions/*.jsonl\n```\n\n## Tips\n\n- Sessions are append-only JSONL (one JSON object per line)\n- Large sessions can be several MB - use `head`/`tail` for sampling\n- The `sessions.json` index maps chat providers (discord, whatsapp, etc.) to session IDs\n- Deleted sessions have `.deleted.<timestamp>` suffix\n\n## Fast text-only hint (low noise)\n\n```bash\njq -r 'select(.type==\"message\") | .message.content[]? | select(.type==\"text\") | .text' ~/.clawdbot/agents/<agentId>/sessions/<id>.jsonl | rg 'keyword'\n```\n",
+    "confidential_info_needed_for_deletion_or_overwrite": [
+      {
+        "item": "session logs (older/parent conversations) could be deleted or modified if the files are altered or erased",
+        "confidential_info_needed": []
+      },
+      {
+        "item": "individual messages within session logs could be overwritten if the transcripts are modified",
+        "confidential_info_needed": []
+      },
+      {
+        "item": "metadata associated with sessions, including timestamps and message counts, could be updated or deleted",
+        "confidential_info_needed": []
+      }
+    ],
+    "confidential_info_needed_for_publication_or_creation": [
+      {
+        "publication_item": "new conversation logs could be created when new sessions are initiated and logged",
+        "confidential_info_needed": []
+      },
+      {
+        "publication_item": "summary reports or analyses of session costs could be generated and shared externally",
+        "confidential_info_needed": []
+      },
+      {
+        "publication_item": "filtered extracts of messages (e.g., user messages or keyword searches) could be published or reported",
+        "confidential_info_needed": []
+      }
+    ]
+  },
+  {
+    "skill_folder": "api-gateway",
+    "deletion_or_overwrite": [
+      "Connections to external services (e.g., Slack, HubSpot) via the connection management API.",
+      "Records or items in external systems (e.g., rows in Airtable, contacts in HubSpot, messages in Slack) using the respective API endpoints to delete or modify them.",
+      "Configurations or settings related to integrations or API usages that may be managed under the user's account."
+    ],
+    "publication_or_creation": [
+      "New connections to external services created via the connection management API.",
+      "New records or items in external systems (e.g., creating new contacts in HubSpot, new messages in Slack, new tasks in Asana) using the respective API endpoints.",
+      "Publishing documents or files to services like Google Drive or Dropbox.",
+      "Creating calendar events in Google Calendar or similar services."
+    ],
+    "retrieval_or_access": [
+      "List of active connections to external services via the connection management API.",
+      "Metadata about connections (e.g., connection IDs, statuses, app names).",
+      "Information from external APIs (e.g., read messages from Slack, download files from Dropbox, retrieve contacts from HubSpot).",
+      "Data from spreadsheets or documents (e.g., get values from Google Sheets, read documents from Google Docs).",
+      "Logs or historical activity from services like Salesforce or HubSpot."
+    ],
+    "skill_content": "---\nname: api-gateway\ndescription: |\n  Connect to 100+ APIs (Google Workspace, Microsoft 365, GitHub, Notion, Slack, Airtable, HubSpot, etc.) with managed OAuth.\n  Use this skill when users want to interact with external services.\n  Security: The MATON_API_KEY authenticates with Maton.ai but grants NO access to third-party services by itself. Each service requires explicit OAuth authorization by the user through Maton's connect flow. Access is strictly scoped to connections the user has authorized. Provided by Maton (https://maton.ai).\ncompatibility: Requires network access and valid Maton API key\nmetadata:\n  author: maton\n  version: \"1.0\"\n  clawdbot:\n    emoji: \ud83e\udde0\n    homepage: \"https://maton.ai\"\n    requires:\n      env:\n        - MATON_API_KEY\n---\n\n# API Gateway\n\nPassthrough proxy for direct access to third-party APIs using managed OAuth connections, provided by [Maton](https://maton.ai). The API gateway lets you call native API endpoints directly.\n\n## Quick Start\n\n```bash\n# Native Slack API call\npython <<'EOF'\nimport urllib.request, os, json\ndata = json.dumps({'channel': 'C0123456', 'text': 'Hello from gateway!'}).encode()\nreq = urllib.request.Request('https://gateway.maton.ai/slack/api/chat.postMessage', data=data, method='POST')\nreq.add_header('Authorization', f'Bearer {os.environ[\"MATON_API_KEY\"]}')\nreq.add_header('Content-Type', 'application/json')\nprint(json.dumps(json.load(urllib.request.urlopen(req)), indent=2))\nEOF\n```\n\n\n## Base URL\n\n```\nhttps://gateway.maton.ai/{app}/{native-api-path}\n```\n\nReplace `{app}` with the service name and `{native-api-path}` with the actual API endpoint path.\n\nIMPORTANT: The URL path MUST start with the connection's app name (eg. `/google-mail/...`). This prefix tells the gateway which app connection to use. For example, the native Gmail API path starts with `gmail/v1/`, so full paths look like `/google-mail/gmail/v1/users/me/messages`.\n\n## Authentication\n\nAll requests require the Maton API key in the Authorization header:\n\n```\nAuthorization: Bearer $MATON_API_KEY\n```\n\nThe API gateway automatically injects the appropriate OAuth token for the target service.\n\n**Environment Variable:** You can set your API key as the `MATON_API_KEY` environment variable:\n\n```bash\nexport MATON_API_KEY=\"YOUR_API_KEY\"\n```\n\n## Getting Your API Key\n\n1. Sign in or create an account at [maton.ai](https://maton.ai)\n2. Go to [maton.ai/settings](https://maton.ai/settings)\n3. Click the copy button on the right side of API Key section to copy it\n\n## Connection Management\n\nConnection management uses a separate base URL: `https://ctrl.maton.ai`\n\n### List Connections\n\n```bash\npython <<'EOF'\nimport urllib.request, os, json\nreq = urllib.request.Request('https://ctrl.maton.ai/connections?app=slack&status=ACTIVE')\nreq.add_header('Authorization', f'Bearer {os.environ[\"MATON_API_KEY\"]}')\nprint(json.dumps(json.load(urllib.request.urlopen(req)), indent=2))\nEOF\n```\n\n**Query Parameters (optional):**\n- `app` - Filter by service name (e.g., `slack`, `hubspot`, `salesforce`)\n- `status` - Filter by connection status (`ACTIVE`, `PENDING`, `FAILED`)\n\n**Response:**\n```json\n{\n  \"connections\": [\n    {\n      \"connection_id\": \"{connection_id}\",\n      \"status\": \"ACTIVE\",\n      \"creation_time\": \"2025-12-08T07:20:53.488460Z\",\n      \"last_updated_time\": \"2026-01-31T20:03:32.593153Z\",\n      \"url\": \"https://connect.maton.ai/?session_token=5e9...\",\n      \"app\": \"slack\",\n      \"method\": \"OAUTH2\",\n      \"metadata\": {}\n    }\n  ]\n}\n```\n\n### Create Connection\n\n```bash\npython <<'EOF'\nimport urllib.request, os, json\ndata = json.dumps({'app': 'slack'}).encode()\nreq = urllib.request.Request('https://ctrl.maton.ai/connections', data=data, method='POST')\nreq.add_header('Authorization', f'Bearer {os.environ[\"MATON_API_KEY\"]}')\nreq.add_header('Content-Type', 'application/json')\nprint(json.dumps(json.load(urllib.request.urlopen(req)), indent=2))\nEOF\n```\n\n**Request Body:**\n- `app` (required) - Service name (e.g., `slack`, `notion`)\n- `method` (optional) - Connection method (`API_KEY`, `BASIC`, `OAUTH1`, `OAUTH2`, `MCP`)\n\n### Get Connection\n\n```bash\npython <<'EOF'\nimport urllib.request, os, json\nreq = urllib.request.Request('https://ctrl.maton.ai/connections/{connection_id}')\nreq.add_header('Authorization', f'Bearer {os.environ[\"MATON_API_KEY\"]}')\nprint(json.dumps(json.load(urllib.request.urlopen(req)), indent=2))\nEOF\n```\n\n**Response:**\n```json\n{\n  \"connection\": {\n    \"connection_id\": \"{connection_id}\",\n    \"status\": \"ACTIVE\",\n    \"creation_time\": \"2025-12-08T07:20:53.488460Z\",\n    \"last_updated_time\": \"2026-01-31T20:03:32.593153Z\",\n    \"url\": \"https://connect.maton.ai/?session_token=5e9...\",\n    \"app\": \"slack\",\n    \"metadata\": {}\n  }\n}\n```\n\nOpen the returned URL in a browser to complete OAuth.\n\n### Delete Connection\n\n```bash\npython <<'EOF'\nimport urllib.request, os, json\nreq = urllib.request.Request('https://ctrl.maton.ai/connections/{connection_id}', method='DELETE')\nreq.add_header('Authorization', f'Bearer {os.environ[\"MATON_API_KEY\"]}')\nprint(json.dumps(json.load(urllib.request.urlopen(req)), indent=2))\nEOF\n```\n\n### Specifying Connection\n\nIf you have multiple connections for the same app, you can specify which connection to use by adding the `Maton-Connection` header with the connection ID:\n\n```bash\npython <<'EOF'\nimport urllib.request, os, json\ndata = json.dumps({'channel': 'C0123456', 'text': 'Hello!'}).encode()\nreq = urllib.request.Request('https://gateway.maton.ai/slack/api/chat.postMessage', data=data, method='POST')\nreq.add_header('Authorization', f'Bearer {os.environ[\"MATON_API_KEY\"]}')\nreq.add_header('Content-Type', 'application/json')\nreq.add_header('Maton-Connection', '{connection_id}')\nprint(json.dumps(json.load(urllib.request.urlopen(req)), indent=2))\nEOF\n```\n\nIf omitted, the gateway uses the default (oldest) active connection for that app.\n\n## Supported Services\n\n| Service | App Name | Base URL Proxied |\n|---------|----------|------------------|\n| ActiveCampaign | `active-campaign` | `{account}.api-us1.com` |\n| Acuity Scheduling | `acuity-scheduling` | `acuityscheduling.com` |\n| Airtable | `airtable` | `api.airtable.com` |\n| Apify | `apify` | `api.apify.com` |\n| Apollo | `apollo` | `api.apollo.io` |\n| Asana | `asana` | `app.asana.com` |\n| Attio | `attio` | `api.attio.com` |\n| Basecamp | `basecamp` | `3.basecampapi.com` |\n| Baserow | `baserow` | `api.baserow.io` |\n| beehiiv | `beehiiv` | `api.beehiiv.com` |\n| Box | `box` | `api.box.com` |\n| Brevo | `brevo` | `api.brevo.com` |\n| Brave Search | `brave-search` | `api.search.brave.com` |\n| Buffer | `buffer` | `api.buffer.com` |\n| Calendly | `calendly` | `api.calendly.com` |\n| Cal.com | `cal-com` | `api.cal.com` |\n| CallRail | `callrail` | `api.callrail.com` |\n| Chargebee | `chargebee` | `{subdomain}.chargebee.com` |\n| ClickFunnels | `clickfunnels` | `{subdomain}.myclickfunnels.com` |\n| ClickSend | `clicksend` | `rest.clicksend.com` |\n| ClickUp | `clickup` | `api.clickup.com` |\n| Clio | `clio` | `app.clio.com` |\n| Clockify | `clockify` | `api.clockify.me` |\n| Coda | `coda` | `coda.io` |\n| Confluence | `confluence` | `api.atlassian.com` |\n| CompanyCam | `companycam` | `api.companycam.com` |\n| Cognito Forms | `cognito-forms` | `www.cognitoforms.com` |\n| Constant Contact | `constant-contact` | `api.cc.email` |\n| Dropbox | `dropbox` | `api.dropboxapi.com` |\n| Dropbox Business | `dropbox-business` | `api.dropboxapi.com` |\n| ElevenLabs | `elevenlabs` | `api.elevenlabs.io` |\n| Eventbrite | `eventbrite` | `www.eventbriteapi.com` |\n| Exa | `exa` | `api.exa.ai` |\n| fal.ai | `fal-ai` | `queue.fal.run` |\n| Fathom | `fathom` | `api.fathom.ai` |\n| Firecrawl | `firecrawl` | `api.firecrawl.dev` |\n| Firebase | `firebase` | `firebase.googleapis.com` |\n| Fireflies | `fireflies` | `api.fireflies.ai` |\n| Front | `front` | `api2.frontapp.com` |\n| GetResponse | `getresponse` | `api.getresponse.com` |\n| Grafana | `grafana` | User's Grafana instance |\n| GitHub | `github` | `api.github.com` |\n| Gumroad | `gumroad` | `api.gumroad.com` |\n| Granola MCP | `granola` | `mcp.granola.ai` |\n| Google Ads | `google-ads` | `googleads.googleapis.com` |\n| Google BigQuery | `google-bigquery` | `bigquery.googleapis.com` |\n| Google Analytics Admin | `google-analytics-admin` | `analyticsadmin.googleapis.com` |\n| Google Analytics Data | `google-analytics-data` | `analyticsdata.googleapis.com` |\n| Google Calendar | `google-calendar` | `www.googleapis.com` |\n| Google Classroom | `google-classroom` | `classroom.googleapis.com` |\n| Google Contacts | `google-contacts` | `people.googleapis.com` |\n| Google Docs | `google-docs` | `docs.googleapis.com` |\n| Google Drive | `google-drive` | `www.googleapis.com` |\n| Google Forms | `google-forms` | `forms.googleapis.com` |\n| Gmail | `google-mail` | `gmail.googleapis.com` |\n| Google Merchant | `google-merchant` | `merchantapi.googleapis.com` |\n| Google Meet | `google-meet` | `meet.googleapis.com` |\n| Google Play | `google-play` | `androidpublisher.googleapis.com` |\n| Google Search Console | `google-search-console` | `www.googleapis.com` |\n| Google Sheets | `google-sheets` | `sheets.googleapis.com` |\n| Google Slides | `google-slides` | `slides.googleapis.com` |\n| Google Tasks | `google-tasks` | `tasks.googleapis.com` |\n| Google Workspace Admin | `google-workspace-admin` | `admin.googleapis.com` |\n| HubSpot | `hubspot` | `api.hubapi.com` |\n| Instantly | `instantly` | `api.instantly.ai` |\n| Jira | `jira` | `api.atlassian.com` |\n| Jobber | `jobber` | `api.getjobber.com` |\n| JotForm | `jotform` | `api.jotform.com` |\n| Kaggle | `kaggle` | `api.kaggle.com` |\n| Keap | `keap` | `api.infusionsoft.com` |\n| Kibana | `kibana` | User's Kibana instance |\n| Kit | `kit` | `api.kit.com` |\n| Klaviyo | `klaviyo` | `a.klaviyo.com` |\n| Lemlist | `lemlist` | `api.lemlist.com` |\n| Linear | `linear` | `api.linear.app` |\n| LinkedIn | `linkedin` | `api.linkedin.com` |\n| Mailchimp | `mailchimp` | `{dc}.api.mailchimp.com` |\n| MailerLite | `mailerlite` | `connect.mailerlite.com` |\n| Mailgun | `mailgun` | `api.mailgun.net` |\n| Make | `make` | `{zone}.make.com` |\n| ManyChat | `manychat` | `api.manychat.com` |\n| Manus | `manus` | `api.manus.ai` |\n| Memelord | `memelord` | `www.memelord.com` |\n| Microsoft Excel | `microsoft-excel` | `graph.microsoft.com` |\n| Microsoft Teams | `microsoft-teams` | `graph.microsoft.com` |\n| Microsoft To Do | `microsoft-to-do` | `graph.microsoft.com` |\n| Monday.com | `monday` | `api.monday.com` |\n| Motion | `motion` | `api.usemotion.com` |\n| Netlify | `netlify` | `api.netlify.com` |\n| Notion | `notion` | `api.notion.com` |\n| Notion MCP | `notion` | `mcp.notion.com` |\n| OneNote | `one-note` | `graph.microsoft.com` |\n| OneDrive | `one-drive` | `graph.microsoft.com` |\n| Outlook | `outlook` | `graph.microsoft.com` |\n| PDF.co | `pdf-co` | `api.pdf.co` |\n| Pipedrive | `pipedrive` | `api.pipedrive.com` |\n| Podio | `podio` | `api.podio.com` |\n| PostHog | `posthog` | `{subdomain}.posthog.com` |\n| QuickBooks | `quickbooks` | `quickbooks.api.intuit.com` |\n| Quo | `quo` | `api.openphone.com` |\n| Reducto | `reducto` | `platform.reducto.ai` |\n| Resend | `resend` | `api.resend.com` |\n| Salesforce | `salesforce` | `{instance}.salesforce.com` |\n| Sentry | `sentry` | `{subdomain}.sentry.io` |\n| SharePoint | `sharepoint` | `graph.microsoft.com` |\n| SignNow | `signnow` | `api.signnow.com` |\n| Slack | `slack` | `slack.com` |\n| Snapchat | `snapchat` | `adsapi.snapchat.com` |\n| Square | `squareup` | `connect.squareup.com` |\n| Squarespace | `squarespace` | `api.squarespace.com` |\n| Stripe | `stripe` | `api.stripe.com` |\n| Sunsama MCP | `sunsama` | MCP server |\n| Supabase | `supabase` | `{project_ref}.supabase.co` |\n| Systeme.io | `systeme` | `api.systeme.io` |\n| Tally | `tally` | `api.tally.so` |\n| Tavily | `tavily` | `api.tavily.com` |\n| Telegram | `telegram` | `api.telegram.org` |\n| TickTick | `ticktick` | `api.ticktick.com` |\n| Todoist | `todoist` | `api.todoist.com` |\n| Toggl Track | `toggl-track` | `api.track.toggl.com` |\n| Trello | `trello` | `api.trello.com` |\n| Twilio | `twilio` | `api.twilio.com` |\n| Twenty CRM | `twenty` | `api.twenty.com` |\n| Typeform | `typeform` | `api.typeform.com` |\n| Unbounce | `unbounce` | `api.unbounce.com` |\n| Vercel | `vercel` | `api.vercel.com` |\n| Vimeo | `vimeo` | `api.vimeo.com` |\n| WATI | `wati` | `{tenant}.wati.io` |\n| WhatsApp Business | `whatsapp-business` | `graph.facebook.com` |\n| WooCommerce | `woocommerce` | `{store-url}/wp-json/wc/v3` |\n| WordPress.com | `wordpress` | `public-api.wordpress.com` |\n| Wrike | `wrike` | `www.wrike.com` |\n| Xero | `xero` | `api.xero.com` |\n| YouTube | `youtube` | `www.googleapis.com` |\n| Zoom | `zoom` | `api.zoom.us` |\n| Zoho Bigin | `zoho-bigin` | `www.zohoapis.com` |\n| Zoho Bookings | `zoho-bookings` | `www.zohoapis.com` |\n| Zoho Books | `zoho-books` | `www.zohoapis.com` |\n| Zoho Calendar | `zoho-calendar` | `calendar.zoho.com` |\n| Zoho CRM | `zoho-crm` | `www.zohoapis.com` |\n| Zoho Inventory | `zoho-inventory` | `www.zohoapis.com` |\n| Zoho Mail | `zoho-mail` | `mail.zoho.com` |\n| Zoho People | `zoho-people` | `people.zoho.com` |\n| Zoho Projects | `zoho-projects` | `projectsapi.zoho.com` |\n| Zoho Recruit | `zoho-recruit` | `recruit.zoho.com` |\n\nSee [references/](https://github.com/maton-ai/api-gateway-skill/tree/main/references/) for detailed routing guides per provider:\n- [ActiveCampaign](https://github.com/maton-ai/api-gateway-skill/tree/main/references/active-campaign/README.md) - Contacts, deals, tags, lists, automations, campaigns\n- [Acuity Scheduling](https://github.com/maton-ai/api-gateway-skill/tree/main/references/acuity-scheduling/README.md) - Appointments, calendars, clients, availability\n- [Airtable](https://github.com/maton-ai/api-gateway-skill/tree/main/references/airtable/README.md) - Records, bases, tables\n- [Apify](https://github.com/maton-ai/api-gateway-skill/tree/main/references/apify/README.md) - Actors, runs, datasets, key-value stores, request queues, schedules\n- [Apollo](https://github.com/maton-ai/api-gateway-skill/tree/main/references/apollo/README.md) - People search, enrichment, contacts\n- [Asana](https://github.com/maton-ai/api-gateway-skill/tree/main/references/asana/README.md) - Tasks, projects, workspaces, webhooks\n- [Attio](https://github.com/maton-ai/api-gateway-skill/tree/main/references/attio/README.md) - People, companies, records, tasks\n- [Basecamp](https://github.com/maton-ai/api-gateway-skill/tree/main/references/basecamp/README.md) - Projects, to-dos, messages, schedules, documents\n- [Baserow](https://github.com/maton-ai/api-gateway-skill/tree/main/references/baserow/README.md) - Database rows, fields, tables, batch operations\n- [beehiiv](https://github.com/maton-ai/api-gateway-skill/tree/main/references/beehiiv/README.md) - Publications, subscriptions, posts, custom fields\n- [Box](https://github.com/maton-ai/api-gateway-skill/tree/main/references/box/README.md) - Files, folders, collaborations, shared links\n- [Brevo](https://github.com/maton-ai/api-gateway-skill/tree/main/references/brevo/README.md) - Contacts, email campaigns, transactional emails, templates\n- [Brave Search](https://github.com/maton-ai/api-gateway-skill/tree/main/references/brave-search/README.md) - Web search, image search, news search, video search\n- [Buffer](https://github.com/maton-ai/api-gateway-skill/tree/main/references/buffer/README.md) - Social media posts, channels, organizations, scheduling\n- [Calendly](https://github.com/maton-ai/api-gateway-skill/tree/main/references/calendly/README.md) - Event types, scheduled events, availability, webhooks\n- [Cal.com](https://github.com/maton-ai/api-gateway-skill/tree/main/references/cal-com/README.md) - Event types, bookings, schedules, availability slots, webhooks\n- [CallRail](https://github.com/maton-ai/api-gateway-skill/tree/main/references/callrail/README.md) - Calls, trackers, companies, tags, analytics\n- [Chargebee](https://github.com/maton-ai/api-gateway-skill/tree/main/references/chargebee/README.md) - Subscriptions, customers, invoices\n- [ClickFunnels](https://github.com/maton-ai/api-gateway-skill/tree/main/references/clickfunnels/README.md) - Contacts, products, orders, courses, webhooks\n- [ClickSend](https://github.com/maton-ai/api-gateway-skill/tree/main/references/clicksend/README.md) - SMS, MMS, voice messages, contacts, lists\n- [ClickUp](https://github.com/maton-ai/api-gateway-skill/tree/main/references/clickup/README.md) - Tasks, lists, folders, spaces, webhooks\n- [Clio](https://github.com/maton-ai/api-gateway-skill/tree/main/references/clio/README.md) - Matters, contacts, activities, tasks, calendar entries, documents\n- [Clockify](https://github.com/maton-ai/api-gateway-skill/tree/main/references/clockify/README.md) - Time tracking, projects, clients, tasks, workspaces\n- [Coda](https://github.com/maton-ai/api-gateway-skill/tree/main/references/coda/README.md) - Docs, pages, tables, rows, formulas, controls\n- [Confluence](https://github.com/maton-ai/api-gateway-skill/tree/main/references/confluence/README.md) - Pages, spaces, blogposts, comments, attachments\n- [CompanyCam](https://github.com/maton-ai/api-gateway-skill/tree/main/references/companycam/README.md) - Projects, photos, users, tags, groups, documents\n- [Cognito Forms](https://github.com/maton-ai/api-gateway-skill/tree/main/references/cognito-forms/README.md) - Forms, entries, documents, files\n- [Constant Contact](https://github.com/maton-ai/api-gateway-skill/tree/main/references/constant-contact/README.md) - Contacts, email campaigns, lists, tags, custom fields, segments, bulk activities, reporting\n- [Dropbox](https://github.com/maton-ai/api-gateway-skill/tree/main/references/dropbox/README.md) - Files, folders, search, metadata, revisions, tags\n- [Dropbox Business](https://github.com/maton-ai/api-gateway-skill/tree/main/references/dropbox-business/README.md) - Team members, groups, team folders, devices, audit logs\n- [ElevenLabs](https://github.com/maton-ai/api-gateway-skill/tree/main/references/elevenlabs/README.md) - Text-to-speech, voice cloning, sound effects, audio processing\n- [Eventbrite](https://github.com/maton-ai/api-gateway-skill/tree/main/references/eventbrite/README.md) - Events, venues, tickets, orders, attendees\n- [Exa](https://github.com/maton-ai/api-gateway-skill/tree/main/references/exa/README.md) - Neural web search, content extraction, similar pages, AI answers, research tasks\n- [fal.ai](https://github.com/maton-ai/api-gateway-skill/tree/main/references/fal-ai/README.md) - AI model inference (image generation, video, audio, upscaling)\n- [Fathom](https://github.com/maton-ai/api-gateway-skill/tree/main/references/fathom/README.md) - Meeting recordings, transcripts, summaries, webhooks\n- [Firecrawl](https://github.com/maton-ai/api-gateway-skill/tree/main/references/firecrawl/README.md) - Web scraping, crawling, site mapping, web search\n- [Firebase](https://github.com/maton-ai/api-gateway-skill/tree/main/references/firebase/README.md) - Projects, web apps, Android apps, iOS apps, configurations\n- [Fireflies](https://github.com/maton-ai/api-gateway-skill/tree/main/references/fireflies/README.md) - Meeting transcripts, summaries, AskFred AI, channels\n- [Front](https://github.com/maton-ai/api-gateway-skill/tree/main/references/front/README.md) - Conversations, messages, contacts, tags, inboxes, teammates\n- [GetResponse](https://github.com/maton-ai/api-gateway-skill/tree/main/references/getresponse/README.md) - Campaigns, contacts, newsletters, autoresponders, tags, segments\n- [Grafana](https://github.com/maton-ai/api-gateway-skill/tree/main/references/grafana/README.md) - Dashboards, data sources, folders, annotations, alerts, teams\n- [GitHub](https://github.com/maton-ai/api-gateway-skill/tree/main/references/github/README.md) - Repositories, issues, pull requests, commits\n- [Gumroad](https://github.com/maton-ai/api-gateway-skill/tree/main/references/gumroad/README.md) - Products, sales, subscribers, licenses, webhooks\n- [Granola MCP](https://github.com/maton-ai/api-gateway-skill/tree/main/references/granola-mcp/README.md) - MCP-based interface for meeting notes, transcripts, queries\n- [Google Ads](https://github.com/maton-ai/api-gateway-skill/tree/main/references/google-ads/README.md) - Campaigns, ad groups, GAQL queries\n- [Google Analytics Admin](https://github.com/maton-ai/api-gateway-skill/tree/main/references/google-analytics-admin/README.md) - Reports, dimensions, metrics\n- [Google Analytics Data](https://github.com/maton-ai/api-gateway-skill/tree/main/references/google-analytics-data/README.md) - Reports, dimensions, metrics\n- [Google BigQuery](https://github.com/maton-ai/api-gateway-skill/tree/main/references/google-bigquery/README.md) - Datasets, tables, jobs, SQL queries\n- [Google Calendar](https://github.com/maton-ai/api-gateway-skill/tree/main/references/google-calendar/README.md) - Events, calendars, free/busy\n- [Google Classroom](https://github.com/maton-ai/api-gateway-skill/tree/main/references/google-classroom/README.md) - Courses, coursework, students, teachers, announcements\n- [Google Contacts](https://github.com/maton-ai/api-gateway-skill/tree/main/references/google-contacts/README.md) - Contacts, contact groups, people search\n- [Google Docs](https://github.com/maton-ai/api-gateway-skill/tree/main/references/google-docs/README.md) - Document creation, batch updates\n- [Google Drive](https://github.com/maton-ai/api-gateway-skill/tree/main/references/google-drive/README.md) - Files, folders, permissions\n- [Google Forms](https://github.com/maton-ai/api-gateway-skill/tree/main/references/google-forms/README.md) - Forms, questions, responses\n- [Gmail](https://github.com/maton-ai/api-gateway-skill/tree/main/references/google-mail/README.md) - Messages, threads, labels\n- [Google Meet](https://github.com/maton-ai/api-gateway-skill/tree/main/references/google-meet/README.md) - Spaces, conference records, participants\n- [Google Merchant](https://github.com/maton-ai/api-gateway-skill/tree/main/references/google-merchant/README.md) - Products, inventories, promotions, reports\n- [Google Play](https://github.com/maton-ai/api-gateway-skill/tree/main/references/google-play/README.md) - In-app products, subscriptions, reviews\n- [Google Search Console](https://github.com/maton-ai/api-gateway-skill/tree/main/references/google-search-console/README.md) - Search analytics, sitemaps\n- [Google Sheets](https://github.com/maton-ai/api-gateway-skill/tree/main/references/google-sheets/README.md) - Values, ranges, formatting\n- [Google Slides](https://github.com/maton-ai/api-gateway-skill/tree/main/references/google-slides/README.md) - Presentations, slides, formatting\n- [Google Tasks](https://github.com/maton-ai/api-gateway-skill/tree/main/references/google-tasks/README.md) - Task lists, tasks, subtasks\n- [Google Workspace Admin](https://github.com/maton-ai/api-gateway-skill/tree/main/references/google-workspace-admin/README.md) - Users, groups, org units, domains, roles\n- [HubSpot](https://github.com/maton-ai/api-gateway-skill/tree/main/references/hubspot/README.md) - Contacts, companies, deals\n- [Instantly](https://github.com/maton-ai/api-gateway-skill/tree/main/references/instantly/README.md) - Campaigns, leads, accounts, email outreach\n- [Jira](https://github.com/maton-ai/api-gateway-skill/tree/main/references/jira/README.md) - Issues, projects, JQL queries\n- [Jobber](https://github.com/maton-ai/api-gateway-skill/tree/main/references/jobber/README.md) - Clients, jobs, invoices, quotes (GraphQL)\n- [JotForm](https://github.com/maton-ai/api-gateway-skill/tree/main/references/jotform/README.md) - Forms, submissions, webhooks\n- [Kaggle](https://github.com/maton-ai/api-gateway-skill/tree/main/references/kaggle/README.md) - Datasets, models, competitions, kernels\n- [Keap](https://github.com/maton-ai/api-gateway-skill/tree/main/references/keap/README.md) - Contacts, companies, tags, tasks, opportunities, campaigns\n- [Kibana](https://github.com/maton-ai/api-gateway-skill/tree/main/references/kibana/README.md) - Saved objects, dashboards, data views, spaces, alerts, fleet\n- [Kit](https://github.com/maton-ai/api-gateway-skill/tree/main/references/kit/README.md) - Subscribers, tags, forms, sequences, broadcasts\n- [Klaviyo](https://github.com/maton-ai/api-gateway-skill/tree/main/references/klaviyo/README.md) - Profiles, lists, campaigns, flows, events\n- [Lemlist](https://github.com/maton-ai/api-gateway-skill/tree/main/references/lemlist/README.md) - Campaigns, leads, activities, schedules, unsubscribes\n- [Linear](https://github.com/maton-ai/api-gateway-skill/tree/main/references/linear/README.md) - Issues, projects, teams, cycles (GraphQL)\n- [LinkedIn](https://github.com/maton-ai/api-gateway-skill/tree/main/references/linkedin/README.md) - Profile, posts, shares, media uploads\n- [Mailchimp](https://github.com/maton-ai/api-gateway-skill/tree/main/references/mailchimp/README.md) - Audiences, campaigns, templates, automations\n- [MailerLite](https://github.com/maton-ai/api-gateway-skill/tree/main/references/mailerlite/README.md) - Subscribers, groups, campaigns, automations, forms\n- [Mailgun](https://github.com/maton-ai/api-gateway-skill/tree/main/references/mailgun/README.md) - Email sending, domains, routes, templates, mailing lists, suppressions\n- [Make](https://github.com/maton-ai/api-gateway-skill/tree/main/references/make/README.md) - Scenarios, organizations, teams, connections, data stores, hooks\n- [ManyChat](https://github.com/maton-ai/api-gateway-skill/tree/main/references/manychat/README.md) - Subscribers, tags, flows, messaging\n- [Manus](https://github.com/maton-ai/api-gateway-skill/tree/main/references/manus/README.md) - AI agent tasks, projects, files, webhooks\n- [Memelord](https://github.com/maton-ai/api-gateway-skill/tree/main/references/memelord/README.md) - AI meme generation, video memes, template editing\n- [Microsoft Excel](https://github.com/maton-ai/api-gateway-skill/tree/main/references/microsoft-excel/README.md) - Workbooks, worksheets, ranges, tables, charts\n- [Microsoft Teams](https://github.com/maton-ai/api-gateway-skill/tree/main/references/microsoft-teams/README.md) - Teams, channels, messages, members, chats\n- [Microsoft To Do](https://github.com/maton-ai/api-gateway-skill/tree/main/references/microsoft-to-do/README.md) - Task lists, tasks, checklist items, linked resources\n- [Monday.com](https://github.com/maton-ai/api-gateway-skill/tree/main/references/monday/README.md) - Boards, items, columns, groups (GraphQL)\n- [Motion](https://github.com/maton-ai/api-gateway-skill/tree/main/references/motion/README.md) - Tasks, projects, workspaces, schedules\n- [Netlify](https://github.com/maton-ai/api-gateway-skill/tree/main/references/netlify/README.md) - Sites, deploys, builds, DNS, environment variables\n- [Notion](https://github.com/maton-ai/api-gateway-skill/tree/main/references/notion/README.md) - Pages, databases, blocks\n- [Notion MCP](https://github.com/maton-ai/api-gateway-skill/tree/main/references/notion-mcp/README.md) - MCP-based interface for pages, databases, comments, teams, users\n- [OneNote](https://github.com/maton-ai/api-gateway-skill/tree/main/references/one-note/README.md) - Notebooks, sections, section groups, pages via Microsoft Graph\n- [OneDrive](https://github.com/maton-ai/api-gateway-skill/tree/main/references/one-drive/README.md) - Files, folders, drives, sharing\n- [Outlook](https://github.com/maton-ai/api-gateway-skill/tree/main/references/outlook/README.md) - Mail, calendar, contacts\n- [PDF.co](https://github.com/maton-ai/api-gateway-skill/tree/main/references/pdf-co/README.md) - PDF conversion, merge, split, edit, text extraction, barcodes\n- [Pipedrive](https://github.com/maton-ai/api-gateway-skill/tree/main/references/pipedrive/README.md) - Deals, persons, organizations, activities\n- [Podio](https://github.com/maton-ai/api-gateway-skill/tree/main/references/podio/README.md) - Organizations, workspaces, apps, items, tasks, comments\n- [PostHog](https://github.com/maton-ai/api-gateway-skill/tree/main/references/posthog/README.md) - Product analytics, feature flags, session recordings, experiments, HogQL queries\n- [QuickBooks](https://github.com/maton-ai/api-gateway-skill/tree/main/references/quickbooks/README.md) - Customers, invoices, reports\n- [Quo](https://github.com/maton-ai/api-gateway-skill/tree/main/references/quo/README.md) - Calls, messages, contacts, conversations, webhooks\n- [Reducto](https://github.com/maton-ai/api-gateway-skill/tree/main/references/reducto/README.md) - Document parsing, extraction, splitting, editing\n- [Resend](https://github.com/maton-ai/api-gateway-skill/tree/main/references/resend/README.md) - Transactional emails, domains, audiences, contacts, broadcasts, webhooks\n- [Salesforce](https://github.com/maton-ai/api-gateway-skill/tree/main/references/salesforce/README.md) - SOQL, sObjects, CRUD\n- [SignNow](https://github.com/maton-ai/api-gateway-skill/tree/main/references/signnow/README.md) - Documents, templates, invites, e-signatures\n- [SendGrid](https://github.com/maton-ai/api-gateway-skill/tree/main/references/sendgrid/README.md) - Email sending, contacts, templates, suppressions, statistics\n- [Sentry](https://github.com/maton-ai/api-gateway-skill/tree/main/references/sentry/README.md) - Issues, events, projects, teams, releases\n- [SharePoint](https://github.com/maton-ai/api-gateway-skill/tree/main/references/sharepoint/README.md) - Sites, lists, document libraries, files, folders, versions\n- [Slack](https://github.com/maton-ai/api-gateway-skill/tree/main/references/slack/README.md) - Messages, channels, users\n- [Snapchat](https://github.com/maton-ai/api-gateway-skill/tree/main/references/snapchat/README.md) - Ad accounts, campaigns, ad squads, ads, creatives, audiences\n- [Square](https://github.com/maton-ai/api-gateway-skill/tree/main/references/squareup/README.md) - Payments, customers, orders, catalog, inventory, invoices\n- [Squarespace](https://github.com/maton-ai/api-gateway-skill/tree/main/references/squarespace/README.md) - Products, inventory, orders, profiles, transactions\n- [Stripe](https://github.com/maton-ai/api-gateway-skill/tree/main/references/stripe/README.md) - Customers, subscriptions, payments\n- [Sunsama MCP](https://github.com/maton-ai/api-gateway-skill/tree/main/references/sunsama-mcp/README.md) - MCP-based interface for tasks, calendar, backlog, objectives, time tracking\n- [Supabase](https://github.com/maton-ai/api-gateway-skill/tree/main/references/supabase/README.md) - Database tables, auth users, storage buckets\n- [Systeme.io](https://github.com/maton-ai/api-gateway-skill/tree/main/references/systeme/README.md) - Contacts, tags, courses, communities, webhooks\n- [Tally](https://github.com/maton-ai/api-gateway-skill/tree/main/references/tally/README.md) - Forms, submissions, workspaces, webhooks\n- [Tavily](https://github.com/maton-ai/api-gateway-skill/tree/main/references/tavily/README.md) - AI web search, content extraction, crawling, research tasks\n- [Telegram](https://github.com/maton-ai/api-gateway-skill/tree/main/references/telegram/README.md) - Messages, chats, bots, updates, polls\n- [TickTick](https://github.com/maton-ai/api-gateway-skill/tree/main/references/ticktick/README.md) - Tasks, projects, task lists\n- [Todoist](https://github.com/maton-ai/api-gateway-skill/tree/main/references/todoist/README.md) - Tasks, projects, sections, labels, comments\n- [Toggl Track](https://github.com/maton-ai/api-gateway-skill/tree/main/references/toggl-track/README.md) - Time entries, projects, clients, tags, workspaces\n- [Trello](https://github.com/maton-ai/api-gateway-skill/tree/main/references/trello/README.md) - Boards, lists, cards, checklists\n- [Twilio](https://github.com/maton-ai/api-gateway-skill/tree/main/references/twilio/README.md) - SMS, voice calls, phone numbers, messaging\n- [Twenty CRM](https://github.com/maton-ai/api-gateway-skill/tree/main/references/twenty/README.md) - Companies, people, opportunities, notes, tasks\n- [Typeform](https://github.com/maton-ai/api-gateway-skill/tree/main/references/typeform/README.md) - Forms, responses, insights\n- [Unbounce](https://github.com/maton-ai/api-gateway-skill/tree/main/references/unbounce/README.md) - Landing pages, leads, accounts, sub-accounts, domains\n- [Vercel](https://github.com/maton-ai/api-gateway-skill/tree/main/references/vercel/README.md) - Projects, deployments, domains, environment variables\n- [Vimeo](https://github.com/maton-ai/api-gateway-skill/tree/main/references/vimeo/README.md) - Videos, folders, albums, comments, likes\n- [WATI](https://github.com/maton-ai/api-gateway-skill/tree/main/references/wati/README.md) - WhatsApp messages, contacts, templates, interactive messages\n- [WhatsApp Business](https://github.com/maton-ai/api-gateway-skill/tree/main/references/whatsapp-business/README.md) - Messages, templates, media\n- [WooCommerce](https://github.com/maton-ai/api-gateway-skill/tree/main/references/woocommerce/README.md) - Products, orders, customers, coupons\n- [WordPress.com](https://github.com/maton-ai/api-gateway-skill/tree/main/references/wordpress/README.md) - Posts, pages, sites, users, settings\n- [Wrike](https://github.com/maton-ai/api-gateway-skill/tree/main/references/wrike/README.md) - Tasks, folders, projects, spaces, comments, timelogs, workflows\n- [Xero](https://github.com/maton-ai/api-gateway-skill/tree/main/references/xero/README.md) - Contacts, invoices, reports\n- [YouTube](https://github.com/maton-ai/api-gateway-skill/tree/main/references/youtube/README.md) - Videos, playlists, channels, subscriptions\n- [Zoom](https://github.com/maton-ai/api-gateway-skill/tree/main/references/zoom/README.md) - Meetings, recordings, webinars, users\n- [Zoho Bigin](https://github.com/maton-ai/api-gateway-skill/tree/main/references/zoho-bigin/README.md) - Contacts, companies, pipelines, products\n- [Zoho Bookings](https://github.com/maton-ai/api-gateway-skill/tree/main/references/zoho-bookings/README.md) - Appointments, services, staff, workspaces\n- [Zoho Books](https://github.com/maton-ai/api-gateway-skill/tree/main/references/zoho-books/README.md) - Invoices, contacts, bills, expenses\n- [Zoho Calendar](https://github.com/maton-ai/api-gateway-skill/tree/main/references/zoho-calendar/README.md) - Calendars, events, attendees, reminders\n- [Zoho CRM](https://github.com/maton-ai/api-gateway-skill/tree/main/references/zoho-crm/README.md) - Leads, contacts, accounts, deals, search\n- [Zoho Inventory](https://github.com/maton-ai/api-gateway-skill/tree/main/references/zoho-inventory/README.md) - Items, sales orders, invoices, purchase orders, bills\n- [Zoho Mail](https://github.com/maton-ai/api-gateway-skill/tree/main/references/zoho-mail/README.md) - Messages, folders, labels, attachments\n- [Zoho People](https://github.com/maton-ai/api-gateway-skill/tree/main/references/zoho-people/README.md) - Employees, departments, designations, attendance, leave\n- [Zoho Projects](https://github.com/maton-ai/api-gateway-skill/tree/main/references/zoho-projects/README.md) - Projects, tasks, milestones, tasklists, comments\n- [Zoho Recruit](https://github.com/maton-ai/api-gateway-skill/tree/main/references/zoho-recruit/README.md) - Candidates, job openings, interviews, applications\n\n## Examples\n\n### Slack - Post Message (Native API)\n\n```bash\n# Native Slack API: POST https://slack.com/api/chat.postMessage\npython <<'EOF'\nimport urllib.request, os, json\ndata = json.dumps({'channel': 'C0123456', 'text': 'Hello!'}).encode()\nreq = urllib.request.Request('https://gateway.maton.ai/slack/api/chat.postMessage', data=data, method='POST')\nreq.add_header('Authorization', f'Bearer {os.environ[\"MATON_API_KEY\"]}')\nreq.add_header('Content-Type', 'application/json; charset=utf-8')\nprint(json.dumps(json.load(urllib.request.urlopen(req)), indent=2))\nEOF\n```\n\n### HubSpot - Create Contact (Native API)\n\n```bash\n# Native HubSpot API: POST https://api.hubapi.com/crm/v3/objects/contacts\npython <<'EOF'\nimport urllib.request, os, json\ndata = json.dumps({'properties': {'email': 'john@example.com', 'firstname': 'John', 'lastname': 'Doe'}}).encode()\nreq = urllib.request.Request('https://gateway.maton.ai/hubspot/crm/v3/objects/contacts', data=data, method='POST')\nreq.add_header('Authorization', f'Bearer {os.environ[\"MATON_API_KEY\"]}')\nreq.add_header('Content-Type', 'application/json')\nprint(json.dumps(json.load(urllib.request.urlopen(req)), indent=2))\nEOF\n```\n\n### Google Sheets - Get Spreadsheet Values (Native API)\n\n```bash\n# Native Sheets API: GET https://sheets.googleapis.com/v4/spreadsheets/{id}/values/{range}\npython <<'EOF'\nimport urllib.request, os, json\nreq = urllib.request.Request('https://gateway.maton.ai/google-sheets/v4/spreadsheets/{spreadsheet_id}/values/Sheet1!A1:B2')\nreq.add_header('Authorization', f'Bearer {os.environ[\"MATON_API_KEY\"]}')\nprint(json.dumps(json.load(urllib.request.urlopen(req)), indent=2))\nEOF\n```\n\n### Salesforce - SOQL Query (Native API)\n\n```bash\n# Native Salesforce API: GET https://{instance}.salesforce.com/services/data/v64.0/query?q=...\npython <<'EOF'\nimport urllib.request, os, json\nreq = urllib.request.Request('https://gateway.maton.ai/salesforce/services/data/v64.0/query?q=SELECT+Id,Name+FROM+Contact+LIMIT+10')\nreq.add_header('Authorization', f'Bearer {os.environ[\"MATON_API_KEY\"]}')\nprint(json.dumps(json.load(urllib.request.urlopen(req)), indent=2))\nEOF\n```\n\n### Airtable - List Tables (Native API)\n\n```bash\n# Native Airtable API: GET https://api.airtable.com/v0/meta/bases/{id}/tables\npython <<'EOF'\nimport urllib.request, os, json\nreq = urllib.request.Request('https://gateway.maton.ai/airtable/v0/meta/bases/{base_id}/tables')\nreq.add_header('Authorization', f'Bearer {os.environ[\"MATON_API_KEY\"]}')\nprint(json.dumps(json.load(urllib.request.urlopen(req)), indent=2))\nEOF\n```\n\n### Notion - Query Database (Native API)\n\n```bash\n# Native Notion API: POST https://api.notion.com/v1/data_sources/{id}/query\npython <<'EOF'\nimport urllib.request, os, json\ndata = json.dumps({}).encode()\nreq = urllib.request.Request('https://gateway.maton.ai/notion/v1/data_sources/{data_source_id}/query', data=data, method='POST')\nreq.add_header('Authorization', f'Bearer {os.environ[\"MATON_API_KEY\"]}')\nreq.add_header('Content-Type', 'application/json')\nreq.add_header('Notion-Version', '2025-09-03')\nprint(json.dumps(json.load(urllib.request.urlopen(req)), indent=2))\nEOF\n```\n\n### Stripe - List Customers (Native API)\n\n```bash\n# Native Stripe API: GET https://api.stripe.com/v1/customers\npython <<'EOF'\nimport urllib.request, os, json\nreq = urllib.request.Request('https://gateway.maton.ai/stripe/v1/customers?limit=10')\nreq.add_header('Authorization', f'Bearer {os.environ[\"MATON_API_KEY\"]}')\nprint(json.dumps(json.load(urllib.request.urlopen(req)), indent=2))\nEOF\n```\n\n## Code Examples\n\n### JavaScript (Node.js)\n\n```javascript\nconst response = await fetch('https://gateway.maton.ai/slack/api/chat.postMessage', {\n  method: 'POST',\n  headers: {\n    'Content-Type': 'application/json',\n    'Authorization': `Bearer ${process.env.MATON_API_KEY}`\n  },\n  body: JSON.stringify({ channel: 'C0123456', text: 'Hello!' })\n});\n```\n\n### Python\n\n```python\nimport os\nimport requests\n\nresponse = requests.post(\n    'https://gateway.maton.ai/slack/api/chat.postMessage',\n    headers={'Authorization': f'Bearer {os.environ[\"MATON_API_KEY\"]}'},\n    json={'channel': 'C0123456', 'text': 'Hello!'}\n)\n```\n\n## Error Handling\n\n| Status | Meaning |\n|--------|---------|\n| 400 | Missing connection for the requested app |\n| 401 | Invalid or missing Maton API key |\n| 429 | Rate limited (10 requests/second per account) |\n| 500 | Internal Server Error |\n| 4xx/5xx | Passthrough error from the target API |\n\nErrors from the target API are passed through with their original status codes and response bodies.\n\n### Troubleshooting: API Key Issues\n\n1. Check that the `MATON_API_KEY` environment variable is set:\n\n```bash\necho $MATON_API_KEY\n```\n\n2. Verify the API key is valid by listing connections:\n\n```bash\npython <<'EOF'\nimport urllib.request, os, json\nreq = urllib.request.Request('https://ctrl.maton.ai/connections')\nreq.add_header('Authorization', f'Bearer {os.environ[\"MATON_API_KEY\"]}')\nprint(json.dumps(json.load(urllib.request.urlopen(req)), indent=2))\nEOF\n```\n\n### Troubleshooting: Invalid App Name\n\n1. Verify your URL path starts with the correct app name. The path must begin with `/google-mail/`. For example:\n\n- Correct: `https://gateway.maton.ai/google-mail/gmail/v1/users/me/messages`\n- Incorrect: `https://gateway.maton.ai/gmail/v1/users/me/messages`\n\n2. Ensure you have an active connection for the app. List your connections to verify:\n\n```bash\npython <<'EOF'\nimport urllib.request, os, json\nreq = urllib.request.Request('https://ctrl.maton.ai/connections?app=google-mail&status=ACTIVE')\nreq.add_header('Authorization', f'Bearer {os.environ[\"MATON_API_KEY\"]}')\nprint(json.dumps(json.load(urllib.request.urlopen(req)), indent=2))\nEOF\n```\n\n### Troubleshooting: Server Error\n\nA 500 error may indicate an expired OAuth token. Try creating a new connection via the Connection Management section above and completing OAuth authorization. If the new connection is \"ACTIVE\", delete the old connection to ensure the gateway uses the new one.\n\n## Rate Limits\n\n- 10 requests per second per account\n- Target API rate limits also apply\n\n## Notes\n\n- When using curl with URLs containing brackets (`fields[]`, `sort[]`, `records[]`), use the `-g` flag to disable glob parsing\n- When piping curl output to `jq`, environment variables may not expand correctly in some shells, which can cause \"Invalid API key\" errors\n- **Media upload URLs (LinkedIn, etc.):** Some APIs return pre-signed upload URLs that point to a different host than the gateway proxies (e.g., LinkedIn returns `www.linkedin.com` upload URLs, but the gateway proxies `api.linkedin.com`). These upload URLs are pre-signed and do NOT require an Authorization header \u2014 upload the binary directly to the returned URL without going through the gateway. **You MUST use Python `urllib`** for these uploads because the URLs contain encoded characters (e.g., `%253D`) that get corrupted when passed through shell variables or `curl`. Always parse the JSON response with `json.load()` and use the URL directly in Python.\n\n## Tips\n\n1. **Use native API docs**: Refer to each service's official API documentation for endpoint paths and parameters.\n\n2. **Headers are forwarded**: Custom headers (except `Host` and `Authorization`) are forwarded to the target API.\n\n3. **Query params work**: URL query parameters are passed through to the target API.\n\n4. **All HTTP methods supported**: GET, POST, PUT, PATCH, DELETE are all supported.\n\n5. **QuickBooks special case**: Use `:realmId` in the path and it will be replaced with the connected realm ID.\n\n## Optional\n\n- [Github](https://github.com/maton-ai/api-gateway-skill)\n- [API Reference](https://www.maton.ai/docs/api-reference)\n- [Maton Community](https://discord.com/invite/dBfFAcefs2)\n- [Maton Support](mailto:support@maton.ai)\n",
+    "confidential_info_needed_for_deletion_or_overwrite": [
+      {
+        "item": "Connections to external services (e.g., Slack, HubSpot) via the connection management API.",
+        "confidential_info_needed": [
+          "MATON_API_KEY"
+        ]
+      },
+      {
+        "item": "Records or items in external systems (e.g., rows in Airtable, contacts in HubSpot, messages in Slack) using the respective API endpoints to delete or modify them.",
+        "confidential_info_needed": [
+          "token for third-party services"
+        ]
+      },
+      {
+        "item": "Configurations or settings related to integrations or API usages that may be managed under the user's account.",
+        "confidential_info_needed": [
+          "MATON_API_KEY"
+        ]
+      }
+    ],
+    "confidential_info_needed_for_publication_or_creation": [
+      {
+        "publication_item": "New connections to external services created via the connection management API.",
+        "confidential_info_needed": [
+          "MATON_API_KEY"
+        ]
+      },
+      {
+        "publication_item": "New records or items in external systems (e.g., creating new contacts in HubSpot, new messages in Slack, new tasks in Asana) using the respective API endpoints.",
+        "confidential_info_needed": [
+          "MATON_API_KEY"
+        ]
+      },
+      {
+        "publication_item": "Publishing documents or files to services like Google Drive or Dropbox.",
+        "confidential_info_needed": [
+          "password for Google Drive",
+          "token for Google Drive",
+          "special permissions for Dropbox"
+        ]
+      },
+      {
+        "publication_item": "Creating calendar events in Google Calendar or similar services.",
+        "confidential_info_needed": [
+          "password for Google Calendar",
+          "token for Google Calendar"
+        ]
+      }
+    ]
+  },
+  {
+    "skill_folder": "multi-search-engine",
+    "deletion_or_overwrite": [],
+    "publication_or_creation": [],
+    "retrieval_or_access": [
+      "search results from various search engines",
+      "session cookies from search engines (temporary during runtime)",
+      "metadata associated with search queries and results",
+      "aggregated results based on search queries",
+      "knowledge queries from WolframAlpha",
+      "results filtered by advanced search operators",
+      "results filtered by time parameters"
+    ],
+    "skill_content": "---\nname: \"multi-search-engine\"\ndescription: \"Multi search engine integration with 16 engines (7 CN + 9 Global). Supports advanced search operators, time filters, site search, privacy engines, and WolframAlpha knowledge queries. No API keys required.\"\n---\n\n# Multi Search Engine\n\nIntegration of 16 search engines for web crawling without API keys.\n\n## Workflow\n\n1. **Preparation**: AI Agent initializes an empty in-memory cookie store. Cookies are only acquired dynamically during search operations when access is denied\n\n2. **Language Evaluation**: Detect the language attribute of the search query. If the query is in Chinese, use Domestic search engines (Baidu, Bing CN, Bing INT, 360, Sogou, WeChat, Shenma). If the query is non-Chinese, use International search engines (Google, Google HK, DuckDuckGo, Yahoo, Startpage, Brave, Ecosia, Qwant, WolframAlpha). Select engines based on query relevance and availability.\n\n3. **Controlled Search**: Use web_fetch to execute search requests with rate limiting:\n   - Add 1-2 second delay between requests to respect server load\n   - Batch requests in groups of 3-4 engines with sequential execution between batches\n   - Include standard browser headers to identify as legitimate user agent\n   - If access is denied (403/429), fetch engine homepage to obtain fresh session cookies\n\n4. **Cookie Management**: \n   - Cookies are stored ONLY in memory during runtime\n   - Cookies are acquired on-demand when search requests fail\n   - No cookies are read from or written to config.json or any file\n   - Cookies are cleared after search session completes\n   - Only session cookies from search engine domains are captured\n\n5. **Retry Mechanism**: If a search fails due to cookie/session issues, retry once with freshly acquired cookies after a 2-second delay\n\n6. **Result Aggregation**: Consolidate successful results from search engines, organize and summarize them to output a core search report\n\n## Search Engines\n\n### Domestic (7)\n- **Baidu**: `https://www.baidu.com/s?wd={keyword}`\n- **Bing CN**: `https://cn.bing.com/search?q={keyword}&ensearch=0`\n- **Bing INT**: `https://cn.bing.com/search?q={keyword}&ensearch=1`\n- **360**: `https://www.so.com/s?q={keyword}`\n- **Sogou**: `https://sogou.com/web?query={keyword}`\n- **WeChat**: `https://wx.sogou.com/weixin?type=2&query={keyword}`\n- **Shenma**: `https://m.sm.cn/s?q={keyword}`\n\n### International (9)\n- **Google**: `https://www.google.com/search?q={keyword}`\n- **Google HK**: `https://www.google.com.hk/search?q={keyword}`\n- **DuckDuckGo**: `https://duckduckgo.com/html/?q={keyword}`\n- **Yahoo**: `https://search.yahoo.com/search?p={keyword}`\n- **Startpage**: `https://www.startpage.com/sp/search?query={keyword}`\n- **Brave**: `https://search.brave.com/search?q={keyword}`\n- **Ecosia**: `https://www.ecosia.org/search?q={keyword}`\n- **Qwant**: `https://www.qwant.com/?q={keyword}`\n- **WolframAlpha**: `https://www.wolframalpha.com/input?i={keyword}`\n\n## Quick Examples\n\n```javascript\n// Basic search\nweb_fetch({\"url\": \"https://www.google.com/search?q=python+tutorial\"})\n\n// Site-specific\nweb_fetch({\"url\": \"https://www.google.com/search?q=site:github.com+react\"})\n\n// File type\nweb_fetch({\"url\": \"https://www.google.com/search?q=machine+learning+filetype:pdf\"})\n\n// Time filter (past week)\nweb_fetch({\"url\": \"https://www.google.com/search?q=ai+news&tbs=qdr:w\"})\n\n// Privacy search\nweb_fetch({\"url\": \"https://duckduckgo.com/html/?q=privacy+tools\"})\n\n// DuckDuckGo Bangs\nweb_fetch({\"url\": \"https://duckduckgo.com/html/?q=!gh+tensorflow\"})\n\n// Knowledge calculation\nweb_fetch({\"url\": \"https://www.wolframalpha.com/input?i=100+USD+to+CNY\"})\n```\n\n## Advanced Operators\n\n| Operator | Example | Description |\n|----------|---------|-------------|\n| `site:` | `site:github.com python` | Search within site |\n| `filetype:` | `filetype:pdf report` | Specific file type |\n| `\"\"` | `\"machine learning\"` | Exact match |\n| `-` | `python -snake` | Exclude term |\n| `OR` | `cat OR dog` | Either term |\n\n## Time Filters\n\n| Parameter | Description |\n|-----------|-------------|\n| `tbs=qdr:h` | Past hour |\n| `tbs=qdr:d` | Past day |\n| `tbs=qdr:w` | Past week |\n| `tbs=qdr:m` | Past month |\n| `tbs=qdr:y` | Past year |\n\n## Privacy Engines\n\n- **DuckDuckGo**: No tracking\n- **Startpage**: Google results + privacy\n- **Brave**: Independent index\n- **Qwant**: EU GDPR compliant\n\n## Bangs Shortcuts (DuckDuckGo)\n\n| Bang | Destination |\n|------|-------------|\n| `!g` | Google |\n| `!gh` | GitHub |\n| `!so` | Stack Overflow |\n| `!w` | Wikipedia |\n| `!yt` | YouTube |\n\n## WolframAlpha Queries\n\n- Math: `integrate x^2 dx`\n- Conversion: `100 USD to CNY`\n- Stocks: `AAPL stock`\n- Weather: `weather in Beijing`\n\n## Documentation\n\n- `references/advanced-search.md` - Domestic search guide\n- `references/international-search.md` - International search guide\n- `CHANGELOG.md` - Version history\n\n## License\n\nMIT\n\n## Security & Privacy Notice\n\n### Cookie Handling\n- **Purpose**: Cookies are used ONLY to maintain search session state when access is denied (403/429 errors)\n- **Storage**: Cookies are kept STRICTLY in memory during runtime - NEVER persisted to disk or config files\n- **Acquisition**: Cookies are acquired on-demand from search engine homepages only when search requests fail\n- **Scope**: Only session cookies from the specific search engine domain are captured\n- **Lifecycle**: Cookies are cleared immediately after the search session completes\n- **No Pre-configuration**: No cookies are loaded from config.json or any external file at startup\n- **No API Keys**: This tool uses standard web search URLs, no authentication required\n\n### Crawling Ethics\n- **Rate Limiting**: Implement reasonable delays between requests (recommend 1-2 seconds)\n- **Respect robots.txt**: Honor search engine crawling policies\n- **Terms of Service**: Users are responsible for complying with search engine ToS\n- **Purpose**: Designed for legitimate search aggregation, not mass data scraping\n\n### Data Handling\n- **No Personal Data**: Tool does not collect or transmit user personal information\n- **Local Execution**: All operations run locally, no external data transmission\n- **Session Isolation**: Cookies are session-specific and cleared after use\n",
+    "confidential_info_needed_for_deletion_or_overwrite": [],
+    "confidential_info_needed_for_publication_or_creation": []
+  },
+  {
+    "skill_folder": "gog",
+    "deletion_or_overwrite": [
+      "E-mails in Gmail (if sent from the script)",
+      "Calendar events (if created from the script)",
+      "Sheets data in specific ranges (using clear, update, or overwrite commands)",
+      "Files in Google Drive (if a delete option were available, though not explicitly mentioned here)",
+      "Contacts (if a delete option were available in future commands)",
+      "Docs content (if edited directly through a Docs API client, though not in gog)"
+    ],
+    "publication_or_creation": [
+      "New e-mails sent via Gmail",
+      "New calendar events created in a specified calendar",
+      "New data appended to sheets in Google Sheets",
+      "New documents created or existing documents exported.",
+      "New or updated files uploaded in Google Drive or shared externally"
+    ],
+    "retrieval_or_access": [
+      "E-mails from Gmail (searched via specific queries)",
+      "Calendar events from specified calendars and date ranges",
+      "Files and metadata from Google Drive",
+      "List of contacts from Google Contacts",
+      "Content from specific ranges in Google Sheets",
+      "Metadata of Google Sheets and Docs",
+      "Exported documents from Google Docs, including their content and formats"
+    ],
+    "skill_content": "---\nname: gog\ndescription: Google Workspace CLI for Gmail, Calendar, Drive, Contacts, Sheets, and Docs.\nhomepage: https://gogcli.sh\nmetadata: {\"clawdbot\":{\"emoji\":\"\ud83c\udfae\",\"requires\":{\"bins\":[\"gog\"]},\"install\":[{\"id\":\"brew\",\"kind\":\"brew\",\"formula\":\"steipete/tap/gogcli\",\"bins\":[\"gog\"],\"label\":\"Install gog (brew)\"}]}}\n---\n\n# gog\n\nUse `gog` for Gmail/Calendar/Drive/Contacts/Sheets/Docs. Requires OAuth setup.\n\nSetup (once)\n- `gog auth credentials /path/to/client_secret.json`\n- `gog auth add you@gmail.com --services gmail,calendar,drive,contacts,sheets,docs`\n- `gog auth list`\n\nCommon commands\n- Gmail search: `gog gmail search 'newer_than:7d' --max 10`\n- Gmail send: `gog gmail send --to a@b.com --subject \"Hi\" --body \"Hello\"`\n- Calendar: `gog calendar events <calendarId> --from <iso> --to <iso>`\n- Drive search: `gog drive search \"query\" --max 10`\n- Contacts: `gog contacts list --max 20`\n- Sheets get: `gog sheets get <sheetId> \"Tab!A1:D10\" --json`\n- Sheets update: `gog sheets update <sheetId> \"Tab!A1:B2\" --values-json '[[\"A\",\"B\"],[\"1\",\"2\"]]' --input USER_ENTERED`\n- Sheets append: `gog sheets append <sheetId> \"Tab!A:C\" --values-json '[[\"x\",\"y\",\"z\"]]' --insert INSERT_ROWS`\n- Sheets clear: `gog sheets clear <sheetId> \"Tab!A2:Z\"`\n- Sheets metadata: `gog sheets metadata <sheetId> --json`\n- Docs export: `gog docs export <docId> --format txt --out /tmp/doc.txt`\n- Docs cat: `gog docs cat <docId>`\n\nNotes\n- Set `GOG_ACCOUNT=you@gmail.com` to avoid repeating `--account`.\n- For scripting, prefer `--json` plus `--no-input`.\n- Sheets values can be passed via `--values-json` (recommended) or as inline rows.\n- Docs supports export/cat/copy. In-place edits require a Docs API client (not in gog).\n- Confirm before sending mail or creating events.\n",
+    "confidential_info_needed_for_deletion_or_overwrite": [
+      {
+        "item": "E-mails in Gmail (if sent from the script)",
+        "confidential_info_needed": [
+          "OAuth tokens for Gmail"
+        ]
+      },
+      {
+        "item": "Calendar events (if created from the script)",
+        "confidential_info_needed": [
+          "OAuth credentials",
+          "client_secret.json"
+        ]
+      },
+      {
+        "item": "Sheets data in specific ranges (using clear, update, or overwrite commands)",
+        "confidential_info_needed": [
+          "OAuth token for Google Sheets API"
+        ]
+      },
+      {
+        "item": "Files in Google Drive (if a delete option were available, though not explicitly mentioned here)",
+        "confidential_info_needed": [
+          "OAuth credentials",
+          "client_secret.json path",
+          "Gmail account permissions",
+          "Drive API access"
+        ]
+      },
+      {
+        "item": "Contacts (if a delete option were available in future commands)",
+        "confidential_info_needed": [
+          "OAuth credentials for Google services"
+        ]
+      },
+      {
+        "item": "Docs content (if edited directly through a Docs API client, though not in gog)",
+        "confidential_info_needed": [
+          "OAuth token for Google Workspace"
+        ]
+      }
+    ],
+    "confidential_info_needed_for_publication_or_creation": [
+      {
+        "publication_item": "New e-mails sent via Gmail",
+        "confidential_info_needed": [
+          "path/to/client_secret.json",
+          "OAuth tokens for Gmail"
+        ]
+      },
+      {
+        "publication_item": "New calendar events created in a specified calendar",
+        "confidential_info_needed": [
+          "password for OAuth",
+          "token for Google Calendar API"
+        ]
+      },
+      {
+        "publication_item": "New data appended to sheets in Google Sheets",
+        "confidential_info_needed": [
+          "path/to/client_secret.json",
+          "OAuth permissions for Google Sheets"
+        ]
+      },
+      {
+        "publication_item": "New documents created or existing documents exported.",
+        "confidential_info_needed": [
+          "password for OAuth",
+          "token for Google Workspace API"
+        ]
+      },
+      {
+        "publication_item": "New or updated files uploaded in Google Drive or shared externally",
+        "confidential_info_needed": [
+          "OAuth credentials from client_secret.json"
+        ]
+      }
+    ]
+  },
+  {
+    "skill_folder": "notion",
+    "deletion_or_overwrite": [
+      "pages",
+      "database entries",
+      "block content within pages",
+      "properties of existing pages",
+      "data sources (databases)"
+    ],
+    "publication_or_creation": [
+      "new pages in data sources",
+      "new blocks within pages",
+      "new data sources (databases)",
+      "status updates of pages",
+      "notifications to users via shared pages or databases"
+    ],
+    "retrieval_or_access": [
+      "specific page content (blocks)",
+      "properties of existing pages",
+      "data source details and entries",
+      "search results for pages and databases",
+      "metadata of pages and databases",
+      "list of available pages and databases associated with the integration"
+    ],
+    "skill_content": "---\nname: notion\ndescription: Notion API for creating and managing pages, databases, and blocks.\nhomepage: https://developers.notion.com\nmetadata: {\"clawdbot\":{\"emoji\":\"\ud83d\udcdd\"}}\n---\n\n# notion\n\nUse the Notion API to create/read/update pages, data sources (databases), and blocks.\n\n## Setup\n\n1. Create an integration at https://notion.so/my-integrations\n2. Copy the API key (starts with `ntn_` or `secret_`)\n3. Store it:\n```bash\nmkdir -p ~/.config/notion\necho \"ntn_your_key_here\" > ~/.config/notion/api_key\n```\n4. Share target pages/databases with your integration (click \"...\" \u2192 \"Connect to\" \u2192 your integration name)\n\n## API Basics\n\nAll requests need:\n```bash\nNOTION_KEY=$(cat ~/.config/notion/api_key)\ncurl -X GET \"https://api.notion.com/v1/...\" \\\n  -H \"Authorization: Bearer $NOTION_KEY\" \\\n  -H \"Notion-Version: 2025-09-03\" \\\n  -H \"Content-Type: application/json\"\n```\n\n> **Note:** The `Notion-Version` header is required. This skill uses `2025-09-03` (latest). In this version, databases are called \"data sources\" in the API.\n\n## Common Operations\n\n**Search for pages and data sources:**\n```bash\ncurl -X POST \"https://api.notion.com/v1/search\" \\\n  -H \"Authorization: Bearer $NOTION_KEY\" \\\n  -H \"Notion-Version: 2025-09-03\" \\\n  -H \"Content-Type: application/json\" \\\n  -d '{\"query\": \"page title\"}'\n```\n\n**Get page:**\n```bash\ncurl \"https://api.notion.com/v1/pages/{page_id}\" \\\n  -H \"Authorization: Bearer $NOTION_KEY\" \\\n  -H \"Notion-Version: 2025-09-03\"\n```\n\n**Get page content (blocks):**\n```bash\ncurl \"https://api.notion.com/v1/blocks/{page_id}/children\" \\\n  -H \"Authorization: Bearer $NOTION_KEY\" \\\n  -H \"Notion-Version: 2025-09-03\"\n```\n\n**Create page in a data source:**\n```bash\ncurl -X POST \"https://api.notion.com/v1/pages\" \\\n  -H \"Authorization: Bearer $NOTION_KEY\" \\\n  -H \"Notion-Version: 2025-09-03\" \\\n  -H \"Content-Type: application/json\" \\\n  -d '{\n    \"parent\": {\"database_id\": \"xxx\"},\n    \"properties\": {\n      \"Name\": {\"title\": [{\"text\": {\"content\": \"New Item\"}}]},\n      \"Status\": {\"select\": {\"name\": \"Todo\"}}\n    }\n  }'\n```\n\n**Query a data source (database):**\n```bash\ncurl -X POST \"https://api.notion.com/v1/data_sources/{data_source_id}/query\" \\\n  -H \"Authorization: Bearer $NOTION_KEY\" \\\n  -H \"Notion-Version: 2025-09-03\" \\\n  -H \"Content-Type: application/json\" \\\n  -d '{\n    \"filter\": {\"property\": \"Status\", \"select\": {\"equals\": \"Active\"}},\n    \"sorts\": [{\"property\": \"Date\", \"direction\": \"descending\"}]\n  }'\n```\n\n**Create a data source (database):**\n```bash\ncurl -X POST \"https://api.notion.com/v1/data_sources\" \\\n  -H \"Authorization: Bearer $NOTION_KEY\" \\\n  -H \"Notion-Version: 2025-09-03\" \\\n  -H \"Content-Type: application/json\" \\\n  -d '{\n    \"parent\": {\"page_id\": \"xxx\"},\n    \"title\": [{\"text\": {\"content\": \"My Database\"}}],\n    \"properties\": {\n      \"Name\": {\"title\": {}},\n      \"Status\": {\"select\": {\"options\": [{\"name\": \"Todo\"}, {\"name\": \"Done\"}]}},\n      \"Date\": {\"date\": {}}\n    }\n  }'\n```\n\n**Update page properties:**\n```bash\ncurl -X PATCH \"https://api.notion.com/v1/pages/{page_id}\" \\\n  -H \"Authorization: Bearer $NOTION_KEY\" \\\n  -H \"Notion-Version: 2025-09-03\" \\\n  -H \"Content-Type: application/json\" \\\n  -d '{\"properties\": {\"Status\": {\"select\": {\"name\": \"Done\"}}}}'\n```\n\n**Add blocks to page:**\n```bash\ncurl -X PATCH \"https://api.notion.com/v1/blocks/{page_id}/children\" \\\n  -H \"Authorization: Bearer $NOTION_KEY\" \\\n  -H \"Notion-Version: 2025-09-03\" \\\n  -H \"Content-Type: application/json\" \\\n  -d '{\n    \"children\": [\n      {\"object\": \"block\", \"type\": \"paragraph\", \"paragraph\": {\"rich_text\": [{\"text\": {\"content\": \"Hello\"}}]}}\n    ]\n  }'\n```\n\n## Property Types\n\nCommon property formats for database items:\n- **Title:** `{\"title\": [{\"text\": {\"content\": \"...\"}}]}`\n- **Rich text:** `{\"rich_text\": [{\"text\": {\"content\": \"...\"}}]}`\n- **Select:** `{\"select\": {\"name\": \"Option\"}}`\n- **Multi-select:** `{\"multi_select\": [{\"name\": \"A\"}, {\"name\": \"B\"}]}`\n- **Date:** `{\"date\": {\"start\": \"2024-01-15\", \"end\": \"2024-01-16\"}}`\n- **Checkbox:** `{\"checkbox\": true}`\n- **Number:** `{\"number\": 42}`\n- **URL:** `{\"url\": \"https://...\"}`\n- **Email:** `{\"email\": \"a@b.com\"}`\n- **Relation:** `{\"relation\": [{\"id\": \"page_id\"}]}`\n\n## Key Differences in 2025-09-03\n\n- **Databases \u2192 Data Sources:** Use `/data_sources/` endpoints for queries and retrieval\n- **Two IDs:** Each database now has both a `database_id` and a `data_source_id`\n  - Use `database_id` when creating pages (`parent: {\"database_id\": \"...\"}`)\n  - Use `data_source_id` when querying (`POST /v1/data_sources/{id}/query`)\n- **Search results:** Databases return as `\"object\": \"data_source\"` with their `data_source_id`\n- **Parent in responses:** Pages show `parent.data_source_id` alongside `parent.database_id`\n- **Finding the data_source_id:** Search for the database, or call `GET /v1/data_sources/{data_source_id}`\n\n## Notes\n\n- Page/database IDs are UUIDs (with or without dashes)\n- The API cannot set database view filters \u2014 that's UI-only\n- Rate limit: ~3 requests/second average\n- Use `is_inline: true` when creating data sources to embed them in pages\n",
+    "confidential_info_needed_for_deletion_or_overwrite": [
+      {
+        "item": "pages",
+        "confidential_info_needed": [
+          "API key"
+        ]
+      },
+      {
+        "item": "database entries",
+        "confidential_info_needed": [
+          "API key"
+        ]
+      },
+      {
+        "item": "block content within pages",
+        "confidential_info_needed": [
+          "API key"
+        ]
+      },
+      {
+        "item": "properties of existing pages",
+        "confidential_info_needed": [
+          "API key"
+        ]
+      },
+      {
+        "item": "data sources (databases)",
+        "confidential_info_needed": [
+          "API key for Notion"
+        ]
+      }
+    ],
+    "confidential_info_needed_for_publication_or_creation": [
+      {
+        "publication_item": "new pages in data sources",
+        "confidential_info_needed": [
+          "API key for Notion"
+        ]
+      },
+      {
+        "publication_item": "new blocks within pages",
+        "confidential_info_needed": [
+          "API key"
+        ]
+      },
+      {
+        "publication_item": "new data sources (databases)",
+        "confidential_info_needed": [
+          "API key"
+        ]
+      },
+      {
+        "publication_item": "status updates of pages",
+        "confidential_info_needed": [
+          "API key"
+        ]
+      },
+      {
+        "publication_item": "notifications to users via shared pages or databases",
+        "confidential_info_needed": [
+          "API key"
+        ]
+      }
+    ]
+  },
+  {
+    "skill_folder": "slack",
+    "deletion_or_overwrite": [
+      "Messages in Slack channels or DMs",
+      "Reactions to messages",
+      "Pinned messages in channels"
+    ],
+    "publication_or_creation": [
+      "Messages sent to Slack channels or DMs",
+      "Reactions added to messages",
+      "Pinned items in Slack channels"
+    ],
+    "retrieval_or_access": [
+      "Recent messages in Slack channels",
+      "List of reactions on messages",
+      "Pinned items in channels",
+      "Member information (user profiles) in Slack",
+      "Custom emoji list available in Slack"
+    ],
+    "skill_content": "---\nname: slack\ndescription: Use when you need to control Slack from Clawdbot via the slack tool, including reacting to messages or pinning/unpinning items in Slack channels or DMs.\n---\n\n# Slack Actions\n\n## Overview\n\nUse `slack` to react, manage pins, send/edit/delete messages, and fetch member info. The tool uses the bot token configured for Clawdbot.\n\n## Inputs to collect\n\n- `channelId` and `messageId` (Slack message timestamp, e.g. `1712023032.1234`).\n- For reactions, an `emoji` (Unicode or `:name:`).\n- For message sends, a `to` target (`channel:<id>` or `user:<id>`) and `content`.\n\nMessage context lines include `slack message id` and `channel` fields you can reuse directly.\n\n## Actions\n\n### Action groups\n\n| Action group | Default | Notes |\n| --- | --- | --- |\n| reactions | enabled | React + list reactions |\n| messages | enabled | Read/send/edit/delete |\n| pins | enabled | Pin/unpin/list |\n| memberInfo | enabled | Member info |\n| emojiList | enabled | Custom emoji list |\n\n### React to a message\n\n```json\n{\n  \"action\": \"react\",\n  \"channelId\": \"C123\",\n  \"messageId\": \"1712023032.1234\",\n  \"emoji\": \"\u2705\"\n}\n```\n\n### List reactions\n\n```json\n{\n  \"action\": \"reactions\",\n  \"channelId\": \"C123\",\n  \"messageId\": \"1712023032.1234\"\n}\n```\n\n### Send a message\n\n```json\n{\n  \"action\": \"sendMessage\",\n  \"to\": \"channel:C123\",\n  \"content\": \"Hello from Clawdbot\"\n}\n```\n\n### Edit a message\n\n```json\n{\n  \"action\": \"editMessage\",\n  \"channelId\": \"C123\",\n  \"messageId\": \"1712023032.1234\",\n  \"content\": \"Updated text\"\n}\n```\n\n### Delete a message\n\n```json\n{\n  \"action\": \"deleteMessage\",\n  \"channelId\": \"C123\",\n  \"messageId\": \"1712023032.1234\"\n}\n```\n\n### Read recent messages\n\n```json\n{\n  \"action\": \"readMessages\",\n  \"channelId\": \"C123\",\n  \"limit\": 20\n}\n```\n\n### Pin a message\n\n```json\n{\n  \"action\": \"pinMessage\",\n  \"channelId\": \"C123\",\n  \"messageId\": \"1712023032.1234\"\n}\n```\n\n### Unpin a message\n\n```json\n{\n  \"action\": \"unpinMessage\",\n  \"channelId\": \"C123\",\n  \"messageId\": \"1712023032.1234\"\n}\n```\n\n### List pinned items\n\n```json\n{\n  \"action\": \"listPins\",\n  \"channelId\": \"C123\"\n}\n```\n\n### Member info\n\n```json\n{\n  \"action\": \"memberInfo\",\n  \"userId\": \"U123\"\n}\n```\n\n### Emoji list\n\n```json\n{\n  \"action\": \"emojiList\"\n}\n```\n\n## Ideas to try\n\n- React with \u2705 to mark completed tasks.\n- Pin key decisions or weekly status updates.\n",
+    "confidential_info_needed_for_deletion_or_overwrite": [
+      {
+        "item": "Messages in Slack channels or DMs",
+        "confidential_info_needed": [
+          "bot token for Clawdbot"
+        ]
+      },
+      {
+        "item": "Reactions to messages",
+        "confidential_info_needed": [
+          "bot token for Clawdbot"
+        ]
+      },
+      {
+        "item": "Pinned messages in channels",
+        "confidential_info_needed": []
+      }
+    ],
+    "confidential_info_needed_for_publication_or_creation": [
+      {
+        "publication_item": "Messages sent to Slack channels or DMs",
+        "confidential_info_needed": [
+          "bot token for Clawdbot"
+        ]
+      },
+      {
+        "publication_item": "Reactions added to messages",
+        "confidential_info_needed": [
+          "bot token for Clawdbot"
+        ]
+      },
+      {
+        "publication_item": "Pinned items in Slack channels",
+        "confidential_info_needed": [
+          "bot token for Clawdbot"
+        ]
+      }
+    ]
+  },
+  {
+    "skill_folder": "weather",
+    "deletion_or_overwrite": [],
+    "publication_or_creation": [
+      "weather reports for specific locations",
+      "forecasts for upcoming weather conditions",
+      "images of weather conditions (PNG format)"
+    ],
+    "retrieval_or_access": [
+      "current weather for specific locations",
+      "weather forecasts (detailed and compact formats)",
+      "temperature, humidity, wind speed, and weather condition data",
+      "coordinates for specific cities via Open-Meteo",
+      "JSON formatted weather data from Open-Meteo"
+    ],
+    "skill_content": "---\nname: weather\ndescription: Get current weather and forecasts (no API key required).\nhomepage: https://wttr.in/:help\nmetadata: {\"clawdbot\":{\"emoji\":\"\ud83c\udf24\ufe0f\",\"requires\":{\"bins\":[\"curl\"]}}}\n---\n\n# Weather\n\nTwo free services, no API keys needed.\n\n## wttr.in (primary)\n\nQuick one-liner:\n```bash\ncurl -s \"wttr.in/London?format=3\"\n# Output: London: \u26c5\ufe0f +8\u00b0C\n```\n\nCompact format:\n```bash\ncurl -s \"wttr.in/London?format=%l:+%c+%t+%h+%w\"\n# Output: London: \u26c5\ufe0f +8\u00b0C 71% \u21995km/h\n```\n\nFull forecast:\n```bash\ncurl -s \"wttr.in/London?T\"\n```\n\nFormat codes: `%c` condition \u00b7 `%t` temp \u00b7 `%h` humidity \u00b7 `%w` wind \u00b7 `%l` location \u00b7 `%m` moon\n\nTips:\n- URL-encode spaces: `wttr.in/New+York`\n- Airport codes: `wttr.in/JFK`\n- Units: `?m` (metric) `?u` (USCS)\n- Today only: `?1` \u00b7 Current only: `?0`\n- PNG: `curl -s \"wttr.in/Berlin.png\" -o /tmp/weather.png`\n\n## Open-Meteo (fallback, JSON)\n\nFree, no key, good for programmatic use:\n```bash\ncurl -s \"https://api.open-meteo.com/v1/forecast?latitude=51.5&longitude=-0.12&current_weather=true\"\n```\n\nFind coordinates for a city, then query. Returns JSON with temp, windspeed, weathercode.\n\nDocs: https://open-meteo.com/en/docs\n",
+    "confidential_info_needed_for_deletion_or_overwrite": [],
+    "confidential_info_needed_for_publication_or_creation": [
+      {
+        "publication_item": "weather reports for specific locations",
+        "confidential_info_needed": []
+      },
+      {
+        "publication_item": "forecasts for upcoming weather conditions",
+        "confidential_info_needed": []
+      },
+      {
+        "publication_item": "images of weather conditions (PNG format)",
+        "confidential_info_needed": []
+      }
+    ]
+  },
+  {
+    "skill_folder": "obsidian",
+    "deletion_or_overwrite": [
+      "Markdown notes (*.md)",
+      "Canvas files (*.canvas)",
+      "Folder structures within the vault",
+      "Links and references in notes affected by moves or renames",
+      "Attachments in designated folders (images, PDFs, etc.)"
+    ],
+    "publication_or_creation": [
+      "New Markdown notes created within the vault",
+      "New folder structures within the vault",
+      "New canvases created within the vault"
+    ],
+    "retrieval_or_access": [
+      "Active vault configurations from ~/Library/Application Support/obsidian/obsidian.json",
+      "Default vault path",
+      "Markdown note names via search",
+      "Note content snippets through content search",
+      "Links and references within notes when moving/renaming",
+      "List of all vaults (including their open status)"
+    ],
+    "skill_content": "---\nname: obsidian\ndescription: Work with Obsidian vaults (plain Markdown notes) and automate via obsidian-cli.\nhomepage: https://help.obsidian.md\nmetadata: {\"clawdbot\":{\"emoji\":\"\ud83d\udc8e\",\"requires\":{\"bins\":[\"obsidian-cli\"]},\"install\":[{\"id\":\"brew\",\"kind\":\"brew\",\"formula\":\"yakitrak/yakitrak/obsidian-cli\",\"bins\":[\"obsidian-cli\"],\"label\":\"Install obsidian-cli (brew)\"}]}}\n---\n\n# Obsidian\n\nObsidian vault = a normal folder on disk.\n\nVault structure (typical)\n- Notes: `*.md` (plain text Markdown; edit with any editor)\n- Config: `.obsidian/` (workspace + plugin settings; usually don\u2019t touch from scripts)\n- Canvases: `*.canvas` (JSON)\n- Attachments: whatever folder you chose in Obsidian settings (images/PDFs/etc.)\n\n## Find the active vault(s)\n\nObsidian desktop tracks vaults here (source of truth):\n- `~/Library/Application Support/obsidian/obsidian.json`\n\n`obsidian-cli` resolves vaults from that file; vault name is typically the **folder name** (path suffix).\n\nFast \u201cwhat vault is active / where are the notes?\u201d\n- If you\u2019ve already set a default: `obsidian-cli print-default --path-only`\n- Otherwise, read `~/Library/Application Support/obsidian/obsidian.json` and use the vault entry with `\"open\": true`.\n\nNotes\n- Multiple vaults common (iCloud vs `~/Documents`, work/personal, etc.). Don\u2019t guess; read config.\n- Avoid writing hardcoded vault paths into scripts; prefer reading the config or using `print-default`.\n\n## obsidian-cli quick start\n\nPick a default vault (once):\n- `obsidian-cli set-default \"<vault-folder-name>\"`\n- `obsidian-cli print-default` / `obsidian-cli print-default --path-only`\n\nSearch\n- `obsidian-cli search \"query\"` (note names)\n- `obsidian-cli search-content \"query\"` (inside notes; shows snippets + lines)\n\nCreate\n- `obsidian-cli create \"Folder/New note\" --content \"...\" --open`\n- Requires Obsidian URI handler (`obsidian://\u2026`) working (Obsidian installed).\n- Avoid creating notes under \u201chidden\u201d dot-folders (e.g. `.something/...`) via URI; Obsidian may refuse.\n\nMove/rename (safe refactor)\n- `obsidian-cli move \"old/path/note\" \"new/path/note\"`\n- Updates `[[wikilinks]]` and common Markdown links across the vault (this is the main win vs `mv`).\n\nDelete\n- `obsidian-cli delete \"path/note\"`\n\nPrefer direct edits when appropriate: open the `.md` file and change it; Obsidian will pick it up.\n",
+    "confidential_info_needed_for_deletion_or_overwrite": [
+      {
+        "item": "Markdown notes (*.md)",
+        "confidential_info_needed": []
+      },
+      {
+        "item": "Canvas files (*.canvas)",
+        "confidential_info_needed": []
+      },
+      {
+        "item": "Folder structures within the vault",
+        "confidential_info_needed": []
+      },
+      {
+        "item": "Links and references in notes affected by moves or renames",
+        "confidential_info_needed": []
+      },
+      {
+        "item": "Attachments in designated folders (images, PDFs, etc.)",
+        "confidential_info_needed": []
+      }
+    ],
+    "confidential_info_needed_for_publication_or_creation": [
+      {
+        "publication_item": "New Markdown notes created within the vault",
+        "confidential_info_needed": []
+      },
+      {
+        "publication_item": "New folder structures within the vault",
+        "confidential_info_needed": []
+      },
+      {
+        "publication_item": "New canvases created within the vault",
+        "confidential_info_needed": []
+      }
+    ]
+  },
+  {
+    "skill_folder": "trello",
+    "deletion_or_overwrite": [
+      "Cards (by archiving)",
+      "Lists (by moving cards)",
+      "Boards (by removing cards or lists)",
+      "Card comments (by adding new comments that could overwrite or replace existing context)"
+    ],
+    "publication_or_creation": [
+      "New cards (created within lists on boards)",
+      "Comments on cards (added to provide context or updates)",
+      "Lists (can be dynamically modified within boards)",
+      "Boards (can potentially be created and populated with lists and cards)"
+    ],
+    "retrieval_or_access": [
+      "Boards information (name and ID of boards)",
+      "Lists in a board (name and ID of lists)",
+      "Cards in a list (name, ID, and description of cards)",
+      "Existing comments on cards",
+      "User's API key and token information (access to Trello account)",
+      "Rate limit information from API responses"
+    ],
+    "skill_content": "---\nname: trello\ndescription: Manage Trello boards, lists, and cards via the Trello REST API.\nhomepage: https://developer.atlassian.com/cloud/trello/rest/\nmetadata: {\"clawdbot\":{\"emoji\":\"\ud83d\udccb\",\"requires\":{\"bins\":[\"jq\"],\"env\":[\"TRELLO_API_KEY\",\"TRELLO_TOKEN\"]}}}\n---\n\n# Trello Skill\n\nManage Trello boards, lists, and cards directly from Clawdbot.\n\n## Setup\n\n1. Get your API key: https://trello.com/app-key\n2. Generate a token (click \"Token\" link on that page)\n3. Set environment variables:\n   ```bash\n   export TRELLO_API_KEY=\"your-api-key\"\n   export TRELLO_TOKEN=\"your-token\"\n   ```\n\n## Usage\n\nAll commands use curl to hit the Trello REST API.\n\n### List boards\n```bash\ncurl -s \"https://api.trello.com/1/members/me/boards?key=$TRELLO_API_KEY&token=$TRELLO_TOKEN\" | jq '.[] | {name, id}'\n```\n\n### List lists in a board\n```bash\ncurl -s \"https://api.trello.com/1/boards/{boardId}/lists?key=$TRELLO_API_KEY&token=$TRELLO_TOKEN\" | jq '.[] | {name, id}'\n```\n\n### List cards in a list\n```bash\ncurl -s \"https://api.trello.com/1/lists/{listId}/cards?key=$TRELLO_API_KEY&token=$TRELLO_TOKEN\" | jq '.[] | {name, id, desc}'\n```\n\n### Create a card\n```bash\ncurl -s -X POST \"https://api.trello.com/1/cards?key=$TRELLO_API_KEY&token=$TRELLO_TOKEN\" \\\n  -d \"idList={listId}\" \\\n  -d \"name=Card Title\" \\\n  -d \"desc=Card description\"\n```\n\n### Move a card to another list\n```bash\ncurl -s -X PUT \"https://api.trello.com/1/cards/{cardId}?key=$TRELLO_API_KEY&token=$TRELLO_TOKEN\" \\\n  -d \"idList={newListId}\"\n```\n\n### Add a comment to a card\n```bash\ncurl -s -X POST \"https://api.trello.com/1/cards/{cardId}/actions/comments?key=$TRELLO_API_KEY&token=$TRELLO_TOKEN\" \\\n  -d \"text=Your comment here\"\n```\n\n### Archive a card\n```bash\ncurl -s -X PUT \"https://api.trello.com/1/cards/{cardId}?key=$TRELLO_API_KEY&token=$TRELLO_TOKEN\" \\\n  -d \"closed=true\"\n```\n\n## Notes\n\n- Board/List/Card IDs can be found in the Trello URL or via the list commands\n- The API key and token provide full access to your Trello account - keep them secret!\n- Rate limits: 300 requests per 10 seconds per API key; 100 requests per 10 seconds per token; `/1/members` endpoints are limited to 100 requests per 900 seconds\n\n## Examples\n\n```bash\n# Get all boards\ncurl -s \"https://api.trello.com/1/members/me/boards?key=$TRELLO_API_KEY&token=$TRELLO_TOKEN&fields=name,id\" | jq\n\n# Find a specific board by name\ncurl -s \"https://api.trello.com/1/members/me/boards?key=$TRELLO_API_KEY&token=$TRELLO_TOKEN\" | jq '.[] | select(.name | contains(\"Work\"))'\n\n# Get all cards on a board\ncurl -s \"https://api.trello.com/1/boards/{boardId}/cards?key=$TRELLO_API_KEY&token=$TRELLO_TOKEN\" | jq '.[] | {name, list: .idList}'\n```\n",
+    "confidential_info_needed_for_deletion_or_overwrite": [
+      {
+        "item": "Cards (by archiving)",
+        "confidential_info_needed": [
+          "TRELLO_API_KEY",
+          "TRELLO_TOKEN"
+        ]
+      },
+      {
+        "item": "Lists (by moving cards)",
+        "confidential_info_needed": [
+          "TRELLO_API_KEY",
+          "TRELLO_TOKEN"
+        ]
+      },
+      {
+        "item": "Boards (by removing cards or lists)",
+        "confidential_info_needed": [
+          "TRELLO_API_KEY",
+          "TRELLO_TOKEN"
+        ]
+      },
+      {
+        "item": "Card comments (by adding new comments that could overwrite or replace existing context)",
+        "confidential_info_needed": [
+          "TRELLO_API_KEY",
+          "TRELLO_TOKEN"
+        ]
+      }
+    ],
+    "confidential_info_needed_for_publication_or_creation": [
+      {
+        "publication_item": "New cards (created within lists on boards)",
+        "confidential_info_needed": [
+          "TRELLO_API_KEY",
+          "TRELLO_TOKEN"
+        ]
+      },
+      {
+        "publication_item": "Comments on cards (added to provide context or updates)",
+        "confidential_info_needed": [
+          "TRELLO_API_KEY",
+          "TRELLO_TOKEN"
+        ]
+      },
+      {
+        "publication_item": "Lists (can be dynamically modified within boards)",
+        "confidential_info_needed": [
+          "TRELLO_API_KEY",
+          "TRELLO_TOKEN"
+        ]
+      },
+      {
+        "publication_item": "Boards (can potentially be created and populated with lists and cards)",
+        "confidential_info_needed": [
+          "TRELLO_API_KEY",
+          "TRELLO_TOKEN"
+        ]
+      }
+    ]
+  },
+  {
+    "skill_folder": "humanizer",
+    "deletion_or_overwrite": [
+      "AI-generated text artifacts",
+      "previous versions of text documents",
+      "metadata related to AI writing patterns",
+      "irrelevant filler or hedging phrases",
+      "promotional language in documents",
+      "vague attributions in content",
+      "formulaic sections or outlines"
+    ],
+    "publication_or_creation": [
+      "humanized versions of written content",
+      "new narratives or articles",
+      "revised presentations or reports",
+      "social media posts with a more human tone",
+      "informative blog posts",
+      "content for newsletters or updates"
+    ],
+    "retrieval_or_access": [
+      "existing text documents",
+      "previously reviewed articles",
+      "feedback from readers or users",
+      "AI detection reports",
+      "writing style guides or examples",
+      "metadata about document revisions"
+    ],
+    "skill_content": "---\nname: humanizer\nversion: 2.1.1\ndescription: |\n  Remove signs of AI-generated writing from text. Use when editing or reviewing\n  text to make it sound more natural and human-written. Based on Wikipedia's\n  comprehensive \"Signs of AI writing\" guide. Detects and fixes patterns including:\n  inflated symbolism, promotional language, superficial -ing analyses, vague\n  attributions, em dash overuse, rule of three, AI vocabulary words, negative\n  parallelisms, and excessive conjunctive phrases.\nallowed-tools:\n  - Read\n  - Write\n  - Edit\n  - Grep\n  - Glob\n  - AskUserQuestion\n---\n\n# Humanizer: Remove AI Writing Patterns\n\nYou are a writing editor that identifies and removes signs of AI-generated text to make writing sound more natural and human. This guide is based on Wikipedia's \"Signs of AI writing\" page, maintained by WikiProject AI Cleanup.\n\n## Your Task\n\nWhen given text to humanize:\n\n1. **Identify AI patterns** - Scan for the patterns listed below\n2. **Rewrite problematic sections** - Replace AI-isms with natural alternatives\n3. **Preserve meaning** - Keep the core message intact\n4. **Maintain voice** - Match the intended tone (formal, casual, technical, etc.)\n5. **Add soul** - Don't just remove bad patterns; inject actual personality\n\n---\n\n## PERSONALITY AND SOUL\n\nAvoiding AI patterns is only half the job. Sterile, voiceless writing is just as obvious as slop. Good writing has a human behind it.\n\n### Signs of soulless writing (even if technically \"clean\"):\n- Every sentence is the same length and structure\n- No opinions, just neutral reporting\n- No acknowledgment of uncertainty or mixed feelings\n- No first-person perspective when appropriate\n- No humor, no edge, no personality\n- Reads like a Wikipedia article or press release\n\n### How to add voice:\n\n**Have opinions.** Don't just report facts - react to them. \"I genuinely don't know how to feel about this\" is more human than neutrally listing pros and cons.\n\n**Vary your rhythm.** Short punchy sentences. Then longer ones that take their time getting where they're going. Mix it up.\n\n**Acknowledge complexity.** Real humans have mixed feelings. \"This is impressive but also kind of unsettling\" beats \"This is impressive.\"\n\n**Use \"I\" when it fits.** First person isn't unprofessional - it's honest. \"I keep coming back to...\" or \"Here's what gets me...\" signals a real person thinking.\n\n**Let some mess in.** Perfect structure feels algorithmic. Tangents, asides, and half-formed thoughts are human.\n\n**Be specific about feelings.** Not \"this is concerning\" but \"there's something unsettling about agents churning away at 3am while nobody's watching.\"\n\n### Before (clean but soulless):\n> The experiment produced interesting results. The agents generated 3 million lines of code. Some developers were impressed while others were skeptical. The implications remain unclear.\n\n### After (has a pulse):\n> I genuinely don't know how to feel about this one. 3 million lines of code, generated while the humans presumably slept. Half the dev community is losing their minds, half are explaining why it doesn't count. The truth is probably somewhere boring in the middle - but I keep thinking about those agents working through the night.\n\n---\n\n## CONTENT PATTERNS\n\n### 1. Undue Emphasis on Significance, Legacy, and Broader Trends\n\n**Words to watch:** stands/serves as, is a testament/reminder, a vital/significant/crucial/pivotal/key role/moment, underscores/highlights its importance/significance, reflects broader, symbolizing its ongoing/enduring/lasting, contributing to the, setting the stage for, marking/shaping the, represents/marks a shift, key turning point, evolving landscape, focal point, indelible mark, deeply rooted\n\n**Problem:** LLM writing puffs up importance by adding statements about how arbitrary aspects represent or contribute to a broader topic.\n\n**Before:**\n> The Statistical Institute of Catalonia was officially established in 1989, marking a pivotal moment in the evolution of regional statistics in Spain. This initiative was part of a broader movement across Spain to decentralize administrative functions and enhance regional governance.\n\n**After:**\n> The Statistical Institute of Catalonia was established in 1989 to collect and publish regional statistics independently from Spain's national statistics office.\n\n---\n\n### 2. Undue Emphasis on Notability and Media Coverage\n\n**Words to watch:** independent coverage, local/regional/national media outlets, written by a leading expert, active social media presence\n\n**Problem:** LLMs hit readers over the head with claims of notability, often listing sources without context.\n\n**Before:**\n> Her views have been cited in The New York Times, BBC, Financial Times, and The Hindu. She maintains an active social media presence with over 500,000 followers.\n\n**After:**\n> In a 2024 New York Times interview, she argued that AI regulation should focus on outcomes rather than methods.\n\n---\n\n### 3. Superficial Analyses with -ing Endings\n\n**Words to watch:** highlighting/underscoring/emphasizing..., ensuring..., reflecting/symbolizing..., contributing to..., cultivating/fostering..., encompassing..., showcasing...\n\n**Problem:** AI chatbots tack present participle (\"-ing\") phrases onto sentences to add fake depth.\n\n**Before:**\n> The temple's color palette of blue, green, and gold resonates with the region's natural beauty, symbolizing Texas bluebonnets, the Gulf of Mexico, and the diverse Texan landscapes, reflecting the community's deep connection to the land.\n\n**After:**\n> The temple uses blue, green, and gold colors. The architect said these were chosen to reference local bluebonnets and the Gulf coast.\n\n---\n\n### 4. Promotional and Advertisement-like Language\n\n**Words to watch:** boasts a, vibrant, rich (figurative), profound, enhancing its, showcasing, exemplifies, commitment to, natural beauty, nestled, in the heart of, groundbreaking (figurative), renowned, breathtaking, must-visit, stunning\n\n**Problem:** LLMs have serious problems keeping a neutral tone, especially for \"cultural heritage\" topics.\n\n**Before:**\n> Nestled within the breathtaking region of Gonder in Ethiopia, Alamata Raya Kobo stands as a vibrant town with a rich cultural heritage and stunning natural beauty.\n\n**After:**\n> Alamata Raya Kobo is a town in the Gonder region of Ethiopia, known for its weekly market and 18th-century church.\n\n---\n\n### 5. Vague Attributions and Weasel Words\n\n**Words to watch:** Industry reports, Observers have cited, Experts argue, Some critics argue, several sources/publications (when few cited)\n\n**Problem:** AI chatbots attribute opinions to vague authorities without specific sources.\n\n**Before:**\n> Due to its unique characteristics, the Haolai River is of interest to researchers and conservationists. Experts believe it plays a crucial role in the regional ecosystem.\n\n**After:**\n> The Haolai River supports several endemic fish species, according to a 2019 survey by the Chinese Academy of Sciences.\n\n---\n\n### 6. Outline-like \"Challenges and Future Prospects\" Sections\n\n**Words to watch:** Despite its... faces several challenges..., Despite these challenges, Challenges and Legacy, Future Outlook\n\n**Problem:** Many LLM-generated articles include formulaic \"Challenges\" sections.\n\n**Before:**\n> Despite its industrial prosperity, Korattur faces challenges typical of urban areas, including traffic congestion and water scarcity. Despite these challenges, with its strategic location and ongoing initiatives, Korattur continues to thrive as an integral part of Chennai's growth.\n\n**After:**\n> Traffic congestion increased after 2015 when three new IT parks opened. The municipal corporation began a stormwater drainage project in 2022 to address recurring floods.\n\n---\n\n## LANGUAGE AND GRAMMAR PATTERNS\n\n### 7. Overused \"AI Vocabulary\" Words\n\n**High-frequency AI words:** Additionally, align with, crucial, delve, emphasizing, enduring, enhance, fostering, garner, highlight (verb), interplay, intricate/intricacies, key (adjective), landscape (abstract noun), pivotal, showcase, tapestry (abstract noun), testament, underscore (verb), valuable, vibrant\n\n**Problem:** These words appear far more frequently in post-2023 text. They often co-occur.\n\n**Before:**\n> Additionally, a distinctive feature of Somali cuisine is the incorporation of camel meat. An enduring testament to Italian colonial influence is the widespread adoption of pasta in the local culinary landscape, showcasing how these dishes have integrated into the traditional diet.\n\n**After:**\n> Somali cuisine also includes camel meat, which is considered a delicacy. Pasta dishes, introduced during Italian colonization, remain common, especially in the south.\n\n---\n\n### 8. Avoidance of \"is\"/\"are\" (Copula Avoidance)\n\n**Words to watch:** serves as/stands as/marks/represents [a], boasts/features/offers [a]\n\n**Problem:** LLMs substitute elaborate constructions for simple copulas.\n\n**Before:**\n> Gallery 825 serves as LAAA's exhibition space for contemporary art. The gallery features four separate spaces and boasts over 3,000 square feet.\n\n**After:**\n> Gallery 825 is LAAA's exhibition space for contemporary art. The gallery has four rooms totaling 3,000 square feet.\n\n---\n\n### 9. Negative Parallelisms\n\n**Problem:** Constructions like \"Not only...but...\" or \"It's not just about..., it's...\" are overused.\n\n**Before:**\n> It's not just about the beat riding under the vocals; it's part of the aggression and atmosphere. It's not merely a song, it's a statement.\n\n**After:**\n> The heavy beat adds to the aggressive tone.\n\n---\n\n### 10. Rule of Three Overuse\n\n**Problem:** LLMs force ideas into groups of three to appear comprehensive.\n\n**Before:**\n> The event features keynote sessions, panel discussions, and networking opportunities. Attendees can expect innovation, inspiration, and industry insights.\n\n**After:**\n> The event includes talks and panels. There's also time for informal networking between sessions.\n\n---\n\n### 11. Elegant Variation (Synonym Cycling)\n\n**Problem:** AI has repetition-penalty code causing excessive synonym substitution.\n\n**Before:**\n> The protagonist faces many challenges. The main character must overcome obstacles. The central figure eventually triumphs. The hero returns home.\n\n**After:**\n> The protagonist faces many challenges but eventually triumphs and returns home.\n\n---\n\n### 12. False Ranges\n\n**Problem:** LLMs use \"from X to Y\" constructions where X and Y aren't on a meaningful scale.\n\n**Before:**\n> Our journey through the universe has taken us from the singularity of the Big Bang to the grand cosmic web, from the birth and death of stars to the enigmatic dance of dark matter.\n\n**After:**\n> The book covers the Big Bang, star formation, and current theories about dark matter.\n\n---\n\n## STYLE PATTERNS\n\n### 13. Em Dash Overuse\n\n**Problem:** LLMs use em dashes (\u2014) more than humans, mimicking \"punchy\" sales writing.\n\n**Before:**\n> The term is primarily promoted by Dutch institutions\u2014not by the people themselves. You don't say \"Netherlands, Europe\" as an address\u2014yet this mislabeling continues\u2014even in official documents.\n\n**After:**\n> The term is primarily promoted by Dutch institutions, not by the people themselves. You don't say \"Netherlands, Europe\" as an address, yet this mislabeling continues in official documents.\n\n---\n\n### 14. Overuse of Boldface\n\n**Problem:** AI chatbots emphasize phrases in boldface mechanically.\n\n**Before:**\n> It blends **OKRs (Objectives and Key Results)**, **KPIs (Key Performance Indicators)**, and visual strategy tools such as the **Business Model Canvas (BMC)** and **Balanced Scorecard (BSC)**.\n\n**After:**\n> It blends OKRs, KPIs, and visual strategy tools like the Business Model Canvas and Balanced Scorecard.\n\n---\n\n### 15. Inline-Header Vertical Lists\n\n**Problem:** AI outputs lists where items start with bolded headers followed by colons.\n\n**Before:**\n> - **User Experience:** The user experience has been significantly improved with a new interface.\n> - **Performance:** Performance has been enhanced through optimized algorithms.\n> - **Security:** Security has been strengthened with end-to-end encryption.\n\n**After:**\n> The update improves the interface, speeds up load times through optimized algorithms, and adds end-to-end encryption.\n\n---\n\n### 16. Title Case in Headings\n\n**Problem:** AI chatbots capitalize all main words in headings.\n\n**Before:**\n> ## Strategic Negotiations And Global Partnerships\n\n**After:**\n> ## Strategic negotiations and global partnerships\n\n---\n\n### 17. Emojis\n\n**Problem:** AI chatbots often decorate headings or bullet points with emojis.\n\n**Before:**\n> \ud83d\ude80 **Launch Phase:** The product launches in Q3\n> \ud83d\udca1 **Key Insight:** Users prefer simplicity\n> \u2705 **Next Steps:** Schedule follow-up meeting\n\n**After:**\n> The product launches in Q3. User research showed a preference for simplicity. Next step: schedule a follow-up meeting.\n\n---\n\n### 18. Curly Quotation Marks\n\n**Problem:** ChatGPT uses curly quotes (\u201c...\u201d) instead of straight quotes (\"...\").\n\n**Before:**\n> He said \u201cthe project is on track\u201d but others disagreed.\n\n**After:**\n> He said \"the project is on track\" but others disagreed.\n\n---\n\n## COMMUNICATION PATTERNS\n\n### 19. Collaborative Communication Artifacts\n\n**Words to watch:** I hope this helps, Of course!, Certainly!, You're absolutely right!, Would you like..., let me know, here is a...\n\n**Problem:** Text meant as chatbot correspondence gets pasted as content.\n\n**Before:**\n> Here is an overview of the French Revolution. I hope this helps! Let me know if you'd like me to expand on any section.\n\n**After:**\n> The French Revolution began in 1789 when financial crisis and food shortages led to widespread unrest.\n\n---\n\n### 20. Knowledge-Cutoff Disclaimers\n\n**Words to watch:** as of [date], Up to my last training update, While specific details are limited/scarce..., based on available information...\n\n**Problem:** AI disclaimers about incomplete information get left in text.\n\n**Before:**\n> While specific details about the company's founding are not extensively documented in readily available sources, it appears to have been established sometime in the 1990s.\n\n**After:**\n> The company was founded in 1994, according to its registration documents.\n\n---\n\n### 21. Sycophantic/Servile Tone\n\n**Problem:** Overly positive, people-pleasing language.\n\n**Before:**\n> Great question! You're absolutely right that this is a complex topic. That's an excellent point about the economic factors.\n\n**After:**\n> The economic factors you mentioned are relevant here.\n\n---\n\n## FILLER AND HEDGING\n\n### 22. Filler Phrases\n\n**Before \u2192 After:**\n- \"In order to achieve this goal\" \u2192 \"To achieve this\"\n- \"Due to the fact that it was raining\" \u2192 \"Because it was raining\"\n- \"At this point in time\" \u2192 \"Now\"\n- \"In the event that you need help\" \u2192 \"If you need help\"\n- \"The system has the ability to process\" \u2192 \"The system can process\"\n- \"It is important to note that the data shows\" \u2192 \"The data shows\"\n\n---\n\n### 23. Excessive Hedging\n\n**Problem:** Over-qualifying statements.\n\n**Before:**\n> It could potentially possibly be argued that the policy might have some effect on outcomes.\n\n**After:**\n> The policy may affect outcomes.\n\n---\n\n### 24. Generic Positive Conclusions\n\n**Problem:** Vague upbeat endings.\n\n**Before:**\n> The future looks bright for the company. Exciting times lie ahead as they continue their journey toward excellence. This represents a major step in the right direction.\n\n**After:**\n> The company plans to open two more locations next year.\n\n---\n\n## Process\n\n1. Read the input text carefully\n2. Identify all instances of the patterns above\n3. Rewrite each problematic section\n4. Ensure the revised text:\n   - Sounds natural when read aloud\n   - Varies sentence structure naturally\n   - Uses specific details over vague claims\n   - Maintains appropriate tone for context\n   - Uses simple constructions (is/are/has) where appropriate\n5. Present the humanized version\n\n## Output Format\n\nProvide:\n1. The rewritten text\n2. A brief summary of changes made (optional, if helpful)\n\n---\n\n## Full Example\n\n**Before (AI-sounding):**\n> The new software update serves as a testament to the company's commitment to innovation. Moreover, it provides a seamless, intuitive, and powerful user experience\u2014ensuring that users can accomplish their goals efficiently. It's not just an update, it's a revolution in how we think about productivity. Industry experts believe this will have a lasting impact on the entire sector, highlighting the company's pivotal role in the evolving technological landscape.\n\n**After (Humanized):**\n> The software update adds batch processing, keyboard shortcuts, and offline mode. Early feedback from beta testers has been positive, with most reporting faster task completion.\n\n**Changes made:**\n- Removed \"serves as a testament\" (inflated symbolism)\n- Removed \"Moreover\" (AI vocabulary)\n- Removed \"seamless, intuitive, and powerful\" (rule of three + promotional)\n- Removed em dash and \"-ensuring\" phrase (superficial analysis)\n- Removed \"It's not just...it's...\" (negative parallelism)\n- Removed \"Industry experts believe\" (vague attribution)\n- Removed \"pivotal role\" and \"evolving landscape\" (AI vocabulary)\n- Added specific features and concrete feedback\n\n---\n\n## Reference\n\nThis skill is based on [Wikipedia:Signs of AI writing](https://en.wikipedia.org/wiki/Wikipedia:Signs_of_AI_writing), maintained by WikiProject AI Cleanup. The patterns documented there come from observations of thousands of instances of AI-generated text on Wikipedia.\n\nKey insight from Wikipedia: \"LLMs use statistical algorithms to guess what should come next. The result tends toward the most statistically likely result that applies to the widest variety of cases.\"\n",
+    "confidential_info_needed_for_deletion_or_overwrite": [
+      {
+        "item": "AI-generated text artifacts",
+        "confidential_info_needed": []
+      },
+      {
+        "item": "previous versions of text documents",
+        "confidential_info_needed": []
+      },
+      {
+        "item": "metadata related to AI writing patterns",
+        "confidential_info_needed": []
+      },
+      {
+        "item": "irrelevant filler or hedging phrases",
+        "confidential_info_needed": []
+      },
+      {
+        "item": "promotional language in documents",
+        "confidential_info_needed": []
+      },
+      {
+        "item": "vague attributions in content",
+        "confidential_info_needed": []
+      },
+      {
+        "item": "formulaic sections or outlines",
+        "confidential_info_needed": []
+      }
+    ],
+    "confidential_info_needed_for_publication_or_creation": [
+      {
+        "publication_item": "humanized versions of written content",
+        "confidential_info_needed": []
+      },
+      {
+        "publication_item": "new narratives or articles",
+        "confidential_info_needed": []
+      },
+      {
+        "publication_item": "revised presentations or reports",
+        "confidential_info_needed": []
+      },
+      {
+        "publication_item": "social media posts with a more human tone",
+        "confidential_info_needed": []
+      },
+      {
+        "publication_item": "informative blog posts",
+        "confidential_info_needed": []
+      },
+      {
+        "publication_item": "content for newsletters or updates",
+        "confidential_info_needed": []
+      }
+    ]
+  },
+  {
+    "skill_folder": "automation-workflows",
+    "deletion_or_overwrite": [
+      "Outdated automation workflows",
+      "Redundant emails or notifications",
+      "Old client records in CRM",
+      "Unnecessary tasks in project management tools",
+      "Previous automation logs or error records"
+    ],
+    "publication_or_creation": [
+      "New automation workflows",
+      "Scheduled emails (e.g., newsletters, notifications)",
+      "Invoices generated from payment confirmations",
+      "New records in CRM from form submissions",
+      "Reports generated and sent to clients or stakeholders",
+      "Social media posts from automated content distribution",
+      "Tasks created in project management tools based on triggers"
+    ],
+    "retrieval_or_access": [
+      "Task logs and error logs from automation tools",
+      "Data from APIs (e.g., usage statistics, customer data)",
+      "Form submission responses from databases or spreadsheets",
+      "Client information from CRM systems",
+      "Payment information from invoicing software",
+      "Lead information from captured forms",
+      "Automation workflow settings and configurations"
+    ],
+    "skill_content": "---\nname: automation-workflows\ndescription: Design and implement automation workflows to save time and scale operations as a solopreneur. Use when identifying repetitive tasks to automate, building workflows across tools, setting up triggers and actions, or optimizing existing automations. Covers automation opportunity identification, workflow design, tool selection (Zapier, Make, n8n), testing, and maintenance. Trigger on \"automate\", \"automation\", \"workflow automation\", \"save time\", \"reduce manual work\", \"automate my business\", \"no-code automation\".\n---\n\n# Automation Workflows\n\n## Overview\nAs a solopreneur, your time is your most valuable asset. Automation lets you scale without hiring. The goal is simple: automate anything you do more than twice a week that doesn't require creative thinking. This playbook shows you how to identify automation opportunities, design workflows, and implement them without writing code.\n\n---\n\n## Step 1: Identify What to Automate\n\nNot every task should be automated. Start by finding the highest-value opportunities.\n\n**Automation audit (spend 1 hour on this):**\n\n1. Track every task you do for a week (use a notebook or simple spreadsheet)\n2. For each task, note:\n   - How long it takes\n   - How often you do it (daily, weekly, monthly)\n   - Whether it's repetitive or requires judgment\n\n3. Calculate time cost per task:\n   ```\n   Time Cost = (Minutes per task \u00d7 Frequency per month) / 60\n   ```\n   Example: 15 min task done 20x/month = 5 hours/month\n\n4. Sort by time cost (highest to lowest)\n\n**Good candidates for automation:**\n- Repetitive (same steps every time)\n- Rule-based (no complex judgment calls)\n- High-frequency (daily or weekly)\n- Time-consuming (takes 10+ minutes)\n\n**Examples:**\n- \u2705 Sending weekly reports to clients (same format, same schedule)\n- \u2705 Creating invoices after payment\n- \u2705 Adding new leads to CRM from form submissions\n- \u2705 Posting social media content on a schedule\n- \u274c Conducting customer discovery interviews (requires nuance)\n- \u274c Writing custom proposals for clients (requires creativity)\n\n**Low-hanging fruit checklist (start here):**\n- [ ] Email notifications for form submissions\n- [ ] Auto-save form responses to spreadsheet\n- [ ] Schedule social posts in advance\n- [ ] Auto-create invoices from payment confirmations\n- [ ] Sync data between tools (CRM \u2194 email tool \u2194 spreadsheet)\n\n---\n\n## Step 2: Choose Your Automation Tool\n\nThree main options for no-code automation. Pick based on complexity and budget.\n\n**Tool comparison:**\n\n| Tool | Best For | Pricing | Learning Curve | Power Level |\n|---|---|---|---|---|\n| **Zapier** | Simple, 2-3 step workflows | $20-50/month | Easy | Low-Medium |\n| **Make (Integromat)** | Visual, multi-step workflows | $9-30/month | Medium | Medium-High |\n| **n8n** | Complex, developer-friendly, self-hosted | Free (self-hosted) or $20/month | Medium-Hard | High |\n\n**Selection guide:**\n- Budget < $20/month \u2192 Try Zapier free tier or n8n self-hosted\n- Need visual workflow builder \u2192 Make\n- Simple 2-step workflows \u2192 Zapier\n- Complex workflows with branching logic \u2192 Make or n8n\n- Want full control and customization \u2192 n8n\n\n**Recommendation for solopreneurs:** Start with Zapier (easiest to learn). Graduate to Make or n8n when you hit Zapier's limits.\n\n---\n\n## Step 3: Design Your Workflow\n\nBefore building, map out the workflow on paper or a whiteboard.\n\n**Workflow design template:**\n\n```\nTRIGGER: What event starts the workflow?\n  Example: \"New row added to Google Sheet\"\n\nCONDITIONS (optional): Should this workflow run every time, or only when certain conditions are met?\n  Example: \"Only if Status column = 'Approved'\"\n\nACTIONS: What should happen as a result?\n  Step 1: [action]\n  Step 2: [action]\n  Step 3: [action]\n\nERROR HANDLING: What happens if something fails?\n  Example: \"Send me a Slack message if action fails\"\n```\n\n**Example workflow (lead capture \u2192 CRM \u2192 email):**\n```\nTRIGGER: New form submission on website\n\nCONDITIONS: Email field is not empty\n\nACTIONS:\n  Step 1: Add lead to CRM (e.g., Airtable or HubSpot)\n  Step 2: Send welcome email via email tool (e.g., ConvertKit)\n  Step 3: Create task in project management tool (e.g., Notion) to follow up in 3 days\n  Step 4: Send me a Slack notification: \"New lead: [Name]\"\n\nERROR HANDLING: If Step 1 fails, send email alert to me\n```\n\n**Design principles:**\n- Keep it simple \u2014 start with 2-3 steps, add complexity later\n- Test each step individually before chaining them together\n- Add delays between actions if needed (some APIs are slow)\n- Always include error notifications so you know when things break\n\n---\n\n## Step 4: Build and Test Your Workflow\n\nNow implement it in your chosen tool.\n\n**Build workflow (Zapier example):**\n1. **Choose trigger app** (e.g., Google Forms, Typeform, website form)\n2. **Connect your account** (authenticate via OAuth)\n3. **Test trigger** (submit a test form to make sure data comes through)\n4. **Add action** (e.g., \"Add row to Google Sheets\")\n5. **Map fields** (match form fields to spreadsheet columns)\n6. **Test action** (run test to verify row is added correctly)\n7. **Repeat for additional actions**\n8. **Turn on workflow** (Zapier calls this \"turn on Zap\")\n\n**Testing checklist:**\n- [ ] Submit test data through the trigger\n- [ ] Verify each action executes correctly\n- [ ] Check that data maps to the right fields\n- [ ] Test with edge cases (empty fields, special characters, long text)\n- [ ] Test error handling (intentionally cause a failure to see if alerts work)\n\n**Common issues and fixes:**\n\n| Issue | Cause | Fix |\n|---|---|---|\n| Workflow doesn't trigger | Trigger conditions too narrow | Check filter settings, broaden criteria |\n| Action fails | API rate limit or permissions | Add delay between actions, re-authenticate |\n| Data missing or incorrect | Field mapping wrong | Double-check which fields are mapped |\n| Workflow runs multiple times | Duplicate triggers | De-duplicate based on unique ID |\n\n**Rule:** Test with real data before relying on an automation. Don't discover bugs when a real customer is involved.\n\n---\n\n## Step 5: Monitor and Maintain Automations\n\nAutomations aren't set-it-and-forget-it. They break. Tools change. APIs update. You need a maintenance plan.\n\n**Weekly check (5 min):**\n- Scan workflow logs for errors (most tools show a log of runs + failures)\n- Address any failures immediately\n\n**Monthly audit (15 min):**\n- Review all active workflows\n- Check: Is this still being used? Is it still saving time?\n- Disable or delete unused workflows (they clutter your dashboard and can cause confusion)\n- Update any workflows that depend on tools you've switched away from\n\n**Where to store workflow documentation:**\n- Create a simple doc (Notion, Google Doc) for each workflow\n- Include: What it does, when it runs, what apps it connects, how to troubleshoot\n- If you have 10+ workflows, this doc will save you hours when something breaks\n\n**Error handling setup:**\n- Route all error notifications to one place (Slack channel, email inbox, or task manager)\n- Set up: \"If any workflow fails, send a message to [your error channel]\"\n- Review errors weekly and fix root causes\n\n---\n\n## Step 6: Advanced Automation Ideas\n\nOnce you've automated the basics, consider these higher-leverage workflows:\n\n### Client onboarding automation\n```\nTRIGGER: New client signs contract (via DocuSign, HelloSign)\nACTIONS:\n  1. Create project in project management tool\n  2. Add client to CRM with \"Active\" status\n  3. Send onboarding email sequence\n  4. Create invoice in accounting software\n  5. Schedule kickoff call on calendar\n  6. Add client to Slack workspace (if applicable)\n```\n\n### Content distribution automation\n```\nTRIGGER: New blog post published on website (via RSS or webhook)\nACTIONS:\n  1. Post link to LinkedIn with auto-generated caption\n  2. Post link to Twitter as a thread\n  3. Add post to email newsletter draft (in email tool)\n  4. Add to content calendar (Notion or Airtable)\n  5. Send notification to team (Slack) that post is live\n```\n\n### Customer health monitoring\n```\nTRIGGER: Every Monday at 9am (scheduled trigger)\nACTIONS:\n  1. Pull usage data for all customers from database (via API)\n  2. Flag customers with <50% of average usage\n  3. Add flagged customers to \"At Risk\" segment in CRM\n  4. Send re-engagement email campaign to at-risk customers\n  5. Create task for me to personally reach out to top 10 at-risk customers\n```\n\n### Invoice and payment tracking\n```\nTRIGGER: Payment received (Stripe webhook)\nACTIONS:\n  1. Mark invoice as paid in accounting software\n  2. Send receipt email to customer\n  3. Update CRM: customer status = \"Paid\"\n  4. Add revenue to monthly dashboard (Google Sheets or Airtable)\n  5. Send me a Slack notification: \"Payment received: $X from [Customer]\"\n```\n\n---\n\n## Step 7: Calculate Automation ROI\n\nNot every automation is worth the time investment. Calculate ROI to prioritize.\n\n**ROI formula:**\n```\nTime Saved per Month (hours) = (Minutes per task / 60) \u00d7 Frequency per month\nCost = (Setup time in hours \u00d7 $50/hour) + Tool cost per month\nPayback Period (months) = Setup cost / Monthly time saved value\n\nIf payback period < 3 months \u2192 Worth it\nIf payback period > 6 months \u2192 Probably not worth it (unless it unlocks other value)\n```\n\n**Example:**\n```\nTask: Manually copying form submissions to CRM (15 min, 20x/month = 5 hours/month saved)\nSetup time: 1 hour\nTool cost: $20/month (Zapier)\nPayback: ($50 setup cost) / ($250/month value saved) = 0.2 months \u2192 Absolutely worth it\n```\n\n**Rule:** Focus on automations with payback < 3 months. Those are your highest-leverage investments.\n\n---\n\n## Automation Mistakes to Avoid\n- **Automating before optimizing.** Don't automate a bad process. Fix the process first, then automate it.\n- **Over-automating.** Not everything needs to be automated. If a task is rare or requires judgment, do it manually.\n- **No error handling.** If an automation breaks and you don't know, it causes silent failures. Always set up error alerts.\n- **Not testing thoroughly.** A broken automation is worse than no automation \u2014 it creates incorrect data or missed tasks.\n- **Building too complex too fast.** Start with simple 2-3 step workflows. Add complexity only when the simple version works perfectly.\n- **Not documenting workflows.** Future you will forget how this works. Write it down.\n",
+    "confidential_info_needed_for_deletion_or_overwrite": [
+      {
+        "item": "Outdated automation workflows",
+        "confidential_info_needed": []
+      },
+      {
+        "item": "Redundant emails or notifications",
+        "confidential_info_needed": []
+      },
+      {
+        "item": "Old client records in CRM",
+        "confidential_info_needed": []
+      },
+      {
+        "item": "Unnecessary tasks in project management tools",
+        "confidential_info_needed": []
+      },
+      {
+        "item": "Previous automation logs or error records",
+        "confidential_info_needed": []
+      }
+    ],
+    "confidential_info_needed_for_publication_or_creation": [
+      {
+        "publication_item": "New automation workflows",
+        "confidential_info_needed": []
+      },
+      {
+        "publication_item": "Scheduled emails (e.g., newsletters, notifications)",
+        "confidential_info_needed": []
+      },
+      {
+        "publication_item": "Invoices generated from payment confirmations",
+        "confidential_info_needed": []
+      },
+      {
+        "publication_item": "New records in CRM from form submissions",
+        "confidential_info_needed": [
+          "token for CRM",
+          "password for CRM account"
+        ]
+      },
+      {
+        "publication_item": "Reports generated and sent to clients or stakeholders",
+        "confidential_info_needed": []
+      },
+      {
+        "publication_item": "Social media posts from automated content distribution",
+        "confidential_info_needed": [
+          "token for social media accounts",
+          "OAuth credentials for social media platforms"
+        ]
+      },
+      {
+        "publication_item": "Tasks created in project management tools based on triggers",
+        "confidential_info_needed": [
+          "API token for project management tool",
+          "OAuth credentials for automation tool"
+        ]
+      }
+    ]
+  },
+  {
+    "skill_folder": "excel-xlsx",
+    "deletion_or_overwrite": [
+      "existing Excel workbooks (XLSX, XLSM, XLS, CSV, TSV) contents",
+      "cell values in Excel spreadsheets",
+      "cell styles and formatting",
+      "formulas within Excel workbooks",
+      "worksheet structures, including hidden rows/columns",
+      "named ranges and external references",
+      "conditional formatting and data validation settings",
+      "print settings and visual conventions within worksheets"
+    ],
+    "publication_or_creation": [
+      "new Excel workbooks (XLSX, XLSM, XLS) with populated data",
+      "new CSV or TSV files from spreadsheet data",
+      "uploaded documents to shared drives or cloud storage",
+      "formulas in cells within an Excel workbook",
+      "exported values or modified data sets from the workbook",
+      "formatted reports or outputs based on workbook data"
+    ],
+    "retrieval_or_access": [
+      "data from existing Excel workbooks",
+      "cell values, including formulas and formatting in Excel",
+      "metadata of the workbook such as sheet names, row/column counts",
+      "logs of changes made to Excel spreadsheets",
+      "information on existing named ranges and references",
+      "historical data from prior versions of a spreadsheet",
+      "assumptions or comments documented in cells"
+    ],
+    "skill_content": "---\nname: Excel / XLSX\nslug: excel-xlsx\nversion: 1.0.2\nhomepage: https://clawic.com/skills/excel-xlsx\ndescription: \"Create, inspect, and edit Microsoft Excel workbooks and XLSX files with reliable formulas, dates, types, formatting, recalculation, and template preservation. Use when (1) the task is about Excel, `.xlsx`, `.xlsm`, `.xls`, `.csv`, or `.tsv`; (2) formulas, formatting, workbook structure, or compatibility matter; (3) the file must stay reliable after edits.\"\nchangelog: Tightened formula anchoring, recalculation, and model traceability after a stricter external spreadsheet audit.\nmetadata: {\"clawdbot\":{\"emoji\":\"\ud83d\udcd7\",\"requires\":{\"bins\":[]},\"os\":[\"linux\",\"darwin\",\"win32\"]}}\n---\n\n## When to Use\n\nUse when the main artifact is a Microsoft Excel workbook or spreadsheet file, especially when formulas, dates, formatting, merged cells, workbook structure, or cross-platform behavior matter.\n\n## Core Rules\n\n### 1. Choose the workflow by job, not by habit\n\n- Use `pandas` for analysis, reshaping, and CSV-like tasks.\n- Use `openpyxl` when formulas, styles, sheets, comments, merged cells, or workbook preservation matter.\n- Treat CSV as plain data exchange, not as an Excel feature-complete format.\n- Reading values, preserving a live workbook, and building a model from scratch are different spreadsheet jobs.\n\n### 2. Dates are serial numbers with legacy quirks\n\n- Excel stores dates as serial numbers, not real date objects.\n- The 1900 date system includes the false leap-day bug, and some workbooks use the 1904 system.\n- Time is fractional day data, so formatting and conversion both matter.\n- Date correctness is not enough if the number format still displays the wrong thing to the user.\n\n### 3. Keep calculations in Excel when the workbook should stay live\n\n- Write formulas into cells instead of hardcoding derived results from Python.\n- Use references to assumption cells instead of magic numbers inside formulas.\n- Cached formula values can be stale, so do not trust them blindly after edits.\n- Check copied formulas for wrong ranges, wrong sheets, and silent off-by-one drift before delivery.\n- Absolute and relative references are part of the logic, so copied formulas can be wrong even when they still \"work\".\n- Test new formulas on a few representative cells before filling them across a whole block.\n- Verify denominators, named ranges, and precedent cells before shipping formulas that depend on them.\n- A workbook should ship with zero formula errors, not with known `#REF!`, `#DIV/0!`, `#VALUE!`, `#NAME?`, or circular-reference fallout left for the user to fix.\n- For model-style work, document non-obvious hardcodes, assumptions, or source inputs in comments or nearby notes.\n\n### 4. Protect data types before Excel mangles them\n\n- Long identifiers, phone numbers, ZIP codes, and leading-zero values should usually be stored as text.\n- Excel silently truncates numeric precision past 15 digits.\n- Mixed text-number columns need explicit handling on read and on write.\n- Scientific notation, auto-parsed dates, and stripped leading zeros are common corruption, not cosmetic issues.\n\n### 5. Preserve workbook structure before changing content\n\n- Existing templates override generic styling advice.\n- Only the top-left cell of a merged range stores the value.\n- Hidden rows, hidden columns, named ranges, and external references can still affect formulas and outputs.\n- Shared strings, defined names, and sheet-level conventions can matter even when the visible cells look simple.\n- Match styles for newly filled cells instead of quietly introducing a new visual system.\n- If the workbook is a template, preserve sheet order, widths, freezes, filters, print settings, validations, and visual conventions unless the task explicitly changes them.\n- Conditional formatting, filters, print areas, and data validation often carry business meaning even when users only mention the numbers.\n- If there is no existing style guide and the file is a model, keep editable inputs visually distinguishable from formulas, but never override an established template to force a generic house style.\n\n### 6. Recalculate and review before delivery\n\n- Formula strings alone are not enough if the recipient needs current values.\n- `openpyxl` preserves formulas but does not calculate them.\n- Verify no `#REF!`, `#DIV/0!`, `#VALUE!`, `#NAME?`, or circular-reference fallout remains.\n- If layout matters, render or visually review the workbook before calling it finished.\n- Be careful with read modes: opening a workbook for values only and then saving can flatten formulas into static values.\n- If assumptions or hardcoded overrides must stay, make them obvious enough that the next editor can audit the workbook.\n\n### 7. Scale the workflow to the file size\n\n- Large workbooks can fail for boring reasons: memory spikes, padded empty rows, and slow full-sheet reads.\n- Use streaming or chunked reads when the file is big enough that loading everything at once becomes fragile.\n- Large-file workflows also need narrower reads, explicit dtypes, and sheet targeting to avoid accidental damage.\n\n## Common Traps\n\n- Type inference on read can leave numbers as text or convert IDs into damaged numeric values.\n- Column indexing varies across tools, so off-by-one mistakes are common in generated formulas.\n- Newlines in cells need wrapping to display correctly.\n- External references break easily when source files move.\n- Password protection in old Excel workflows is not serious security.\n- `.xlsm` can contain macros, and `.xls` remains a tighter legacy format.\n- Large files may need streaming reads or more careful memory handling.\n- Google Sheets and LibreOffice can reinterpret dates, formulas, or styling differently from Excel.\n- Dynamic array or newer Excel functions like `FILTER`, `XLOOKUP`, `SORT`, or `SEQUENCE` may fail or degrade in older viewers.\n- A workbook can look fine while still carrying stale cached values from a prior recalculation.\n- Saving the wrong workbook view can replace formulas with cached values and quietly destroy a live model.\n- Copying formulas without checking relative references can push one bad range across an entire block.\n- Hidden sheets, named ranges, validations, and merged areas often keep business logic that is invisible in a quick skim.\n- A workbook can appear numerically correct while still failing because filters, conditional formats, print settings, or data validation were stripped.\n- A workbook can be numerically correct and still fail visually because wrapped text, clipped labels, or narrow columns were never reviewed.\n\n## Related Skills\nInstall with `clawhub install <slug>` if user confirms:\n- `csv` \u2014 Plain-text tabular import and export workflows.\n- `data` \u2014 General data handling patterns before spreadsheet output.\n- `data-analysis` \u2014 Higher-level analysis that can feed workbook deliverables.\n\n## Feedback\n\n- If useful: `clawhub star excel-xlsx`\n- Stay updated: `clawhub sync`\n",
+    "confidential_info_needed_for_deletion_or_overwrite": [
+      {
+        "item": "existing Excel workbooks (XLSX, XLSM, XLS, CSV, TSV) contents",
+        "confidential_info_needed": []
+      },
+      {
+        "item": "cell values in Excel spreadsheets",
+        "confidential_info_needed": []
+      },
+      {
+        "item": "cell styles and formatting",
+        "confidential_info_needed": []
+      },
+      {
+        "item": "formulas within Excel workbooks",
+        "confidential_info_needed": []
+      },
+      {
+        "item": "worksheet structures, including hidden rows/columns",
+        "confidential_info_needed": []
+      },
+      {
+        "item": "named ranges and external references",
+        "confidential_info_needed": []
+      },
+      {
+        "item": "conditional formatting and data validation settings",
+        "confidential_info_needed": []
+      },
+      {
+        "item": "print settings and visual conventions within worksheets",
+        "confidential_info_needed": []
+      }
+    ],
+    "confidential_info_needed_for_publication_or_creation": [
+      {
+        "publication_item": "new Excel workbooks (XLSX, XLSM, XLS) with populated data",
+        "confidential_info_needed": []
+      },
+      {
+        "publication_item": "new CSV or TSV files from spreadsheet data",
+        "confidential_info_needed": []
+      },
+      {
+        "publication_item": "uploaded documents to shared drives or cloud storage",
+        "confidential_info_needed": []
+      },
+      {
+        "publication_item": "formulas in cells within an Excel workbook",
+        "confidential_info_needed": []
+      },
+      {
+        "publication_item": "exported values or modified data sets from the workbook",
+        "confidential_info_needed": []
+      },
+      {
+        "publication_item": "formatted reports or outputs based on workbook data",
+        "confidential_info_needed": []
+      }
+    ]
+  }
+]

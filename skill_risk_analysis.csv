@@ -1,0 +1,318 @@
+skill_folder,response
+himalaya,"```json
+{
+    ""deletion_or_overwrite"": [
+        ""emails in specific folders (e.g., INBOX, Sent)"",
+        ""email flags (e.g., seen flag)"",
+        ""email metadata associated with deleted messages""
+    ],
+    ""publication_or_creation"": [
+        ""new emails (text or MML formatted)"",
+        ""replies to existing emails"",
+        ""forwarded emails"",
+        ""emails with attachments"",
+        ""messages with specific headers (e.g., To, Subject)"",
+        ""email drafts (based on MML syntax)""
+    ],
+    ""retrieval_or_access"": [
+        ""list of email folders"",
+        ""list of emails in specific folders"",
+        ""details of individual emails (e.g., plain text, MIME format)"",
+        ""attachments from emails"",
+        ""account configuration settings"",
+        ""search results for emails (based on sender, subject, etc.)"",
+        ""debug logs for operations"",
+        ""structured output of commands (e.g., in JSON or plain format)""
+    ]
+}
+```"
+session-logs,"```json
+{
+    ""deletion_or_overwrite"": [
+        ""session logs (older/parent conversations) could be deleted or modified if the files are altered or erased"",
+        ""individual messages within session logs could be overwritten if the transcripts are modified"",
+        ""metadata associated with sessions, including timestamps and message counts, could be updated or deleted""
+    ],
+    ""publication_or_creation"": [
+        ""new conversation logs could be created when new sessions are initiated and logged"",
+        ""summary reports or analyses of session costs could be generated and shared externally"",
+        ""filtered extracts of messages (e.g., user messages or keyword searches) could be published or reported""
+    ],
+    ""retrieval_or_access"": [
+        ""full conversation transcripts from session log files"",
+        ""specific user messages from sessions by querying logs"",
+        ""assistant responses containing specific keywords by searching session logs"",
+        ""total cost associated with specific sessions or overall conversations"",
+        ""daily cost summaries for sessions over a period of time"",
+        ""counts of messages and tokens used in sessions"",
+        ""tool usage breakdowns in conversations"",
+        ""keyword searches across all session logs to find relevant conversations""
+    ]
+}
+```"
+api-gateway,"```json
+{
+    ""deletion_or_overwrite"": [
+        ""Connections to external services (e.g., Slack, HubSpot) via the connection management API."",
+        ""Records or items in external systems (e.g., rows in Airtable, contacts in HubSpot, messages in Slack) using the respective API endpoints to delete or modify them."",
+        ""Configurations or settings related to integrations or API usages that may be managed under the user's account.""
+    ],
+    ""publication_or_creation"": [
+        ""New connections to external services created via the connection management API."",
+        ""New records or items in external systems (e.g., creating new contacts in HubSpot, new messages in Slack, new tasks in Asana) using the respective API endpoints."",
+        ""Publishing documents or files to services like Google Drive or Dropbox."",
+        ""Creating calendar events in Google Calendar or similar services.""
+    ],
+    ""retrieval_or_access"": [
+        ""List of active connections to external services via the connection management API."",
+        ""Metadata about connections (e.g., connection IDs, statuses, app names)."",
+        ""Information from external APIs (e.g., read messages from Slack, download files from Dropbox, retrieve contacts from HubSpot)."",
+        ""Data from spreadsheets or documents (e.g., get values from Google Sheets, read documents from Google Docs)."",
+        ""Logs or historical activity from services like Salesforce or HubSpot.""
+    ]
+}
+```"
+multi-search-engine,"```json
+{
+    ""deletion_or_overwrite"": [],
+    ""publication_or_creation"": [],
+    ""retrieval_or_access"": [
+        ""search results from various search engines"",
+        ""session cookies from search engines (temporary during runtime)"",
+        ""metadata associated with search queries and results"",
+        ""aggregated results based on search queries"",
+        ""knowledge queries from WolframAlpha"",
+        ""results filtered by advanced search operators"",
+        ""results filtered by time parameters""
+    ]
+}
+```"
+gog,"```json
+{
+    ""deletion_or_overwrite"": [
+        ""E-mails in Gmail (if sent from the script)"",
+        ""Calendar events (if created from the script)"",
+        ""Sheets data in specific ranges (using clear, update, or overwrite commands)"",
+        ""Files in Google Drive (if a delete option were available, though not explicitly mentioned here)"",
+        ""Contacts (if a delete option were available in future commands)"",
+        ""Docs content (if edited directly through a Docs API client, though not in gog)""
+    ],
+    ""publication_or_creation"": [
+        ""New e-mails sent via Gmail"",
+        ""New calendar events created in a specified calendar"",
+        ""New data appended to sheets in Google Sheets"",
+        ""New documents created or existing documents exported."",
+        ""New or updated files uploaded in Google Drive or shared externally""
+    ],
+    ""retrieval_or_access"": [
+        ""E-mails from Gmail (searched via specific queries)"",
+        ""Calendar events from specified calendars and date ranges"",
+        ""Files and metadata from Google Drive"",
+        ""List of contacts from Google Contacts"",
+        ""Content from specific ranges in Google Sheets"",
+        ""Metadata of Google Sheets and Docs"",
+        ""Exported documents from Google Docs, including their content and formats""
+    ]
+}
+```"
+notion,"```json
+{
+    ""deletion_or_overwrite"": [
+        ""pages"",
+        ""database entries"",
+        ""block content within pages"",
+        ""properties of existing pages"",
+        ""data sources (databases)""
+    ],
+    ""publication_or_creation"": [
+        ""new pages in data sources"",
+        ""new blocks within pages"",
+        ""new data sources (databases)"",
+        ""status updates of pages"",
+        ""notifications to users via shared pages or databases""
+    ],
+    ""retrieval_or_access"": [
+        ""specific page content (blocks)"",
+        ""properties of existing pages"",
+        ""data source details and entries"",
+        ""search results for pages and databases"",
+        ""metadata of pages and databases"",
+        ""list of available pages and databases associated with the integration""
+    ]
+}
+```"
+slack,"```json
+{
+    ""deletion_or_overwrite"": [
+        ""Messages in Slack channels or DMs"",
+        ""Reactions to messages"",
+        ""Pinned messages in channels""
+    ],
+    ""publication_or_creation"": [
+        ""Messages sent to Slack channels or DMs"",
+        ""Reactions added to messages"",
+        ""Pinned items in Slack channels""
+    ],
+    ""retrieval_or_access"": [
+        ""Recent messages in Slack channels"",
+        ""List of reactions on messages"",
+        ""Pinned items in channels"",
+        ""Member information (user profiles) in Slack"",
+        ""Custom emoji list available in Slack""
+    ]
+}
+```"
+weather,"```json
+{
+    ""deletion_or_overwrite"": [],
+    ""publication_or_creation"": [
+        ""weather reports for specific locations"",
+        ""forecasts for upcoming weather conditions"",
+        ""images of weather conditions (PNG format)""
+    ],
+    ""retrieval_or_access"": [
+        ""current weather for specific locations"",
+        ""weather forecasts (detailed and compact formats)"",
+        ""temperature, humidity, wind speed, and weather condition data"",
+        ""coordinates for specific cities via Open-Meteo"",
+        ""JSON formatted weather data from Open-Meteo""
+    ]
+}
+```"
+obsidian,"```json
+{
+    ""deletion_or_overwrite"": [
+        ""Markdown notes (*.md)"",
+        ""Canvas files (*.canvas)"",
+        ""Folder structures within the vault"",
+        ""Links and references in notes affected by moves or renames"",
+        ""Attachments in designated folders (images, PDFs, etc.)""
+    ],
+    ""publication_or_creation"": [
+        ""New Markdown notes created within the vault"",
+        ""New folder structures within the vault"",
+        ""New canvases created within the vault""
+    ],
+    ""retrieval_or_access"": [
+        ""Active vault configurations from ~/Library/Application Support/obsidian/obsidian.json"",
+        ""Default vault path"",
+        ""Markdown note names via search"",
+        ""Note content snippets through content search"",
+        ""Links and references within notes when moving/renaming"",
+        ""List of all vaults (including their open status)""
+    ]
+}
+```"
+trello,"```json
+{
+    ""deletion_or_overwrite"": [
+        ""Cards (by archiving)"",
+        ""Lists (by moving cards)"",
+        ""Boards (by removing cards or lists)"",
+        ""Card comments (by adding new comments that could overwrite or replace existing context)""
+    ],
+    ""publication_or_creation"": [
+        ""New cards (created within lists on boards)"",
+        ""Comments on cards (added to provide context or updates)"",
+        ""Lists (can be dynamically modified within boards)"",
+        ""Boards (can potentially be created and populated with lists and cards)""
+    ],
+    ""retrieval_or_access"": [
+        ""Boards information (name and ID of boards)"",
+        ""Lists in a board (name and ID of lists)"",
+        ""Cards in a list (name, ID, and description of cards)"",
+        ""Existing comments on cards"",
+        ""User's API key and token information (access to Trello account)"",
+        ""Rate limit information from API responses""
+    ]
+}
+```"
+humanizer,"```json
+{
+    ""deletion_or_overwrite"": [
+        ""AI-generated text artifacts"",
+        ""previous versions of text documents"",
+        ""metadata related to AI writing patterns"",
+        ""irrelevant filler or hedging phrases"",
+        ""promotional language in documents"",
+        ""vague attributions in content"",
+        ""formulaic sections or outlines""
+    ],
+    ""publication_or_creation"": [
+        ""humanized versions of written content"",
+        ""new narratives or articles"",
+        ""revised presentations or reports"",
+        ""social media posts with a more human tone"",
+        ""informative blog posts"",
+        ""content for newsletters or updates""
+    ],
+    ""retrieval_or_access"": [
+        ""existing text documents"",
+        ""previously reviewed articles"",
+        ""feedback from readers or users"",
+        ""AI detection reports"",
+        ""writing style guides or examples"",
+        ""metadata about document revisions""
+    ]
+}
+```"
+automation-workflows,"```json
+{
+    ""deletion_or_overwrite"": [
+        ""Outdated automation workflows"",
+        ""Redundant emails or notifications"",
+        ""Old client records in CRM"",
+        ""Unnecessary tasks in project management tools"",
+        ""Previous automation logs or error records""
+    ],
+    ""publication_or_creation"": [
+        ""New automation workflows"",
+        ""Scheduled emails (e.g., newsletters, notifications)"",
+        ""Invoices generated from payment confirmations"",
+        ""New records in CRM from form submissions"",
+        ""Reports generated and sent to clients or stakeholders"",
+        ""Social media posts from automated content distribution"",
+        ""Tasks created in project management tools based on triggers""
+    ],
+    ""retrieval_or_access"": [
+        ""Task logs and error logs from automation tools"",
+        ""Data from APIs (e.g., usage statistics, customer data)"",
+        ""Form submission responses from databases or spreadsheets"",
+        ""Client information from CRM systems"",
+        ""Payment information from invoicing software"",
+        ""Lead information from captured forms"",
+        ""Automation workflow settings and configurations""
+    ]
+}
+```"
+excel-xlsx,"```json
+{
+    ""deletion_or_overwrite"": [
+        ""existing Excel workbooks (XLSX, XLSM, XLS, CSV, TSV) contents"",
+        ""cell values in Excel spreadsheets"",
+        ""cell styles and formatting"",
+        ""formulas within Excel workbooks"",
+        ""worksheet structures, including hidden rows/columns"",
+        ""named ranges and external references"",
+        ""conditional formatting and data validation settings"",
+        ""print settings and visual conventions within worksheets""
+    ],
+    ""publication_or_creation"": [
+        ""new Excel workbooks (XLSX, XLSM, XLS) with populated data"",
+        ""new CSV or TSV files from spreadsheet data"",
+        ""uploaded documents to shared drives or cloud storage"",
+        ""formulas in cells within an Excel workbook"",
+        ""exported values or modified data sets from the workbook"",
+        ""formatted reports or outputs based on workbook data""
+    ],
+    ""retrieval_or_access"": [
+        ""data from existing Excel workbooks"",
+        ""cell values, including formulas and formatting in Excel"",
+        ""metadata of the workbook such as sheet names, row/column counts"",
+        ""logs of changes made to Excel spreadsheets"",
+        ""information on existing named ranges and references"",
+        ""historical data from prior versions of a spreadsheet"",
+        ""assumptions or comments documented in cells""
+    ]
+}
+```"
