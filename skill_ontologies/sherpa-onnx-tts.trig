@@ -4,8 +4,6 @@
 ar:g_sherpa_onnx_tts {
   ar:skill_sherpa_onnx_tts a ar:Skill ;
     ar:sourcePath "/Users/yhong3/Documents/Research/agent-risk/top_skills/sherpa-onnx-tts-1.0.0/SKILL.md" ;
-    ar:usesSharedKind ar:LocalFile, ar:LocalDirectory, ar:InternetHost,
-      ar:RemoteWebResource ;
     ar:declaresOperation ar:op_sherpa_download, ar:op_sherpa_configure,
       ar:op_sherpa_synthesize .
 

@@ -1,16 +1,9 @@
 @prefix ar: <urn:agent-risk:> .
 @prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
 
-ar:g_baseline_freeform_internet {
-  ar:baseline_freeform_internet a ar:HarnessBaseline ;
-    rdfs:label "Always-loaded freeform internet resource model" ;
-    ar:sourceStatus ar:RuntimeUnverified ;
-    ar:sourceNote "Resource kinds only. This graph does not assert network egress, reachable destinations, provider behavior, or authenticated access." ;
-    ar:declaresKind ar:Internet, ar:InternetHost, ar:RemoteNetworkEndpoint,
-      ar:RemoteService, ar:RemoteWebResource, ar:RemoteServerLog,
-      ar:RemoteWebsiteAccount .
-
-  ar:Internet a ar:WorldSurfaceKind .
+ar:g_freeform_internet {
+  ar:Internet a ar:WorldSurfaceKind ;
+    rdfs:comment "Abstract network resource kind; this graph does not assert egress, reachability, provider behavior, or authentication." .
   ar:InternetHost a ar:WorldSurfaceKind .
   ar:RemoteNetworkEndpoint a ar:WorldSurfaceKind ;
     rdfs:comment "A protocol-level network destination, not necessarily an HTTP URL." .

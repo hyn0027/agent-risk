@@ -4,7 +4,6 @@
 ar:g_skill_creator {
   ar:skill_skill_creator a ar:Skill ;
     ar:sourcePath "/Users/yhong3/Documents/Research/agent-risk/top_skills/skill-creator-1.0.0/SKILL.md" ;
-    ar:usesSharedKind ar:LocalFile, ar:LocalDirectory ;
     ar:declaresOperation ar:op_creator_inspect, ar:op_creator_propose,
       ar:op_creator_repo_edit, ar:op_creator_validate .
 

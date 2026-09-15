@@ -4,7 +4,6 @@
 ar:g_diagram_maker {
   ar:skill_diagram_maker a ar:Skill ;
     ar:sourcePath "/Users/yhong3/Documents/Research/agent-risk/top_skills/diagram-maker-1.0.0/SKILL.md" ;
-    ar:usesSharedKind ar:LocalFile ;
     ar:declaresOperation ar:op_diagram_read_patterns,
       ar:op_diagram_write_artifact, ar:op_diagram_verify .
 

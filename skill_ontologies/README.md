@@ -1,57 +1,40 @@
-# Top-skills endpoint ontologies — prototype
+# Endpoint and resource ontologies — prototype
 
-Each per-skill `.trig` file contains one named graph for one `top_skills/*/SKILL.md`. Two additional `.trig` files, `local-filesystem.trig` and `freeform-internet.trig`, are always-loaded **resource-only** catalogues: they define resource kinds and containment, but no operations, invocation channels, or effects. `vocabulary.ttl` defines the common classes and relations; `shapes.ttl` defines validation rules. `manifest.json` maps exact source directories and SHA-256 hashes to skill modules, and lists the baseline graphs. The manifest is loader metadata. Skill graphs catalog **potential surfaces and effects**, not agent identities, actual permissions, or execution traces. The source directory was read-only during preparation; the files do not invoke any skill.
+Each per-skill `.trig` file contains one named graph derived from a `top_skills/*/SKILL.md`. `local-filesystem.trig` and `freeform-internet.trig` are ordinary **resource-only** named graphs. They contain kinds of world resources and their relationships, not operations, effects, invocation channels, permissions, or special "baseline" entities. `manifest.json` says that the loader always includes these two graphs; **always loaded is a loading policy, not an ontological category**.
 
-All files use the same RDF prefix, `ar: <urn:agent-risk:>`. The IRIs are identifiers within this dataset, not dereferenceable Web URLs. For a public ontology, replace this private namespace with an owned, persistent HTTPS namespace.
+All graphs use `ar: <urn:agent-risk:>`. These are local identifiers, not dereferenceable Web URLs. For a published ontology, use an owned, persistent HTTPS namespace. `vocabulary.ttl` defines the common terms, and `shapes.ttl` validates skill operations. The source skills are not invoked by these files.
 
-## Loading
+## Resource relationships
 
-Keep one named graph per skill and version. The active dataset is the union of `vocabulary.ttl`, both baseline resource graphs, any separately verified harness-inventory graph, and the `.trig` graphs of loaded skills. `loader.py` loads the baselines on every run, uses `manifest.json` to find selected skills, rejects stale skill ontologies when source hashes differ, checks that shared-kind citations resolve to baseline-declared kinds, and validates the combined graph against `shapes.ttl`. It does not implement a harness hook, runtime availability check, or graph unloading. A later skill version should replace, not blindly accumulate with, the previous active version.
+Resource kinds are currently RDF *individuals* typed `ar:WorldSurfaceKind`, rather than OWL classes. The following relationships can overlap and form multiple hierarchies:
 
-Run `python loader.py discord gh-issues` from this folder with `rdflib` and `pyshacl` installed. Omitting arguments selects those two skills by default; `python loader.py --baseline-only` lists shared resources with no skill-operation rows. The filesystem and internet baselines load in either case. `ar:HarnessBaseline` declares resource kinds with `ar:declaresKind`; only `ar:Skill` modules declare operations. "Always loaded" describes ontology inclusion only. It does **not** mean the agent actually has filesystem permissions, internet egress, an authenticated browser, or access to every remote endpoint.
+- `ar:specializesKind` means **is-a**: `ar:LocalAudioFile ar:specializesKind ar:LocalFile`. A kind may have multiple broader kinds. The loader follows all parents for the "Broader kinds" column.
+- `ar:containsKind` means **part/containment**: `ar:LocalDirectory ar:containsKind ar:LocalFile`. Containment does not imply subtype.
+- `ar:mayBeStoredAsKind` is a weaker physical-representation link: logical OpenClaw configuration may be stored as a local file. It does not assert that every configuration action directly edits a file.
 
-The graph names do not themselves imply provenance or trust. `ar:sourceStatus` describes the basis for individual operation claims. All runtime availability, authentication, action gates, destinations, and provider behavior remain unverified. Example IDs such as `channel:<id>` and `slack:thread-1` are *templates/examples*, not concrete endpoints.
+Because kinds are individuals, `ar:specializesKind` is a project-specific property, **not** `rdfs:subClassOf` or OWL subclass reasoning. The loader uses graph traversal to compute broader kinds; it rejects cycles in the is-a relation. A future migration to OWL classes would be a schema change, not just a spelling change.
 
-## Interpretation
+Per-skill kinds link directly to general kinds. For example, `ar:LocalSecretFile` is-a `ar:LocalFile`, and a Discord media send directly affects `ar:LocalFile` as a source. There is no module-level `usesSharedKind` citation: the resource relationship itself is the link across named graphs.
 
-- `ar:InvocationSurfaceKind` is a channel the harness or a tool may call (CLI, API, message tool, subagent launcher).
-- `ar:WorldSurfaceKind` is a kind of resource that may be read, created, changed, deleted, or receive information.
-- `ar:Operation` connects a call channel with potential effects, and occurs only in skill graphs. `ar:PotentialEffect` does not assert an observed mutation.
-- `ar:usesSharedKind` is an explicit skill-to-baseline citation. `ar:specializesKind` maps a specific kind (for example `ar:LocalAudioFile`) to a broader baseline kind (`ar:LocalFile`). Both are RDF individuals representing kinds; this is not `rdfs:subClassOf`. `ar:mayBeStoredAsKind` is a weaker, conditional storage link when the physical representation is uncertain.
-- `ar:Requirement` describes a stated prerequisite, not a verified permission grant.
-- Effects on humans after messages, PRs, or media publication are **not** asserted. A delivered message does not imply it was read; a PR does not imply merge or deployment.
+Named provider endpoints (GitHub REST, Discord, Slack, Imgflip API, etc.) remain distinct from the freeform-internet taxonomy. Only unspecified websites and ordinary URL downloads are linked to general internet kinds. This classifies the described resource/access context; it does not establish actual reachability or authentication.
 
-The graph gives endpoint reachability at a coarse level. Joint effects such as "read credential, then transmit it through Discord" need separate content-flow/state-transition rules; merging graphs alone will not infer them. Generic shell or delegated coding workers have open-ended effects. They are represented conservatively, not exhaustively.
+## Loading and validation
 
-Named connector/API endpoints such as Discord, GitHub REST, Imgflip `caption_image`, and Slack remain separate kinds even when their transport uses the internet. The freeform-internet catalogue is cited for unspecified websites and ordinary URL downloads, not used as a replacement for provider-specific endpoint semantics. No baseline operation is inferred merely because a skill cites a resource kind.
+Run `python loader.py --resources-only` to inspect the always-loaded resource graphs without skill operations. The old `--baseline-only` spelling remains an alias. Run `python loader.py discord gh-issues` to add those two skill graphs; no arguments select those two by default. The loader requires `rdflib` and `pyshacl`.
 
-## Example query
+The loader preserves one named graph per file, verifies each selected skill's `SKILL.md` SHA-256 against `manifest.json`, validates the union against `shapes.ttl`, checks that resource relationships resolve to typed kinds, and prints resource kinds, relationships, and skill-stated potential effects. Loading policy and source hashes are metadata outside the ontology. Loading a graph does **not** prove runtime permissions. No harness hook, graph unloading mechanism, or verified harness tool inventory is installed in this prototype.
 
-Load the active graphs into the default graph or query each named graph with `GRAPH`. This query lists explicit skill citations to shared kinds:
+On the combined graph, a SPARQL property path can query all broader resource kinds:
 
 ```sparql
 PREFIX ar: <urn:agent-risk:>
-SELECT ?graph ?skill ?sharedKind WHERE {
-  GRAPH ?graph {
-    ?skill a ar:Skill ; ar:usesSharedKind ?sharedKind .
-  }
+SELECT ?narrow ?broader WHERE {
+  ?narrow ar:specializesKind+ ?broader .
 }
 ```
 
-The loader also prints skill-stated potential effects and, when possible, the shared parent kind reached through `ar:specializesKind`. To inspect effects directly:
+Do not combine `ar:specializesKind` and `ar:containsKind` in one path and interpret the result as a subtype. A file being inside a directory is not a kind of directory.
 
-```sparql
-PREFIX ar: <urn:agent-risk:>
-SELECT ?graph ?operation ?toolKind ?effectType ?affectedKind WHERE {
-  GRAPH ?graph {
-    ?operation a ar:Operation ;
-      ar:invokedThroughKind ?toolKind ;
-      ar:hasPotentialEffect ?effect .
-    ?effect ar:effectType ?effectType ; ar:affectsKind ?affectedKind .
-  }
-}
-```
+## Limits
 
-## Coverage and limits
-
-This initial extraction covers all ten current `top_skills/*/SKILL.md` files and selected bundled references/scripts relevant to side effects. Nine skill modules explicitly cite shared resource kinds. The TaskFlow example has no identified local-file or freeform-internet resource and was left unchanged. The baselines are generic resource taxonomies, not an observed inventory of this harness. The extraction is a manually reviewed *first pass*, not an exhaustive code audit or runtime inventory. A verified harness graph is still absent because the source skills do not disclose the complete harness tool list or its live configuration. Add that inventory from harness schemas/configuration rather than guessing it from skill prose.
+This is a manually reviewed first-pass model for the ten current skill files, not an exhaustive code audit. The TaskFlow example has no identified local-file or freeform-internet resource and was left unchanged. Generic shell and delegated workers can have open-ended effects. Skill operations describe *potential* effects, not observed changes; joint effects such as reading a credential and later transmitting that specific value still require call arguments, dataflow, and state-transition facts. The local filesystem and internet graphs do not define actual sandbox roots, destinations, accounts, or rights. Add those from a separately verified harness/runtime inventory.

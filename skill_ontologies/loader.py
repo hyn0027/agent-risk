@@ -7,116 +7,122 @@ from rdflib import Dataset, Graph, Namespace, URIRef
 from rdflib.namespace import RDF
 from pyshacl import validate
 
+
 ONTOLOGY_DIR = Path(__file__).resolve().parent
 AR = Namespace("urn:agent-risk:")
 
-# Pass skill directory names as arguments, or use these defaults.
-# --baseline-only runs without any skill graphs.
+# --resources-only replaces --baseline-only; the old spelling still works.
 arguments = sys.argv[1:]
-if "--baseline-only" in arguments and arguments != ["--baseline-only"]:
-    raise SystemExit("Use --baseline-only by itself.")
-loaded_skills = (
-    set() if arguments == ["--baseline-only"]
-    else set(arguments) or {"discord", "gh-issues"}
-)
+resource_only = arguments in (["--resources-only"], ["--baseline-only"])
+if any(arg.startswith("--") for arg in arguments) and not resource_only:
+    raise SystemExit("Use --resources-only by itself, or pass skill directory names.")
+loaded_skills = set() if resource_only else set(arguments) or {"discord", "gh-issues"}
 
 manifest = json.loads((ONTOLOGY_DIR / "manifest.json").read_text())
 modules = {module["directory"]: module for module in manifest["modules"]}
-
 unknown = loaded_skills - modules.keys()
 if unknown:
     raise SystemExit(f"Unknown skills: {', '.join(sorted(unknown))}")
 
-# Preserve separate named graphs for querying.
-active = Dataset()
-
-# SHACL validates the union of the vocabulary, baselines, and loaded skill graphs.
-combined = Graph()
+active = Dataset()  # Retains provenance as one named graph per source file.
+combined = Graph()  # Union for cross-graph checks, hierarchy, and SHACL.
 vocabulary = Graph().parse(
-    str(ONTOLOGY_DIR / manifest["vocabulary"]),
-    format="turtle",
+    str(ONTOLOGY_DIR / manifest["vocabulary"]), format="turtle"
 )
 for triple in vocabulary:
     combined.add(triple)
 
-# These resource catalogues are loaded even when access to their concrete
-# resources is not confirmed by a runtime inventory.
-shared_kinds = set()
-for baseline in manifest["baselines"]:
-    parsed = Dataset()
-    parsed.parse(str(ONTOLOGY_DIR / baseline["file"]), format="trig")
 
-    graph_id = URIRef(baseline["graph"])
+def load_named_graph(entry):
+    parsed = Dataset()
+    parsed.parse(str(ONTOLOGY_DIR / entry["file"]), format="trig")
+    graph_id = URIRef(entry["graph"])
     source_graph = parsed.graph(graph_id)
     if len(source_graph) == 0:
-        raise SystemExit(f"Missing or empty baseline graph: {graph_id}")
-
+        raise SystemExit(f"Missing or empty named graph: {graph_id}")
     target_graph = active.graph(graph_id)
     for triple in source_graph:
         target_graph.add(triple)
         combined.add(triple)
-    if any(target_graph.subjects(RDF.type, AR.Operation)):
-        raise SystemExit(f"Baseline must not contain operations: {graph_id}")
-    shared_kinds.update(target_graph.objects(None, AR.declaresKind))
+    return target_graph
+
+
+# Loading policy lives in the manifest, not in the ontology vocabulary.
+resource_graphs = manifest["alwaysLoadedGraphs"]
+for entry in resource_graphs:
+    graph = load_named_graph(entry)
+    if any(graph.subjects(RDF.type, AR.Operation)) or any(
+        graph.subjects(RDF.type, AR.PotentialEffect)
+    ) or any(graph.subjects(RDF.type, AR.InvocationSurfaceKind)):
+        raise SystemExit(f"Resource graph contains an action construct: {entry['file']}")
+    if any(graph.triples((None, AR.declaresOperation, None))) or any(
+        graph.triples((None, AR.hasPotentialEffect, None))
+    ):
+        raise SystemExit(f"Resource graph contains an operation relation: {entry['file']}")
 
 for skill_name in sorted(loaded_skills):
     module = modules[skill_name]
-
     source = Path(manifest["sourceRoot"]) / skill_name / "SKILL.md"
     actual_hash = hashlib.sha256(source.read_bytes()).hexdigest()
     if actual_hash != module["skillSha256"]:
         raise SystemExit(f"Ontology for {skill_name} is stale: SKILL.md has changed.")
+    load_named_graph(module)
 
-    parsed = Dataset()
-    parsed.parse(str(ONTOLOGY_DIR / module["file"]), format="trig")
-
-    graph_id = URIRef(module["graph"])
-    source_graph = parsed.graph(graph_id)
-    if len(source_graph) == 0:
-        raise SystemExit(f"Missing or empty named graph: {graph_id}")
-
-    target_graph = active.graph(graph_id)
-    for triple in source_graph:
-        target_graph.add(triple)
-        combined.add(triple)
-    for shared_kind in target_graph.objects(None, AR.usesSharedKind):
-        if shared_kind not in shared_kinds:
-            raise SystemExit(f"Unresolved shared-kind citation in {skill_name}: {shared_kind}")
-    for _, parent_kind in target_graph.subject_objects(AR.specializesKind):
-        if parent_kind not in shared_kinds:
-            raise SystemExit(f"Unresolved shared-kind specialization in {skill_name}: {parent_kind}")
-
-shapes = Graph().parse(
-    str(ONTOLOGY_DIR / manifest["shapes"]),
-    format="turtle",
+typed_kinds = set(combined.subjects(RDF.type, AR.WorldSurfaceKind))
+relations = (
+    (AR.specializesKind, "is-a"),
+    (AR.containsKind, "contains"),
+    (AR.mayBeStoredAsKind, "may be stored as"),
 )
+for predicate, relation_name in relations:
+    for subject, related in combined.subject_objects(predicate):
+        if subject not in typed_kinds or related not in typed_kinds:
+            raise SystemExit(
+                f"Untyped kind in {relation_name} relation: {subject} -> {related}"
+            )
+if combined.query(
+    "ASK { ?kind <urn:agent-risk:specializesKind>+ ?kind }"
+).askAnswer:
+    raise SystemExit("Cycle in is-a hierarchy")
+
+shapes = Graph().parse(str(ONTOLOGY_DIR / manifest["shapes"]), format="turtle")
 conforms, _, report = validate(combined, shacl_graph=shapes)
 if not conforms:
     raise SystemExit(f"SHACL validation failed:\n{report}")
 
-baseline_query = """
-PREFIX ar: <urn:agent-risk:>
 
-SELECT DISTINCT ?graph ?kind
-WHERE {
-  GRAPH ?graph {
-    ?baseline a ar:HarnessBaseline ; ar:declaresKind ?kind .
-  }
-}
-ORDER BY ?graph ?kind
-"""
+def label(value):
+    return str(value).rsplit(":", 1)[-1]
 
-citation_query = """
-PREFIX ar: <urn:agent-risk:>
 
-SELECT DISTINCT ?graph ?sharedKind
-WHERE {
-  GRAPH ?graph {
-    ?skill a ar:Skill ; ar:usesSharedKind ?sharedKind .
-  }
-}
-ORDER BY ?graph ?sharedKind
-"""
+def ancestors(kind):
+    """All broader kinds, across any active graph; multiple parents are allowed."""
+    seen = set()
+    frontier = list(combined.objects(kind, AR.specializesKind))
+    while frontier:
+        parent = frontier.pop()
+        if parent not in seen:
+            seen.add(parent)
+            frontier.extend(combined.objects(parent, AR.specializesKind))
+    return sorted(seen, key=str)
+
+
+resource_rows = sorted(
+    {
+        (label(URIRef(entry["graph"])), label(kind))
+        for entry in resource_graphs
+        for kind in active.graph(URIRef(entry["graph"])).subjects(
+            RDF.type, AR.WorldSurfaceKind
+        )
+    }
+)
+relationship_rows = sorted(
+    {
+        (label(subject), relation_name, label(related))
+        for predicate, relation_name in relations
+        for subject, related in combined.subject_objects(predicate)
+    }
+)
 
 effect_query = """
 PREFIX ar: <urn:agent-risk:>
@@ -126,64 +132,45 @@ WHERE {
   GRAPH ?graph {
     ?skill a ar:Skill ; ar:declaresOperation ?operation .
     ?operation ar:hasPotentialEffect ?effect .
-    ?effect ar:effectType ?effectType ;
-            ar:affectsKind ?resourceKind .
+    ?effect ar:effectType ?effectType ; ar:affectsKind ?resourceKind .
   }
 }
 ORDER BY ?graph ?operation ?effectType ?resourceKind
 """
-
-def label(value):
-    """Display the local part of an urn:agent-risk: identifier."""
-    return str(value).rsplit(":", 1)[-1]
-
-
-baseline_rows = [
-    (label(row.graph), label(row.kind))
-    for row in active.query(baseline_query)
-]
-citation_rows = [
-    (label(row.graph), label(row.sharedKind))
-    for row in active.query(citation_query)
-]
-parent_by_kind = {
-    narrower: parent
-    for module in manifest["modules"]
-    if module["directory"] in loaded_skills
-    for narrower, parent in active.graph(URIRef(module["graph"])).subject_objects(AR.specializesKind)
-}
 effect_rows = [
     (
         label(row.graph), label(row.operation), label(row.effectType),
         label(row.resourceKind),
-        label(row.resourceKind) if row.resourceKind in shared_kinds else
-        label(parent_by_kind[row.resourceKind]) if row.resourceKind in parent_by_kind else "",
+        ", ".join(label(parent) for parent in ancestors(row.resourceKind)),
     )
     for row in active.query(effect_query)
 ]
+
 
 def print_table(headers, rows):
     widths = [
         max(len(header), *(len(row[i]) for row in rows))
         for i, header in enumerate(headers)
     ]
+
     def print_row(values):
         print("  ".join(value.ljust(width) for value, width in zip(values, widths)))
+
     print_row(headers)
     print_row(tuple("-" * width for width in widths))
     for row in rows:
         print_row(row)
 
 
-print(f"Always-loaded baselines: {', '.join(b['name'] for b in manifest['baselines'])}")
+print("Always-loaded resource graphs: " + ", ".join(e["file"] for e in resource_graphs))
 print(f"Loaded skills: {', '.join(sorted(loaded_skills)) or '(none)'}")
-print(f"Shared resource kinds: {len(baseline_rows)}")
-print(f"Skill shared-kind citations: {len(citation_rows)}")
+print(f"Resource kinds: {len(resource_rows)}")
+print(f"Resource relationships: {len(relationship_rows)}")
 print(f"Skill potential-effect rows: {len(effect_rows)}\n")
-print_table(("Graph", "Shared resource kind"), baseline_rows)
-if citation_rows:
+print_table(("Graph", "Resource kind"), resource_rows)
+if relationship_rows:
     print()
-    print_table(("Skill graph", "Cited shared kind"), citation_rows)
+    print_table(("Kind", "Relation", "Related kind"), relationship_rows)
 if effect_rows:
     print()
-    print_table(("Graph", "Operation", "Effect", "Resource kind", "Shared parent"), effect_rows)
+    print_table(("Graph", "Operation", "Effect", "Resource kind", "Broader kinds"), effect_rows)

@@ -4,7 +4,6 @@
 ar:g_meme_maker {
   ar:skill_meme_maker a ar:Skill ;
     ar:sourcePath "/Users/yhong3/Documents/Research/agent-risk/top_skills/meme-maker-1.0.0/SKILL.md" ;
-    ar:usesSharedKind ar:LocalFile, ar:LocalDirectory, ar:RemoteWebResource ;
     ar:declaresOperation ar:op_meme_catalog, ar:op_meme_local_render,
       ar:op_meme_hosted_render, ar:op_meme_refresh .
 

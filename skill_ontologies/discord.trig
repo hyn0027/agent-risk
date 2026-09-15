@@ -4,7 +4,6 @@
 ar:g_discord {
   ar:skill_discord a ar:Skill ;
     ar:sourcePath "/Users/yhong3/Documents/Research/agent-risk/top_skills/discord/SKILL.md" ;
-    ar:usesSharedKind ar:LocalFile ;
     ar:declaresOperation ar:op_discord_send, ar:op_discord_send_media,
       ar:op_discord_read, ar:op_discord_search, ar:op_discord_edit,
       ar:op_discord_delete, ar:op_discord_react, ar:op_discord_poll,
