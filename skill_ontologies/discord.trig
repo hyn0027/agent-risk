@@ -1,0 +1,102 @@
+@prefix ar: <urn:agent-risk:> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+
+ar:g_discord {
+  ar:skill_discord a ar:Skill ;
+    ar:sourcePath "/Users/yhong3/Documents/Research/agent-risk/top_skills/discord/SKILL.md" ;
+    ar:declaresOperation ar:op_discord_send, ar:op_discord_send_media,
+      ar:op_discord_read, ar:op_discord_search, ar:op_discord_edit,
+      ar:op_discord_delete, ar:op_discord_react, ar:op_discord_poll,
+      ar:op_discord_pin, ar:op_discord_thread, ar:op_discord_presence .
+
+  ar:DiscordAdapter a ar:InvocationSurfaceKind ; ar:routesToKind ar:DiscordService .
+  ar:OpenClawMessageTool ar:routesToKind ar:DiscordAdapter .
+  ar:DiscordService a ar:WorldSurfaceKind .
+  ar:DiscordGuild a ar:WorldSurfaceKind .
+  ar:DiscordChannel a ar:WorldSurfaceKind .
+  ar:DiscordDirectMessage a ar:WorldSurfaceKind .
+  ar:DiscordUser a ar:WorldSurfaceKind .
+  ar:DiscordMessage a ar:WorldSurfaceKind .
+  ar:DiscordMedia a ar:WorldSurfaceKind .
+  ar:DiscordReaction a ar:WorldSurfaceKind .
+  ar:DiscordPoll a ar:WorldSurfaceKind .
+  ar:DiscordThread a ar:WorldSurfaceKind .
+  ar:DiscordPresence a ar:WorldSurfaceKind .
+  ar:DiscordService ar:containsKind ar:DiscordGuild, ar:DiscordDirectMessage .
+  ar:DiscordGuild ar:containsKind ar:DiscordChannel, ar:DiscordUser .
+  ar:DiscordChannel ar:containsKind ar:DiscordMessage, ar:DiscordPoll, ar:DiscordThread .
+  ar:DiscordMessage ar:containsKind ar:DiscordMedia, ar:DiscordReaction .
+
+  ar:cond_discord_token a ar:Requirement .
+  ar:cond_discord_target_permission a ar:Requirement .
+  ar:cond_discord_action_gate a ar:Requirement .
+  ar:cond_message_id a ar:Requirement .
+  ar:cond_media_path a ar:Requirement .
+  ar:cond_discord_action_gate rdfs:comment "channels.discord.actions.* may gate roles, moderation, presence, and channels; live settings unverified." .
+
+  ar:op_discord_send a ar:Operation ; ar:invokedThroughKind ar:OpenClawMessageTool ;
+    ar:targetsKind ar:DiscordChannel, ar:DiscordDirectMessage ;
+    ar:requires ar:cond_discord_token, ar:cond_discord_target_permission ;
+    ar:sourceStatus ar:SkillText ;
+    ar:hasPotentialEffect [ a ar:PotentialEffect ; ar:effectType ar:Create ; ar:affectsKind ar:DiscordMessage ],
+      [ a ar:PotentialEffect ; ar:effectType ar:Transmit ; ar:affectsKind ar:DiscordChannel, ar:DiscordDirectMessage ] .
+
+  ar:op_discord_send_media a ar:Operation ; ar:invokedThroughKind ar:OpenClawMessageTool ;
+    ar:targetsKind ar:LocalFile, ar:DiscordChannel ;
+    ar:requires ar:cond_discord_token, ar:cond_discord_target_permission, ar:cond_media_path ;
+    ar:sourceNote "media: file:///tmp/example.png is illustrative; the source file may contain sensitive content." ;
+    ar:sourceStatus ar:SkillText ;
+    ar:hasPotentialEffect [ a ar:PotentialEffect ; ar:effectType ar:Read ; ar:affectsKind ar:LocalFile ],
+      [ a ar:PotentialEffect ; ar:effectType ar:Transmit ; ar:affectsKind ar:DiscordMedia, ar:DiscordChannel ] .
+
+  ar:op_discord_read a ar:Operation ; ar:invokedThroughKind ar:OpenClawMessageTool ;
+    ar:targetsKind ar:DiscordChannel, ar:DiscordMessage ;
+    ar:requires ar:cond_discord_token, ar:cond_discord_target_permission ; ar:sourceStatus ar:SkillText ;
+    ar:hasPotentialEffect [ a ar:PotentialEffect ; ar:effectType ar:Read ; ar:affectsKind ar:DiscordMessage ] .
+
+  ar:op_discord_search a ar:Operation ; ar:invokedThroughKind ar:OpenClawMessageTool ;
+    ar:targetsKind ar:DiscordGuild, ar:DiscordChannel ;
+    ar:requires ar:cond_discord_token, ar:cond_discord_target_permission ; ar:sourceStatus ar:SkillText ;
+    ar:hasPotentialEffect [ a ar:PotentialEffect ; ar:effectType ar:Read ; ar:affectsKind ar:DiscordMessage ] .
+
+  ar:op_discord_edit a ar:Operation ; ar:invokedThroughKind ar:OpenClawMessageTool ;
+    ar:targetsKind ar:DiscordMessage ;
+    ar:requires ar:cond_discord_token, ar:cond_message_id, ar:cond_discord_target_permission ;
+    ar:sourceStatus ar:SkillText ;
+    ar:hasPotentialEffect [ a ar:PotentialEffect ; ar:effectType ar:Update ; ar:affectsKind ar:DiscordMessage ] .
+
+  ar:op_discord_delete a ar:Operation ; ar:invokedThroughKind ar:OpenClawMessageTool ;
+    ar:targetsKind ar:DiscordMessage ;
+    ar:requires ar:cond_discord_token, ar:cond_message_id, ar:cond_discord_target_permission ;
+    ar:sourceStatus ar:SkillText ;
+    ar:hasPotentialEffect [ a ar:PotentialEffect ; ar:effectType ar:Delete ; ar:affectsKind ar:DiscordMessage ] .
+
+  ar:op_discord_react a ar:Operation ; ar:invokedThroughKind ar:OpenClawMessageTool ;
+    ar:targetsKind ar:DiscordMessage ;
+    ar:requires ar:cond_discord_token, ar:cond_message_id, ar:cond_discord_target_permission ;
+    ar:sourceStatus ar:SkillText ;
+    ar:hasPotentialEffect [ a ar:PotentialEffect ; ar:effectType ar:Create ; ar:affectsKind ar:DiscordReaction ] .
+
+  ar:op_discord_poll a ar:Operation ; ar:invokedThroughKind ar:OpenClawMessageTool ;
+    ar:targetsKind ar:DiscordChannel ;
+    ar:requires ar:cond_discord_token, ar:cond_discord_target_permission ; ar:sourceStatus ar:SkillText ;
+    ar:hasPotentialEffect [ a ar:PotentialEffect ; ar:effectType ar:Create ; ar:affectsKind ar:DiscordPoll ] .
+
+  ar:op_discord_pin a ar:Operation ; ar:invokedThroughKind ar:OpenClawMessageTool ;
+    ar:targetsKind ar:DiscordMessage ;
+    ar:requires ar:cond_discord_token, ar:cond_message_id, ar:cond_discord_target_permission ;
+    ar:sourceStatus ar:SkillText ;
+    ar:hasPotentialEffect [ a ar:PotentialEffect ; ar:effectType ar:Update ; ar:affectsKind ar:DiscordMessage ] .
+
+  ar:op_discord_thread a ar:Operation ; ar:invokedThroughKind ar:OpenClawMessageTool ;
+    ar:targetsKind ar:DiscordChannel, ar:DiscordMessage ;
+    ar:requires ar:cond_discord_token, ar:cond_message_id, ar:cond_discord_target_permission ;
+    ar:sourceStatus ar:SkillText ;
+    ar:hasPotentialEffect [ a ar:PotentialEffect ; ar:effectType ar:Create ; ar:affectsKind ar:DiscordThread ] .
+
+  ar:op_discord_presence a ar:Operation ; ar:invokedThroughKind ar:OpenClawMessageTool ;
+    ar:targetsKind ar:DiscordPresence ;
+    ar:requires ar:cond_discord_token, ar:cond_discord_action_gate ;
+    ar:sourceStatus ar:SkillText ;
+    ar:hasPotentialEffect [ a ar:PotentialEffect ; ar:effectType ar:Update ; ar:affectsKind ar:DiscordPresence ] .
+}

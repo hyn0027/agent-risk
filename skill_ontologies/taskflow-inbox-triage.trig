@@ -1,0 +1,79 @@
+@prefix ar: <urn:agent-risk:> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+
+ar:g_taskflow_inbox_triage {
+  ar:skill_taskflow_inbox_triage a ar:Skill ;
+    ar:sourcePath "/Users/yhong3/Documents/Research/agent-risk/top_skills/taskflow-inbox-triage/SKILL.md" ;
+    ar:sourceNote "Example TaskFlow pattern; route destinations and thread IDs are illustrative, not deployed endpoints." ;
+    ar:declaresOperation ar:op_taskflow_create, ar:op_taskflow_classify,
+      ar:op_taskflow_wait, ar:op_taskflow_resume_finish,
+      ar:op_taskflow_slack_post, ar:op_taskflow_personal_notify,
+      ar:op_taskflow_eod_summary .
+
+  ar:SlackMessageChannel a ar:InvocationSurfaceKind .
+  ar:OwnerNotificationChannel a ar:InvocationSurfaceKind .
+  ar:SlackMessageChannel ar:routesToKind ar:SlackWorkspace .
+  ar:OwnerNotificationChannel ar:routesToKind ar:OwnerNotificationDestination .
+  ar:InboxBatch a ar:WorldSurfaceKind .
+  ar:InboxItem a ar:WorldSurfaceKind .
+  ar:ManagedFlow a ar:WorldSurfaceKind .
+  ar:ManagedFlowState a ar:WorldSurfaceKind .
+  ar:ChildTaskRecord a ar:WorldSurfaceKind .
+  ar:SlackWorkspace a ar:WorldSurfaceKind .
+  ar:SlackThread a ar:WorldSurfaceKind .
+  ar:SlackMessage a ar:WorldSurfaceKind .
+  ar:OwnerNotificationDestination a ar:WorldSurfaceKind .
+  ar:OwnerNotification a ar:WorldSurfaceKind .
+  ar:EndOfDaySummary a ar:WorldSurfaceKind .
+  ar:InboxBatch ar:containsKind ar:InboxItem .
+  ar:ManagedFlow ar:containsKind ar:ManagedFlowState, ar:ChildTaskRecord .
+  ar:SlackWorkspace ar:containsKind ar:SlackThread, ar:SlackMessage .
+
+  ar:cond_taskflow_runtime a ar:Requirement .
+  ar:cond_slack_connection a ar:Requirement .
+  ar:cond_owner_notification_route a ar:Requirement .
+  ar:cond_outside_reply a ar:Requirement .
+
+  ar:op_taskflow_create a ar:Operation ; ar:invokedThroughKind ar:OpenClawTaskFlowRuntime ;
+    ar:targetsKind ar:ManagedFlow ; ar:requires ar:cond_taskflow_runtime ;
+    ar:sourceStatus ar:ExampleOnly ;
+    ar:hasPotentialEffect [ a ar:PotentialEffect ; ar:effectType ar:Create ; ar:affectsKind ar:ManagedFlow, ar:ManagedFlowState ] .
+
+  ar:op_taskflow_classify a ar:Operation ; ar:invokedThroughKind ar:OpenClawTaskFlowRuntime, ar:SubagentSpawnTool ;
+    ar:targetsKind ar:InboxBatch, ar:ChildTaskRecord, ar:ManagedFlowState ;
+    ar:requires ar:cond_taskflow_runtime ; ar:sourceStatus ar:ExampleOnly ;
+    ar:hasPotentialEffect [ a ar:PotentialEffect ; ar:effectType ar:Read ; ar:affectsKind ar:InboxItem ],
+      [ a ar:PotentialEffect ; ar:effectType ar:Create ; ar:affectsKind ar:ChildTaskRecord ],
+      [ a ar:PotentialEffect ; ar:effectType ar:Update ; ar:affectsKind ar:ManagedFlowState ] .
+
+  ar:op_taskflow_wait a ar:Operation ; ar:invokedThroughKind ar:OpenClawTaskFlowRuntime ;
+    ar:targetsKind ar:ManagedFlowState ; ar:requires ar:cond_outside_reply ;
+    ar:sourceNote "waitJson channel=slack and slack:thread-1 are illustrative values." ;
+    ar:sourceStatus ar:ExampleOnly ;
+    ar:hasPotentialEffect [ a ar:PotentialEffect ; ar:effectType ar:Update ; ar:affectsKind ar:ManagedFlowState ] .
+
+  ar:op_taskflow_resume_finish a ar:Operation ; ar:invokedThroughKind ar:OpenClawTaskFlowRuntime ;
+    ar:targetsKind ar:ManagedFlowState ; ar:requires ar:cond_taskflow_runtime ;
+    ar:sourceStatus ar:ExampleOnly ;
+    ar:hasPotentialEffect [ a ar:PotentialEffect ; ar:effectType ar:Update ; ar:affectsKind ar:ManagedFlowState ] .
+
+  ar:op_taskflow_slack_post a ar:Operation ; ar:invokedThroughKind ar:SlackMessageChannel ;
+    ar:targetsKind ar:SlackThread ; ar:requires ar:cond_slack_connection ;
+    ar:sourceNote "Business items are routed to Slack in the pattern; no exact Slack send API is supplied." ;
+    ar:sourceStatus ar:ExampleOnly ;
+    ar:hasPotentialEffect [ a ar:PotentialEffect ; ar:effectType ar:Create ; ar:affectsKind ar:SlackMessage ],
+      [ a ar:PotentialEffect ; ar:effectType ar:Transmit ; ar:affectsKind ar:SlackThread ] .
+
+  ar:op_taskflow_personal_notify a ar:Operation ; ar:invokedThroughKind ar:OwnerNotificationChannel ;
+    ar:targetsKind ar:OwnerNotificationDestination ; ar:requires ar:cond_owner_notification_route ;
+    ar:sourceNote "The owner's notification channel is unspecified in the example." ;
+    ar:sourceStatus ar:ExampleOnly ;
+    ar:hasPotentialEffect [ a ar:PotentialEffect ; ar:effectType ar:Create ; ar:affectsKind ar:OwnerNotification ],
+      [ a ar:PotentialEffect ; ar:effectType ar:Notify ; ar:affectsKind ar:OwnerNotificationDestination ] .
+
+  ar:op_taskflow_eod_summary a ar:Operation ; ar:invokedThroughKind ar:OpenClawTaskFlowRuntime ;
+    ar:targetsKind ar:EndOfDaySummary ;
+    ar:sourceNote "The pattern says to keep other items for an end-of-day summary, but does not specify delivery." ;
+    ar:sourceStatus ar:ExampleOnly ;
+    ar:hasPotentialEffect [ a ar:PotentialEffect ; ar:effectType ar:Create ; ar:affectsKind ar:EndOfDaySummary ] .
+}

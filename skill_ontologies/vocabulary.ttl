@@ -1,0 +1,68 @@
+@prefix ar: <urn:agent-risk:> .
+@prefix rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix owl: <http://www.w3.org/2002/07/owl#> .
+@prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
+
+ar:EndpointSurfaceOntology a owl:Ontology ;
+  rdfs:comment "Lightweight vocabulary for potential invocation surfaces, affected world surfaces, and skill-described operations. Assertions are claims, not verified runtime authority or guaranteed effects." .
+
+ar:Skill a rdfs:Class .
+ar:SurfaceKind a rdfs:Class .
+ar:InvocationSurfaceKind a rdfs:Class ; rdfs:subClassOf ar:SurfaceKind .
+ar:WorldSurfaceKind a rdfs:Class ; rdfs:subClassOf ar:SurfaceKind .
+ar:Operation a rdfs:Class .
+ar:PotentialEffect a rdfs:Class .
+ar:EffectType a rdfs:Class .
+ar:Requirement a rdfs:Class .
+ar:EvidenceStatus a rdfs:Class .
+
+ar:declaresOperation a rdf:Property ; rdfs:domain ar:Skill ; rdfs:range ar:Operation .
+ar:sourcePath a rdf:Property ; rdfs:domain ar:Skill ; rdfs:range xsd:string .
+ar:sourceStatus a rdf:Property ; rdfs:range ar:EvidenceStatus .
+ar:sourceNote a rdf:Property ; rdfs:range xsd:string .
+ar:invokedThroughKind a rdf:Property ; rdfs:domain ar:Operation ; rdfs:range ar:InvocationSurfaceKind .
+ar:routesToKind a rdf:Property ; rdfs:range ar:SurfaceKind .
+ar:targetsKind a rdf:Property ; rdfs:domain ar:Operation ; rdfs:range ar:WorldSurfaceKind .
+ar:requires a rdf:Property ; rdfs:domain ar:Operation ; rdfs:range ar:Requirement .
+ar:hasPotentialEffect a rdf:Property ; rdfs:domain ar:Operation ; rdfs:range ar:PotentialEffect .
+ar:effectType a rdf:Property ; rdfs:domain ar:PotentialEffect ; rdfs:range ar:EffectType .
+ar:affectsKind a rdf:Property ; rdfs:domain ar:PotentialEffect ; rdfs:range ar:WorldSurfaceKind .
+ar:conditionalOn a rdf:Property ; rdfs:domain ar:PotentialEffect ; rdfs:range ar:Requirement .
+ar:mayEnable a rdf:Property ; rdfs:domain ar:Operation ; rdfs:range ar:Operation .
+ar:containsKind a rdf:Property ; rdfs:domain ar:WorldSurfaceKind ; rdfs:range ar:WorldSurfaceKind .
+ar:concreteExampleOnly a rdf:Property ; rdfs:range xsd:boolean .
+
+ar:SkillText a ar:EvidenceStatus ; rdfs:label "asserted by skill text" .
+ar:ScriptInspected a ar:EvidenceStatus ; rdfs:label "supported by inspected bundled script" .
+ar:ExampleOnly a ar:EvidenceStatus ; rdfs:label "illustrative example; not verified deployment" .
+ar:RuntimeUnverified a ar:EvidenceStatus ; rdfs:label "runtime presence and authority unverified" .
+
+ar:Read a ar:EffectType ; rdfs:comment "Access or obtain information; does not assert world-state mutation." .
+ar:Create a ar:EffectType .
+ar:Update a ar:EffectType .
+ar:Delete a ar:EffectType .
+ar:Transmit a ar:EffectType ; rdfs:comment "Data sent to another surface, without asserting a human read it." .
+ar:Execute a ar:EffectType .
+ar:Configure a ar:EffectType .
+ar:Authenticate a ar:EffectType .
+ar:Install a ar:EffectType .
+ar:Delegate a ar:EffectType .
+ar:Validate a ar:EffectType .
+ar:Notify a ar:EffectType .
+
+# Cross-skill kinds are types, not claims that the harness exposes them.
+ar:ShellExecution a ar:InvocationSurfaceKind .
+ar:OpenClawMessageTool a ar:InvocationSurfaceKind .
+ar:OpenClawConfigCLI a ar:InvocationSurfaceKind .
+ar:OpenClawTaskFlowRuntime a ar:InvocationSurfaceKind .
+ar:SubagentSpawnTool a ar:InvocationSurfaceKind .
+ar:ProcessControlTool a ar:InvocationSurfaceKind .
+ar:LocalFileSystem a ar:WorldSurfaceKind .
+ar:LocalFile a ar:WorldSurfaceKind .
+ar:ProcessEnvironment a ar:WorldSurfaceKind .
+ar:OpenClawConfiguration a ar:WorldSurfaceKind .
+ar:ExternalService a ar:WorldSurfaceKind .
+ar:Credential a ar:WorldSurfaceKind .
+ar:HumanRecipient a ar:WorldSurfaceKind ;
+  rdfs:comment "Potential downstream recipient; a send operation does not prove attention or behavior." .

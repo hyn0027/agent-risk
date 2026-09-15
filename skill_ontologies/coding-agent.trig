@@ -1,0 +1,66 @@
+@prefix ar: <urn:agent-risk:> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+
+ar:g_coding_agent {
+  ar:skill_coding_agent a ar:Skill ;
+    ar:sourcePath "/Users/yhong3/Documents/Research/agent-risk/top_skills/coding-agent/SKILL.md" ;
+    ar:declaresOperation ar:op_prepare_worktree, ar:op_launch_coding_worker,
+      ar:op_monitor_worker, ar:op_worker_issue_pr, ar:op_worker_notify .
+
+  ar:GitCLI a ar:InvocationSurfaceKind .
+  ar:CodingWorkerCLI a ar:InvocationSurfaceKind .
+  ar:GitCLI ar:routesToKind ar:LocalGitRepository, ar:RemoteGitRepository .
+  ar:CodingWorkerCLI ar:routesToKind ar:WorkerProcess .
+  ar:LocalGitRepository a ar:WorldSurfaceKind .
+  ar:RemoteGitRepository a ar:WorldSurfaceKind .
+  ar:IsolatedWorktree a ar:WorldSurfaceKind .
+  ar:LocalBranch a ar:WorldSurfaceKind .
+  ar:WorkerProcess a ar:WorldSurfaceKind .
+  ar:GitHubIssue a ar:WorldSurfaceKind .
+  ar:GitHubPullRequest a ar:WorldSurfaceKind .
+  ar:NotificationDestination a ar:WorldSurfaceKind .
+  ar:LocalGitRepository ar:containsKind ar:IsolatedWorktree, ar:LocalBranch .
+  ar:RemoteGitRepository ar:containsKind ar:GitHubIssue, ar:GitHubPullRequest .
+
+  ar:cond_trusted_ref a ar:Requirement .
+  ar:cond_verified_base a ar:Requirement .
+  ar:cond_isolated_worktree a ar:Requirement .
+  ar:cond_worker_available a ar:Requirement .
+  ar:cond_worker_auth a ar:Requirement .
+  ar:cond_notification_route a ar:Requirement .
+  ar:cond_remote_push_permission a ar:Requirement .
+
+  ar:op_prepare_worktree a ar:Operation ; ar:invokedThroughKind ar:ShellExecution, ar:GitCLI ;
+    ar:targetsKind ar:LocalGitRepository, ar:IsolatedWorktree ;
+    ar:requires ar:cond_trusted_ref, ar:cond_verified_base ; ar:sourceStatus ar:SkillText ;
+    ar:hasPotentialEffect [ a ar:PotentialEffect ; ar:effectType ar:Read ; ar:affectsKind ar:RemoteGitRepository ],
+      [ a ar:PotentialEffect ; ar:effectType ar:Create ; ar:affectsKind ar:IsolatedWorktree, ar:LocalBranch ] .
+
+  ar:op_launch_coding_worker a ar:Operation ; ar:invokedThroughKind ar:ShellExecution, ar:CodingWorkerCLI ;
+    ar:targetsKind ar:WorkerProcess, ar:IsolatedWorktree ;
+    ar:requires ar:cond_isolated_worktree, ar:cond_worker_available, ar:cond_worker_auth ;
+    ar:sourceNote "The worker runs in the worktree; one documented Claude Code launch uses bypassPermissions. Worker effects are open-ended and not exhaustively enumerated here." ;
+    ar:sourceStatus ar:SkillText ;
+    ar:hasPotentialEffect [ a ar:PotentialEffect ; ar:effectType ar:Execute ; ar:affectsKind ar:WorkerProcess ],
+      [ a ar:PotentialEffect ; ar:effectType ar:Update ; ar:affectsKind ar:IsolatedWorktree ] .
+
+  ar:op_monitor_worker a ar:Operation ; ar:invokedThroughKind ar:ProcessControlTool ;
+    ar:targetsKind ar:WorkerProcess ; ar:sourceStatus ar:SkillText ;
+    ar:sourceNote "Process list/poll/log/read, submit/write/paste input, and kill are all described; these have different effects." ;
+    ar:hasPotentialEffect [ a ar:PotentialEffect ; ar:effectType ar:Read ; ar:affectsKind ar:WorkerProcess ],
+      [ a ar:PotentialEffect ; ar:effectType ar:Update ; ar:affectsKind ar:WorkerProcess ],
+      [ a ar:PotentialEffect ; ar:effectType ar:Delete ; ar:affectsKind ar:WorkerProcess ] .
+
+  ar:op_worker_issue_pr a ar:Operation ; ar:invokedThroughKind ar:CodingWorkerCLI ;
+    ar:targetsKind ar:GitHubIssue, ar:LocalGitRepository, ar:RemoteGitRepository ;
+    ar:requires ar:cond_remote_push_permission ;
+    ar:sourceNote "Long issue-to-PR workflow is an instruction to a delegated worker, not a guaranteed outcome or a directly enumerated tool call." ;
+    ar:sourceStatus ar:SkillText ;
+    ar:hasPotentialEffect [ a ar:PotentialEffect ; ar:effectType ar:Update ; ar:affectsKind ar:LocalGitRepository, ar:RemoteGitRepository ],
+      [ a ar:PotentialEffect ; ar:effectType ar:Create ; ar:affectsKind ar:GitHubPullRequest ] .
+
+  ar:op_worker_notify a ar:Operation ; ar:invokedThroughKind ar:OpenClawMessageTool ;
+    ar:targetsKind ar:NotificationDestination ; ar:requires ar:cond_notification_route ;
+    ar:sourceStatus ar:SkillText ;
+    ar:hasPotentialEffect [ a ar:PotentialEffect ; ar:effectType ar:Notify ; ar:affectsKind ar:NotificationDestination ] .
+}

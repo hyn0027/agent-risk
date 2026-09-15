@@ -1,0 +1,51 @@
+@prefix ar: <urn:agent-risk:> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+
+ar:g_skill_creator {
+  ar:skill_skill_creator a ar:Skill ;
+    ar:sourcePath "/Users/yhong3/Documents/Research/agent-risk/top_skills/skill-creator-1.0.0/SKILL.md" ;
+    ar:declaresOperation ar:op_creator_inspect, ar:op_creator_propose,
+      ar:op_creator_repo_edit, ar:op_creator_validate .
+
+  ar:SkillWorkshopTool a ar:InvocationSurfaceKind .
+  ar:SkillValidationScript a ar:InvocationSurfaceKind .
+  ar:SkillWorkshopTool ar:routesToKind ar:PendingSkillProposal .
+  ar:SkillValidationScript ar:routesToKind ar:SkillFile .
+  ar:SkillDirectory a ar:WorldSurfaceKind .
+  ar:SkillFile a ar:WorldSurfaceKind .
+  ar:SkillResource a ar:WorldSurfaceKind .
+  ar:PendingSkillProposal a ar:WorldSurfaceKind .
+  ar:RepositorySkillSource a ar:WorldSurfaceKind .
+  ar:ValidationResult a ar:WorldSurfaceKind .
+  ar:SkillDirectory ar:containsKind ar:SkillFile, ar:SkillResource .
+  ar:RepositorySkillSource ar:containsKind ar:SkillDirectory .
+
+  ar:cond_workshop_available a ar:Requirement .
+  ar:cond_repo_edit_authorized a ar:Requirement .
+  ar:cond_validate_script_available a ar:Requirement .
+
+  ar:op_creator_inspect a ar:Operation ; ar:invokedThroughKind ar:ShellExecution ;
+    ar:targetsKind ar:SkillFile, ar:SkillResource ; ar:sourceStatus ar:SkillText ;
+    ar:hasPotentialEffect [ a ar:PotentialEffect ; ar:effectType ar:Read ; ar:affectsKind ar:SkillFile, ar:SkillResource ] .
+
+  ar:op_creator_propose a ar:Operation ; ar:invokedThroughKind ar:SkillWorkshopTool ;
+    ar:targetsKind ar:PendingSkillProposal ; ar:requires ar:cond_workshop_available ;
+    ar:sourceNote "The described live-workspace branch creates/revises a pending proposal and keeps live files unchanged until apply." ;
+    ar:sourceStatus ar:SkillText ;
+    ar:hasPotentialEffect [ a ar:PotentialEffect ; ar:effectType ar:Create ; ar:affectsKind ar:PendingSkillProposal ],
+      [ a ar:PotentialEffect ; ar:effectType ar:Update ; ar:affectsKind ar:PendingSkillProposal ] .
+
+  ar:op_creator_repo_edit a ar:Operation ; ar:invokedThroughKind ar:ShellExecution ;
+    ar:targetsKind ar:RepositorySkillSource, ar:SkillFile, ar:SkillResource ;
+    ar:requires ar:cond_repo_edit_authorized ; ar:sourceStatus ar:SkillText ;
+    ar:hasPotentialEffect [ a ar:PotentialEffect ; ar:effectType ar:Create ; ar:affectsKind ar:SkillFile, ar:SkillResource ],
+      [ a ar:PotentialEffect ; ar:effectType ar:Update ; ar:affectsKind ar:SkillFile, ar:SkillResource ] .
+
+  ar:op_creator_validate a ar:Operation ; ar:invokedThroughKind ar:SkillValidationScript ;
+    ar:targetsKind ar:SkillDirectory, ar:ValidationResult ;
+    ar:requires ar:cond_validate_script_available ;
+    ar:sourceNote "The skill points to quick_validate.py, while the bundle lists quick_validate.py and tests; helper tests may have effects not audited here." ;
+    ar:sourceStatus ar:SkillText ;
+    ar:hasPotentialEffect [ a ar:PotentialEffect ; ar:effectType ar:Read ; ar:affectsKind ar:SkillDirectory ],
+      [ a ar:PotentialEffect ; ar:effectType ar:Validate ; ar:affectsKind ar:ValidationResult ] .
+}

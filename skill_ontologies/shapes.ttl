@@ -1,0 +1,19 @@
+@prefix ar: <urn:agent-risk:> .
+@prefix sh: <http://www.w3.org/ns/shacl#> .
+@prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
+
+ar:OperationShape a sh:NodeShape ;
+  sh:targetClass ar:Operation ;
+  sh:property [ sh:path ar:invokedThroughKind ; sh:class ar:InvocationSurfaceKind ; sh:minCount 1 ] ;
+  sh:property [ sh:path ar:hasPotentialEffect ; sh:class ar:PotentialEffect ; sh:minCount 1 ] ;
+  sh:property [ sh:path ar:sourceStatus ; sh:class ar:EvidenceStatus ; sh:minCount 1 ] .
+
+ar:EffectShape a sh:NodeShape ;
+  sh:targetClass ar:PotentialEffect ;
+  sh:property [ sh:path ar:effectType ; sh:class ar:EffectType ; sh:minCount 1 ; sh:maxCount 1 ] ;
+  sh:property [ sh:path ar:affectsKind ; sh:class ar:WorldSurfaceKind ; sh:minCount 1 ] .
+
+ar:SkillShape a sh:NodeShape ;
+  sh:targetClass ar:Skill ;
+  sh:property [ sh:path ar:sourcePath ; sh:datatype xsd:string ; sh:minCount 1 ] ;
+  sh:property [ sh:path ar:declaresOperation ; sh:class ar:Operation ; sh:minCount 1 ] .

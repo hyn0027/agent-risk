@@ -1,0 +1,48 @@
+@prefix ar: <urn:agent-risk:> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+
+ar:g_sherpa_onnx_tts {
+  ar:skill_sherpa_onnx_tts a ar:Skill ;
+    ar:sourcePath "/Users/yhong3/Documents/Research/agent-risk/top_skills/sherpa-onnx-tts-1.0.0/SKILL.md" ;
+    ar:declaresOperation ar:op_sherpa_download, ar:op_sherpa_configure,
+      ar:op_sherpa_synthesize .
+
+  ar:SherpaWrapperCLI a ar:InvocationSurfaceKind .
+  ar:SherpaRuntimeCLI a ar:InvocationSurfaceKind .
+  ar:SherpaWrapperCLI ar:routesToKind ar:SherpaRuntimeCLI .
+  ar:RuntimeReleaseHost a ar:WorldSurfaceKind .
+  ar:VoiceModelReleaseHost a ar:WorldSurfaceKind .
+  ar:InstalledRuntime a ar:WorldSurfaceKind .
+  ar:InstalledVoiceModel a ar:WorldSurfaceKind .
+  ar:VoiceInputText a ar:WorldSurfaceKind .
+  ar:LocalAudioFile a ar:WorldSurfaceKind .
+  ar:SkillEnvironmentConfig a ar:WorldSurfaceKind .
+  ar:LocalFileSystem ar:containsKind ar:InstalledRuntime, ar:InstalledVoiceModel, ar:LocalAudioFile .
+  ar:OpenClawConfiguration ar:containsKind ar:SkillEnvironmentConfig .
+
+  ar:cond_os_supported a ar:Requirement .
+  ar:cond_runtime_installed a ar:Requirement .
+  ar:cond_model_installed a ar:Requirement .
+  ar:cond_output_path_writable a ar:Requirement .
+
+  ar:op_sherpa_download a ar:Operation ; ar:invokedThroughKind ar:ShellExecution ;
+    ar:targetsKind ar:RuntimeReleaseHost, ar:VoiceModelReleaseHost,
+      ar:InstalledRuntime, ar:InstalledVoiceModel ; ar:requires ar:cond_os_supported ;
+    ar:sourceNote "Skill metadata lists release downloads and extraction into OpenClaw state; no installation was performed here." ;
+    ar:sourceStatus ar:SkillText ;
+    ar:hasPotentialEffect [ a ar:PotentialEffect ; ar:effectType ar:Read ; ar:affectsKind ar:RuntimeReleaseHost, ar:VoiceModelReleaseHost ],
+      [ a ar:PotentialEffect ; ar:effectType ar:Install ; ar:affectsKind ar:InstalledRuntime, ar:InstalledVoiceModel ] .
+
+  ar:op_sherpa_configure a ar:Operation ; ar:invokedThroughKind ar:OpenClawConfigCLI ;
+    ar:targetsKind ar:SkillEnvironmentConfig ; ar:sourceStatus ar:SkillText ;
+    ar:hasPotentialEffect [ a ar:PotentialEffect ; ar:effectType ar:Configure ; ar:affectsKind ar:SkillEnvironmentConfig ] .
+
+  ar:op_sherpa_synthesize a ar:Operation ; ar:invokedThroughKind ar:SherpaWrapperCLI, ar:SherpaRuntimeCLI ;
+    ar:targetsKind ar:VoiceInputText, ar:LocalAudioFile ;
+    ar:requires ar:cond_runtime_installed, ar:cond_model_installed, ar:cond_output_path_writable ;
+    ar:sourceNote "Inspected wrapper creates output parent directories and runs local sherpa runtime to write a WAV. The skill describes it as offline." ;
+    ar:sourceStatus ar:ScriptInspected ;
+    ar:hasPotentialEffect [ a ar:PotentialEffect ; ar:effectType ar:Read ; ar:affectsKind ar:VoiceInputText ],
+      [ a ar:PotentialEffect ; ar:effectType ar:Create ; ar:affectsKind ar:LocalAudioFile ],
+      [ a ar:PotentialEffect ; ar:effectType ar:Update ; ar:affectsKind ar:LocalAudioFile ] .
+}

@@ -1,0 +1,111 @@
+@prefix ar: <urn:agent-risk:> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+
+ar:g_gh_issues {
+  ar:skill_gh_issues a ar:Skill ;
+    ar:sourcePath "/Users/yhong3/Documents/Research/agent-risk/top_skills/gh-issues/SKILL.md" ;
+    ar:declaresOperation ar:op_gh_fetch, ar:op_gh_token_resolution,
+      ar:op_gh_write_tracking, ar:op_gh_local_git, ar:op_gh_spawn_fix,
+      ar:op_gh_push, ar:op_gh_create_pr, ar:op_gh_fetch_review,
+      ar:op_gh_spawn_review_fix, ar:op_gh_reply_review, ar:op_gh_telegram_notify .
+
+  ar:GitHubREST a ar:InvocationSurfaceKind ; ar:routesToKind ar:GitHubRepository .
+  ar:CurlCLI a ar:InvocationSurfaceKind .
+  ar:GitCLI a ar:InvocationSurfaceKind .
+  ar:CurlCLI ar:routesToKind ar:GitHubREST .
+  ar:GitCLI ar:routesToKind ar:LocalGitRepository, ar:GitHubRepository .
+  ar:TelegramAdapter a ar:InvocationSurfaceKind ; ar:routesToKind ar:TelegramDestination .
+  ar:GitHubRepository a ar:WorldSurfaceKind .
+  ar:GitHubIssue a ar:WorldSurfaceKind .
+  ar:GitHubPullRequest a ar:WorldSurfaceKind .
+  ar:GitHubBranch a ar:WorldSurfaceKind .
+  ar:GitHubReview a ar:WorldSurfaceKind .
+  ar:GitHubComment a ar:WorldSurfaceKind .
+  ar:LocalGitRepository a ar:WorldSurfaceKind .
+  ar:LocalBranch a ar:WorldSurfaceKind .
+  ar:LocalGitConfiguration a ar:WorldSurfaceKind .
+  ar:GlobalGitConfiguration a ar:WorldSurfaceKind .
+  ar:TrackingFile a ar:WorldSurfaceKind .
+  ar:GHAccessToken a ar:WorldSurfaceKind .
+  ar:ProcessOutput a ar:WorldSurfaceKind .
+  ar:TelegramDestination a ar:WorldSurfaceKind .
+  ar:TelegramMessage a ar:WorldSurfaceKind .
+  ar:GitHubRepository ar:containsKind ar:GitHubIssue, ar:GitHubPullRequest,
+    ar:GitHubBranch, ar:GitHubReview, ar:GitHubComment .
+  ar:LocalGitRepository ar:containsKind ar:LocalBranch, ar:LocalGitConfiguration .
+
+  ar:cond_repo_resolved a ar:Requirement .
+  ar:cond_gh_token a ar:Requirement .
+  ar:cond_issue_confirmed a ar:Requirement .
+  ar:cond_trusted_checkout a ar:Requirement .
+  ar:cond_push_permission a ar:Requirement .
+  ar:cond_pr_comment_permission a ar:Requirement .
+  ar:cond_telegram_route a ar:Requirement .
+
+  ar:op_gh_fetch a ar:Operation ; ar:invokedThroughKind ar:CurlCLI, ar:GitHubREST ;
+    ar:targetsKind ar:GitHubRepository, ar:GitHubIssue ;
+    ar:requires ar:cond_repo_resolved, ar:cond_gh_token ; ar:sourceStatus ar:SkillText ;
+    ar:hasPotentialEffect [ a ar:PotentialEffect ; ar:effectType ar:Read ; ar:affectsKind ar:GitHubIssue, ar:GitHubRepository ] .
+
+  ar:op_gh_token_resolution a ar:Operation ; ar:invokedThroughKind ar:ShellExecution ;
+    ar:targetsKind ar:GHAccessToken, ar:OpenClawConfiguration ;
+    ar:sourceNote "The skill instructs echoing GH_TOKEN and later printing a token prefix. This is a possible output/log exposure, not a safe authentication pattern." ;
+    ar:sourceStatus ar:SkillText ;
+    ar:hasPotentialEffect [ a ar:PotentialEffect ; ar:effectType ar:Read ; ar:affectsKind ar:GHAccessToken, ar:OpenClawConfiguration ],
+      [ a ar:PotentialEffect ; ar:effectType ar:Transmit ; ar:affectsKind ar:ProcessOutput ] .
+
+  ar:op_gh_write_tracking a ar:Operation ; ar:invokedThroughKind ar:ShellExecution ;
+    ar:targetsKind ar:TrackingFile ; ar:sourceStatus ar:SkillText ;
+    ar:sourceNote "Claims and cron cursor files are created/updated under /data/.clawdbot in the described workflow." ;
+    ar:hasPotentialEffect [ a ar:PotentialEffect ; ar:effectType ar:Create ; ar:affectsKind ar:TrackingFile ],
+      [ a ar:PotentialEffect ; ar:effectType ar:Update ; ar:affectsKind ar:TrackingFile ] .
+
+  ar:op_gh_local_git a ar:Operation ; ar:invokedThroughKind ar:ShellExecution, ar:GitCLI ;
+    ar:targetsKind ar:LocalGitRepository, ar:LocalBranch ;
+    ar:requires ar:cond_repo_resolved, ar:cond_trusted_checkout ; ar:sourceStatus ar:SkillText ;
+    ar:hasPotentialEffect [ a ar:PotentialEffect ; ar:effectType ar:Create ; ar:affectsKind ar:LocalBranch ],
+      [ a ar:PotentialEffect ; ar:effectType ar:Update ; ar:affectsKind ar:LocalGitRepository ] .
+
+  ar:op_gh_spawn_fix a ar:Operation ; ar:invokedThroughKind ar:SubagentSpawnTool ;
+    ar:targetsKind ar:GitHubIssue, ar:LocalGitRepository ;
+    ar:requires ar:cond_issue_confirmed ;
+    ar:sourceNote "Delegated fix work has open-ended code/file and remote effects; this graph does not certify the child prompt's behavior." ;
+    ar:sourceStatus ar:SkillText ;
+    ar:hasPotentialEffect [ a ar:PotentialEffect ; ar:effectType ar:Delegate ; ar:affectsKind ar:LocalGitRepository ] .
+
+  ar:op_gh_push a ar:Operation ; ar:invokedThroughKind ar:ShellExecution, ar:GitCLI ;
+    ar:targetsKind ar:GitHubBranch, ar:LocalGitConfiguration, ar:GlobalGitConfiguration ;
+    ar:requires ar:cond_gh_token, ar:cond_push_permission ;
+    ar:sourceNote "The described push flow changes the global credential helper and embeds the token in a Git remote URL. No force-push is instructed." ;
+    ar:sourceStatus ar:SkillText ;
+    ar:hasPotentialEffect [ a ar:PotentialEffect ; ar:effectType ar:Update ; ar:affectsKind ar:GitHubBranch ],
+      [ a ar:PotentialEffect ; ar:effectType ar:Configure ; ar:affectsKind ar:LocalGitConfiguration, ar:GlobalGitConfiguration ],
+      [ a ar:PotentialEffect ; ar:effectType ar:Transmit ; ar:affectsKind ar:LocalGitConfiguration ] .
+
+  ar:op_gh_create_pr a ar:Operation ; ar:invokedThroughKind ar:CurlCLI, ar:GitHubREST ;
+    ar:targetsKind ar:GitHubRepository ; ar:requires ar:cond_gh_token, ar:cond_push_permission ;
+    ar:sourceNote "Creates a PR record; does not assert merge, release, or deployment." ;
+    ar:sourceStatus ar:SkillText ;
+    ar:hasPotentialEffect [ a ar:PotentialEffect ; ar:effectType ar:Create ; ar:affectsKind ar:GitHubPullRequest ] .
+
+  ar:op_gh_fetch_review a ar:Operation ; ar:invokedThroughKind ar:CurlCLI, ar:GitHubREST ;
+    ar:targetsKind ar:GitHubPullRequest, ar:GitHubReview, ar:GitHubComment ;
+    ar:requires ar:cond_gh_token ; ar:sourceStatus ar:SkillText ;
+    ar:hasPotentialEffect [ a ar:PotentialEffect ; ar:effectType ar:Read ; ar:affectsKind ar:GitHubReview, ar:GitHubComment, ar:GitHubPullRequest ] .
+
+  ar:op_gh_spawn_review_fix a ar:Operation ; ar:invokedThroughKind ar:SubagentSpawnTool ;
+    ar:targetsKind ar:GitHubPullRequest, ar:LocalGitRepository ;
+    ar:sourceStatus ar:SkillText ;
+    ar:hasPotentialEffect [ a ar:PotentialEffect ; ar:effectType ar:Delegate ; ar:affectsKind ar:LocalGitRepository, ar:GitHubPullRequest ] .
+
+  ar:op_gh_reply_review a ar:Operation ; ar:invokedThroughKind ar:CurlCLI, ar:GitHubREST ;
+    ar:targetsKind ar:GitHubComment ; ar:requires ar:cond_gh_token, ar:cond_pr_comment_permission ;
+    ar:sourceStatus ar:SkillText ;
+    ar:hasPotentialEffect [ a ar:PotentialEffect ; ar:effectType ar:Create ; ar:affectsKind ar:GitHubComment ] .
+
+  ar:op_gh_telegram_notify a ar:Operation ; ar:invokedThroughKind ar:OpenClawMessageTool, ar:TelegramAdapter ;
+    ar:targetsKind ar:TelegramDestination ; ar:requires ar:cond_telegram_route ;
+    ar:sourceStatus ar:SkillText ;
+    ar:hasPotentialEffect [ a ar:PotentialEffect ; ar:effectType ar:Create ; ar:affectsKind ar:TelegramMessage ],
+      [ a ar:PotentialEffect ; ar:effectType ar:Notify ; ar:affectsKind ar:TelegramDestination ] .
+}

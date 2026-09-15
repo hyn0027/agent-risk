@@ -1,0 +1,61 @@
+@prefix ar: <urn:agent-risk:> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+
+ar:g_configure_channel {
+  ar:skill_configure_channel a ar:Skill ;
+    ar:sourcePath "/Users/yhong3/Documents/Research/agent-risk/top_skills/configure-channel/SKILL.md" ;
+    ar:declaresOperation ar:op_channel_inspect, ar:op_channel_configure,
+      ar:op_connect_channel, ar:op_doctor_fix, ar:op_dry_run_message,
+      ar:op_real_test_message .
+
+  ar:ConnectChannelTool a ar:InvocationSurfaceKind .
+  ar:OpenClawDoctorCLI a ar:InvocationSurfaceKind .
+  ar:OpenClawConfigCLI ar:routesToKind ar:OpenClawConfiguration .
+  ar:OpenClawMessageTool ar:routesToKind ar:ConfiguredChatChannel .
+  ar:ConfiguredChatChannel a ar:WorldSurfaceKind .
+  ar:ChannelSecretReference a ar:WorldSurfaceKind .
+  ar:ChannelStatus a ar:WorldSurfaceKind .
+  ar:ChannelTestPayload a ar:WorldSurfaceKind .
+  ar:RemoteChatMessage a ar:WorldSurfaceKind .
+  ar:OpenClawConfiguration ar:containsKind ar:ChannelSecretReference .
+  ar:ConfiguredChatChannel ar:containsKind ar:RemoteChatMessage .
+
+  ar:cond_exact_config_path a ar:Requirement .
+  ar:cond_secret_ref a ar:Requirement .
+  ar:cond_operator_secret_entry a ar:Requirement .
+  ar:cond_fix_approval a ar:Requirement .
+  ar:cond_channel_auth a ar:Requirement .
+  ar:cond_test_destination a ar:Requirement .
+
+  ar:op_channel_inspect a ar:Operation ; ar:invokedThroughKind ar:OpenClawConfigCLI ;
+    ar:targetsKind ar:OpenClawConfiguration, ar:ChannelStatus ; ar:sourceStatus ar:SkillText ;
+    ar:hasPotentialEffect [ a ar:PotentialEffect ; ar:effectType ar:Read ; ar:affectsKind ar:OpenClawConfiguration, ar:ChannelStatus ] .
+
+  ar:op_channel_configure a ar:Operation ; ar:invokedThroughKind ar:OpenClawConfigCLI ;
+    ar:targetsKind ar:OpenClawConfiguration ; ar:requires ar:cond_exact_config_path, ar:cond_secret_ref ;
+    ar:sourceNote "config set/patch can update channel enablement, token SecretRefs, and allowlists." ;
+    ar:sourceStatus ar:SkillText ;
+    ar:hasPotentialEffect [ a ar:PotentialEffect ; ar:effectType ar:Configure ; ar:affectsKind ar:OpenClawConfiguration, ar:ChannelSecretReference ] .
+
+  ar:op_connect_channel a ar:Operation ; ar:invokedThroughKind ar:ConnectChannelTool ;
+    ar:targetsKind ar:OpenClawConfiguration ; ar:requires ar:cond_operator_secret_entry ;
+    ar:sourceStatus ar:SkillText ;
+    ar:hasPotentialEffect [ a ar:PotentialEffect ; ar:effectType ar:Configure ; ar:affectsKind ar:OpenClawConfiguration ] .
+
+  ar:op_doctor_fix a ar:Operation ; ar:invokedThroughKind ar:OpenClawDoctorCLI ;
+    ar:targetsKind ar:OpenClawConfiguration ; ar:requires ar:cond_fix_approval ;
+    ar:sourceStatus ar:SkillText ;
+    ar:hasPotentialEffect [ a ar:PotentialEffect ; ar:effectType ar:Update ; ar:affectsKind ar:OpenClawConfiguration ] .
+
+  ar:op_dry_run_message a ar:Operation ; ar:invokedThroughKind ar:OpenClawMessageTool ;
+    ar:targetsKind ar:ChannelTestPayload ; ar:sourceStatus ar:SkillText ;
+    ar:sourceNote "Dry-run inspects the outgoing payload; it does not claim remote delivery." ;
+    ar:hasPotentialEffect [ a ar:PotentialEffect ; ar:effectType ar:Validate ; ar:affectsKind ar:ChannelTestPayload ] .
+
+  ar:op_real_test_message a ar:Operation ; ar:invokedThroughKind ar:OpenClawMessageTool ;
+    ar:targetsKind ar:ConfiguredChatChannel ; ar:requires ar:cond_channel_auth, ar:cond_test_destination ;
+    ar:sourceNote "A labeled real test send is an external side effect. Delivery confirmation does not prove a human read it." ;
+    ar:sourceStatus ar:SkillText ;
+    ar:hasPotentialEffect [ a ar:PotentialEffect ; ar:effectType ar:Create ; ar:affectsKind ar:RemoteChatMessage ],
+      [ a ar:PotentialEffect ; ar:effectType ar:Transmit ; ar:affectsKind ar:ConfiguredChatChannel ] .
+}

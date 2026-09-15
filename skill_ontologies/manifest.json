@@ -1,0 +1,18 @@
+{
+  "schemaVersion": "0.1",
+  "vocabulary": "vocabulary.ttl",
+  "shapes": "shapes.ttl",
+  "sourceRoot": "/Users/yhong3/Documents/Research/agent-risk/top_skills",
+  "modules": [
+    {"directory": "1password-1.0.0", "file": "1password.trig", "graph": "urn:agent-risk:g_1password", "skillSha256": "c0f96ba727c68ebcbfdaed31bbf631f300e3ea3e717a72442cbd18143f347f55"},
+    {"directory": "coding-agent", "file": "coding-agent.trig", "graph": "urn:agent-risk:g_coding_agent", "skillSha256": "67dff2389503d4a47ef757afa637458e00bb9560f898ff072e35a825e065174d"},
+    {"directory": "configure-channel", "file": "configure-channel.trig", "graph": "urn:agent-risk:g_configure_channel", "skillSha256": "56f12cec97442410de68a5fc119dc5b198bedaadff9749188b48704d354b94fd"},
+    {"directory": "diagram-maker-1.0.0", "file": "diagram-maker.trig", "graph": "urn:agent-risk:g_diagram_maker", "skillSha256": "b8a3355cf2b7ca1c18b672d3fb23fba331db0da75308b403721a9918094b7bcb"},
+    {"directory": "discord", "file": "discord.trig", "graph": "urn:agent-risk:g_discord", "skillSha256": "29897610e192ee367f0117dd992147dd7fe417820b79ad01329838f537019508"},
+    {"directory": "gh-issues", "file": "gh-issues.trig", "graph": "urn:agent-risk:g_gh_issues", "skillSha256": "f2a787203a90572835e7b7bfe939a422c7d7e1828662d60ad2e4a0db8c9f5577"},
+    {"directory": "meme-maker-1.0.0", "file": "meme-maker.trig", "graph": "urn:agent-risk:g_meme_maker", "skillSha256": "05e5500023d6b432f695f680ca771b005ab66b03aceff9294dc0a9768dcf2301"},
+    {"directory": "sherpa-onnx-tts-1.0.0", "file": "sherpa-onnx-tts.trig", "graph": "urn:agent-risk:g_sherpa_onnx_tts", "skillSha256": "afd52f85a94d8e46114fcd7e9bebcdf4c7dcf0de34fdebf178c38cab60246d7e"},
+    {"directory": "skill-creator-1.0.0", "file": "skill-creator.trig", "graph": "urn:agent-risk:g_skill_creator", "skillSha256": "50ceafc65b49526d94b1263bc4a8ee381ce36249f2e370f3cdc414efa6a75c2f"},
+    {"directory": "taskflow-inbox-triage", "file": "taskflow-inbox-triage.trig", "graph": "urn:agent-risk:g_taskflow_inbox_triage", "skillSha256": "0fb413b107f9b0f5625136869cd5a979ecd65e1a756216705bee2ae0b8d1112c"}
+  ]
+}
