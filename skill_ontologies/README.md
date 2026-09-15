@@ -1,8 +1,17 @@
 # Endpoint and resource ontologies — prototype
 
-Each per-skill `.trig` file contains one named graph derived from a `top_skills/*/SKILL.md`. Four universal named graphs load independently of skills. `local-filesystem.trig` and `freeform-internet.trig` are **resource-only** graphs. `tool-endpoints.trig` provides the common callable-endpoint parent and an abstract MCP-tool branch. `shell-execution.trig` describes a shell invocation hierarchy and process-related resources. Neither tool-endpoint nor shell graph contains operations or effects. `openclaw-messaging.trig` is a separate **on-demand dependency** for skills that cite its mediator kinds. `manifest.json` selects the always-loaded graphs and resolves skill dependencies; **loading policy is not an ontological category**.
+Each file in `skills/` contains one named graph derived from a `top_skills/*/SKILL.md`. Reusable graphs and schemas live in `universal/`. Four universal named graphs load independently of skills. `local-filesystem.trig` and `freeform-internet.trig` are **resource-only** graphs. `tool-endpoints.trig` provides the common callable-endpoint parent and an abstract MCP-tool branch. `shell-execution.trig` describes a shell invocation hierarchy and process-related resources. Neither tool-endpoint nor shell graph contains operations or effects. `universal/openclaw-messaging.trig` is a reusable **on-demand dependency** for skills that cite its mediator kinds; being in `universal/` does not mean it is always loaded. `manifest.json` selects the always-loaded graphs and resolves skill dependencies; **loading policy is not an ontological category**.
 
-All graphs use `ar: <urn:agent-risk:>`. These are local identifiers, not dereferenceable Web URLs. For a published ontology, use an owned, persistent HTTPS namespace. `vocabulary.ttl` defines the common terms, and `shapes.ttl` validates skill operations. The source skills are not invoked by these files.
+All graphs use `ar: <urn:agent-risk:>`. These are local identifiers, not dereferenceable Web URLs. For a published ontology, use an owned, persistent HTTPS namespace. `universal/vocabulary.ttl` defines the common terms, and `universal/shapes.ttl` validates skill operations. The source skills are not invoked by these files.
+
+```text
+skill_ontologies/
+  manifest.json          graph paths and loading/dependency policy
+  loader.py              loads and validates a selected graph union
+  README.md
+  universal/             reusable vocabulary, shapes, and shared graphs
+  skills/                one graph per source skill
+```
 
 ## Resource relationships
 
