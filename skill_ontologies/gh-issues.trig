@@ -4,6 +4,7 @@
 ar:g_gh_issues {
   ar:skill_gh_issues a ar:Skill ;
     ar:sourcePath "/Users/yhong3/Documents/Research/agent-risk/top_skills/gh-issues/SKILL.md" ;
+    ar:usesSharedKind ar:LocalFile, ar:LocalDirectory ;
     ar:declaresOperation ar:op_gh_fetch, ar:op_gh_token_resolution,
       ar:op_gh_write_tracking, ar:op_gh_local_git, ar:op_gh_spawn_fix,
       ar:op_gh_push, ar:op_gh_create_pr, ar:op_gh_fetch_review,
@@ -21,11 +22,11 @@ ar:g_gh_issues {
   ar:GitHubBranch a ar:WorldSurfaceKind .
   ar:GitHubReview a ar:WorldSurfaceKind .
   ar:GitHubComment a ar:WorldSurfaceKind .
-  ar:LocalGitRepository a ar:WorldSurfaceKind .
+  ar:LocalGitRepository a ar:WorldSurfaceKind ; ar:specializesKind ar:LocalDirectory .
   ar:LocalBranch a ar:WorldSurfaceKind .
-  ar:LocalGitConfiguration a ar:WorldSurfaceKind .
-  ar:GlobalGitConfiguration a ar:WorldSurfaceKind .
-  ar:TrackingFile a ar:WorldSurfaceKind .
+  ar:LocalGitConfiguration a ar:WorldSurfaceKind ; ar:specializesKind ar:LocalFile .
+  ar:GlobalGitConfiguration a ar:WorldSurfaceKind ; ar:specializesKind ar:LocalFile .
+  ar:TrackingFile a ar:WorldSurfaceKind ; ar:specializesKind ar:LocalFile .
   ar:GHAccessToken a ar:WorldSurfaceKind .
   ar:ProcessOutput a ar:WorldSurfaceKind .
   ar:TelegramDestination a ar:WorldSurfaceKind .

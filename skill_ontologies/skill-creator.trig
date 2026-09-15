@@ -4,6 +4,7 @@
 ar:g_skill_creator {
   ar:skill_skill_creator a ar:Skill ;
     ar:sourcePath "/Users/yhong3/Documents/Research/agent-risk/top_skills/skill-creator-1.0.0/SKILL.md" ;
+    ar:usesSharedKind ar:LocalFile, ar:LocalDirectory ;
     ar:declaresOperation ar:op_creator_inspect, ar:op_creator_propose,
       ar:op_creator_repo_edit, ar:op_creator_validate .
 
@@ -11,11 +12,13 @@ ar:g_skill_creator {
   ar:SkillValidationScript a ar:InvocationSurfaceKind .
   ar:SkillWorkshopTool ar:routesToKind ar:PendingSkillProposal .
   ar:SkillValidationScript ar:routesToKind ar:SkillFile .
-  ar:SkillDirectory a ar:WorldSurfaceKind .
-  ar:SkillFile a ar:WorldSurfaceKind .
-  ar:SkillResource a ar:WorldSurfaceKind .
+  ar:SkillDirectory a ar:WorldSurfaceKind ; ar:specializesKind ar:LocalDirectory .
+  ar:SkillFile a ar:WorldSurfaceKind ; ar:specializesKind ar:LocalFile .
+  ar:SkillResource a ar:WorldSurfaceKind ;
+    ar:mayBeStoredAsKind ar:LocalFile, ar:LocalDirectory ;
+    rdfs:comment "Bundled resources may be files or directories; a single narrower file kind would overstate the source." .
   ar:PendingSkillProposal a ar:WorldSurfaceKind .
-  ar:RepositorySkillSource a ar:WorldSurfaceKind .
+  ar:RepositorySkillSource a ar:WorldSurfaceKind ; ar:specializesKind ar:LocalDirectory .
   ar:ValidationResult a ar:WorldSurfaceKind .
   ar:SkillDirectory ar:containsKind ar:SkillFile, ar:SkillResource .
   ar:RepositorySkillSource ar:containsKind ar:SkillDirectory .

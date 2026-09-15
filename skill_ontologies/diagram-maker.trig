@@ -4,6 +4,7 @@
 ar:g_diagram_maker {
   ar:skill_diagram_maker a ar:Skill ;
     ar:sourcePath "/Users/yhong3/Documents/Research/agent-risk/top_skills/diagram-maker-1.0.0/SKILL.md" ;
+    ar:usesSharedKind ar:LocalFile ;
     ar:declaresOperation ar:op_diagram_read_patterns,
       ar:op_diagram_write_artifact, ar:op_diagram_verify .
 
@@ -11,11 +12,11 @@ ar:g_diagram_maker {
     rdfs:comment "The skill requires file generation but does not identify a particular harness write tool." .
   ar:LocalArtifactReader a ar:InvocationSurfaceKind ;
     rdfs:comment "The skill calls for opening/parsing when feasible but does not identify a particular harness read tool." .
-  ar:DiagramTemplate a ar:WorldSurfaceKind .
-  ar:DiagramArtifact a ar:WorldSurfaceKind .
-  ar:DiagramHTML a ar:WorldSurfaceKind .
-  ar:DiagramSVG a ar:WorldSurfaceKind .
-  ar:ExcalidrawJSON a ar:WorldSurfaceKind .
+  ar:DiagramTemplate a ar:WorldSurfaceKind ; ar:specializesKind ar:LocalFile .
+  ar:DiagramArtifact a ar:WorldSurfaceKind ; ar:specializesKind ar:LocalFile .
+  ar:DiagramHTML a ar:WorldSurfaceKind ; ar:specializesKind ar:LocalFile .
+  ar:DiagramSVG a ar:WorldSurfaceKind ; ar:specializesKind ar:LocalFile .
+  ar:ExcalidrawJSON a ar:WorldSurfaceKind ; ar:specializesKind ar:LocalFile .
   ar:LocalFileSystem ar:containsKind ar:DiagramTemplate, ar:DiagramArtifact .
   ar:DiagramArtifact ar:containsKind ar:DiagramHTML, ar:DiagramSVG, ar:ExcalidrawJSON .
 

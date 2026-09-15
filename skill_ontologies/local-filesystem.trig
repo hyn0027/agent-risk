@@ -1,0 +1,24 @@
+@prefix ar: <urn:agent-risk:> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+
+ar:g_baseline_local_filesystem {
+  ar:baseline_local_filesystem a ar:HarnessBaseline ;
+    rdfs:label "Always-loaded local filesystem resource model" ;
+    ar:sourceStatus ar:RuntimeUnverified ;
+    ar:sourceNote "Resource kinds only. Concrete paths, mounts, sandbox boundaries, and permissions require a separate runtime inventory." ;
+    ar:declaresKind ar:LocalFileSystem, ar:LocalDirectory, ar:LocalFile,
+      ar:LocalFileMetadata, ar:LocalSymbolicLink .
+
+  ar:LocalFileSystem a ar:WorldSurfaceKind .
+  ar:LocalDirectory a ar:WorldSurfaceKind .
+  ar:LocalFile a ar:WorldSurfaceKind .
+  ar:LocalFileMetadata a ar:WorldSurfaceKind ;
+    rdfs:comment "Permissions, timestamps, ownership, and similar file or directory metadata." .
+  ar:LocalSymbolicLink a ar:WorldSurfaceKind .
+
+  ar:LocalFileSystem ar:containsKind ar:LocalDirectory, ar:LocalFile,
+    ar:LocalSymbolicLink .
+  ar:LocalDirectory ar:containsKind ar:LocalDirectory, ar:LocalFile,
+    ar:LocalSymbolicLink, ar:LocalFileMetadata .
+  ar:LocalFile ar:containsKind ar:LocalFileMetadata .
+}

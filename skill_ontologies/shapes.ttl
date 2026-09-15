@@ -17,3 +17,9 @@ ar:SkillShape a sh:NodeShape ;
   sh:targetClass ar:Skill ;
   sh:property [ sh:path ar:sourcePath ; sh:datatype xsd:string ; sh:minCount 1 ] ;
   sh:property [ sh:path ar:declaresOperation ; sh:class ar:Operation ; sh:minCount 1 ] .
+
+ar:HarnessBaselineShape a sh:NodeShape ;
+  sh:targetClass ar:HarnessBaseline ;
+  sh:property [ sh:path ar:declaresKind ; sh:class ar:WorldSurfaceKind ; sh:minCount 1 ] ;
+  sh:property [ sh:path ar:declaresOperation ; sh:maxCount 0 ] ;
+  sh:property [ sh:path ar:sourceStatus ; sh:class ar:EvidenceStatus ; sh:minCount 1 ] .

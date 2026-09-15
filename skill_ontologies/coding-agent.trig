@@ -4,6 +4,7 @@
 ar:g_coding_agent {
   ar:skill_coding_agent a ar:Skill ;
     ar:sourcePath "/Users/yhong3/Documents/Research/agent-risk/top_skills/coding-agent/SKILL.md" ;
+    ar:usesSharedKind ar:LocalDirectory, ar:LocalFile ;
     ar:declaresOperation ar:op_prepare_worktree, ar:op_launch_coding_worker,
       ar:op_monitor_worker, ar:op_worker_issue_pr, ar:op_worker_notify .
 
@@ -11,9 +12,9 @@ ar:g_coding_agent {
   ar:CodingWorkerCLI a ar:InvocationSurfaceKind .
   ar:GitCLI ar:routesToKind ar:LocalGitRepository, ar:RemoteGitRepository .
   ar:CodingWorkerCLI ar:routesToKind ar:WorkerProcess .
-  ar:LocalGitRepository a ar:WorldSurfaceKind .
+  ar:LocalGitRepository a ar:WorldSurfaceKind ; ar:specializesKind ar:LocalDirectory .
   ar:RemoteGitRepository a ar:WorldSurfaceKind .
-  ar:IsolatedWorktree a ar:WorldSurfaceKind .
+  ar:IsolatedWorktree a ar:WorldSurfaceKind ; ar:specializesKind ar:LocalDirectory .
   ar:LocalBranch a ar:WorldSurfaceKind .
   ar:WorkerProcess a ar:WorldSurfaceKind .
   ar:GitHubIssue a ar:WorldSurfaceKind .

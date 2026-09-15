@@ -1,8 +1,12 @@
 {
-  "schemaVersion": "0.1",
+  "schemaVersion": "0.3",
   "vocabulary": "vocabulary.ttl",
   "shapes": "shapes.ttl",
   "sourceRoot": "/Users/yhong3/Documents/Research/agent-risk/top_skills",
+  "baselines": [
+    {"name": "local-filesystem", "file": "local-filesystem.trig", "graph": "urn:agent-risk:g_baseline_local_filesystem"},
+    {"name": "freeform-internet", "file": "freeform-internet.trig", "graph": "urn:agent-risk:g_baseline_freeform_internet"}
+  ],
   "modules": [
     {"directory": "1password-1.0.0", "file": "1password.trig", "graph": "urn:agent-risk:g_1password", "skillSha256": "c0f96ba727c68ebcbfdaed31bbf631f300e3ea3e717a72442cbd18143f347f55"},
     {"directory": "coding-agent", "file": "coding-agent.trig", "graph": "urn:agent-risk:g_coding_agent", "skillSha256": "67dff2389503d4a47ef757afa637458e00bb9560f898ff072e35a825e065174d"},

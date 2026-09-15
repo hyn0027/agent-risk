@@ -7,7 +7,11 @@
 ar:EndpointSurfaceOntology a owl:Ontology ;
   rdfs:comment "Lightweight vocabulary for potential invocation surfaces, affected world surfaces, and skill-described operations. Assertions are claims, not verified runtime authority or guaranteed effects." .
 
-ar:Skill a rdfs:Class .
+ar:EndpointModule a rdfs:Class ;
+  rdfs:comment "A named ontology module; a skill can describe operations, while a baseline can only catalogue shared resource kinds." .
+ar:Skill a rdfs:Class ; rdfs:subClassOf ar:EndpointModule .
+ar:HarnessBaseline a rdfs:Class ; rdfs:subClassOf ar:EndpointModule ;
+  rdfs:comment "A resource-only ontology module loaded independently of skills; not an assertion of live permission." .
 ar:SurfaceKind a rdfs:Class .
 ar:InvocationSurfaceKind a rdfs:Class ; rdfs:subClassOf ar:SurfaceKind .
 ar:WorldSurfaceKind a rdfs:Class ; rdfs:subClassOf ar:SurfaceKind .
@@ -17,7 +21,14 @@ ar:EffectType a rdfs:Class .
 ar:Requirement a rdfs:Class .
 ar:EvidenceStatus a rdfs:Class .
 
-ar:declaresOperation a rdf:Property ; rdfs:domain ar:Skill ; rdfs:range ar:Operation .
+ar:declaresOperation a rdf:Property ; rdfs:domain ar:EndpointModule ; rdfs:range ar:Operation .
+ar:declaresKind a rdf:Property ; rdfs:domain ar:EndpointModule ; rdfs:range ar:WorldSurfaceKind .
+ar:usesSharedKind a rdf:Property ; rdfs:domain ar:Skill ; rdfs:range ar:WorldSurfaceKind ;
+  rdfs:comment "Explicit citation from a skill ontology to a resource kind defined by an always-loaded baseline." .
+ar:specializesKind a rdf:Property ; rdfs:domain ar:WorldSurfaceKind ; rdfs:range ar:WorldSurfaceKind ;
+  rdfs:comment "A narrower resource kind; these kinds are individuals, so rdfs:subClassOf is not used." .
+ar:mayBeStoredAsKind a rdf:Property ; rdfs:domain ar:WorldSurfaceKind ; rdfs:range ar:WorldSurfaceKind ;
+  rdfs:comment "Possible physical storage representation, not an identity or guaranteed effect." .
 ar:sourcePath a rdf:Property ; rdfs:domain ar:Skill ; rdfs:range xsd:string .
 ar:sourceStatus a rdf:Property ; rdfs:range ar:EvidenceStatus .
 ar:sourceNote a rdf:Property ; rdfs:range xsd:string .
@@ -58,10 +69,10 @@ ar:OpenClawConfigCLI a ar:InvocationSurfaceKind .
 ar:OpenClawTaskFlowRuntime a ar:InvocationSurfaceKind .
 ar:SubagentSpawnTool a ar:InvocationSurfaceKind .
 ar:ProcessControlTool a ar:InvocationSurfaceKind .
-ar:LocalFileSystem a ar:WorldSurfaceKind .
-ar:LocalFile a ar:WorldSurfaceKind .
 ar:ProcessEnvironment a ar:WorldSurfaceKind .
-ar:OpenClawConfiguration a ar:WorldSurfaceKind .
+ar:OpenClawConfiguration a ar:WorldSurfaceKind ;
+  ar:mayBeStoredAsKind ar:LocalFile ;
+  rdfs:comment "Logical configuration may be persisted in a local file; this relation does not assert direct file access by every config operation." .
 ar:ExternalService a ar:WorldSurfaceKind .
 ar:Credential a ar:WorldSurfaceKind .
 ar:HumanRecipient a ar:WorldSurfaceKind ;

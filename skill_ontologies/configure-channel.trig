@@ -4,6 +4,8 @@
 ar:g_configure_channel {
   ar:skill_configure_channel a ar:Skill ;
     ar:sourcePath "/Users/yhong3/Documents/Research/agent-risk/top_skills/configure-channel/SKILL.md" ;
+    ar:usesSharedKind ar:LocalFile ;
+    ar:sourceNote "Configuration is file-backed in the documented setup, but this skill explicitly forbids hand-editing config files; the CLI operations remain logical configuration effects." ;
     ar:declaresOperation ar:op_channel_inspect, ar:op_channel_configure,
       ar:op_connect_channel, ar:op_doctor_fix, ar:op_dry_run_message,
       ar:op_real_test_message .
