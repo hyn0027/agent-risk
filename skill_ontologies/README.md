@@ -1,6 +1,6 @@
 # Endpoint and resource ontologies — prototype
 
-Each per-skill `.trig` file contains one named graph derived from a `top_skills/*/SKILL.md`. Three universal named graphs load independently of skills. `local-filesystem.trig` and `freeform-internet.trig` are **resource-only** graphs. `shell-execution.trig` describes a shell invocation hierarchy and process-related resources, but contains no operations or effects. `openclaw-messaging.trig` is a separate **on-demand dependency** for skills that cite its mediator kinds. `manifest.json` selects the always-loaded graphs and resolves skill dependencies; **loading policy is not an ontological category**.
+Each per-skill `.trig` file contains one named graph derived from a `top_skills/*/SKILL.md`. Four universal named graphs load independently of skills. `local-filesystem.trig` and `freeform-internet.trig` are **resource-only** graphs. `tool-endpoints.trig` provides the common callable-endpoint parent and an abstract MCP-tool branch. `shell-execution.trig` describes a shell invocation hierarchy and process-related resources. Neither tool-endpoint nor shell graph contains operations or effects. `openclaw-messaging.trig` is a separate **on-demand dependency** for skills that cite its mediator kinds. `manifest.json` selects the always-loaded graphs and resolves skill dependencies; **loading policy is not an ontological category**.
 
 All graphs use `ar: <urn:agent-risk:>`. These are local identifiers, not dereferenceable Web URLs. For a published ontology, use an owned, persistent HTTPS namespace. `vocabulary.ttl` defines the common terms, and `shapes.ttl` validates skill operations. The source skills are not invoked by these files.
 
@@ -18,9 +18,17 @@ Per-skill kinds link directly to general kinds. For example, `ar:LocalSecretFile
 
 Named provider endpoints (GitHub REST, Discord, Slack, Imgflip API, etc.) remain distinct from the freeform-internet taxonomy. Only unspecified websites and ordinary URL downloads are linked to general internet kinds. This classifies the described resource/access context; it does not establish actual reachability or authentication.
 
+## Tool-endpoint interface and hierarchy
+
+`ar:ToolEndpointKind` is an RDF class under `ar:InvocationSurfaceKind`. `ar:ToolEndpoint` is the common parent **kind** (an individual of that class); concrete callable kinds use `ar:specializesInvocationKind` to reach it. The class gives a uniform typing interface, while the parent-kind path supplies transitive classification across named graphs. These are not OWL subclasses: the loader computes inheritance along the project-specific property. A future migration to OWL class hierarchies would need an explicit schema conversion.
+
+`ShellExecution` and the agent-facing `OpenClawMessageTool` are separate children of `ToolEndpoint`. The shell-invoked `OpenClawMessageCLI` is a tool endpoint through `ShellCommandExecution`; it remains distinct from the agent-facing tool. `MCPToolEndpoint` is another child, representing an *individual callable MCP tool* discovered with `tools/list` and invoked with `tools/call`, not its server, transport, resources, or prompts. This branch intentionally has no concrete server/tools or effect claims. [MCP's tool specification](https://modelcontextprotocol.io/specification/2026-07-28/server/tools) defines those calls and notes that the available set depends on current capability and authorization.
+
+Existing directly callable `SubagentSpawnTool`, `ProcessControlTool`, `ConnectChannelTool`, and `SkillWorkshopTool` also cite the parent. Provider APIs and channel-plugin adapters remain invocation/mediation surfaces rather than automatically becoming agent-facing tool endpoints. The loader prints declared endpoint kinds and narrower inherited kinds; it checks that every explicitly typed `ToolEndpointKind` has a path to the parent. The common operation-to-endpoint relation remains `ar:invokedThroughKind`, and mediation beyond a tool remains `ar:routesToKind`. This is a taxonomy/interface for analysis, not an inventory of tools actually exposed by a harness.
+
 ## Shell invocation hierarchy
 
-`ar:ShellExecution` is an `ar:InvocationSurfaceKind`, not a world resource or a generic operation. `ar:ShellCommandExecution` and `ar:ShellScriptExecution` are narrower invocation kinds under it. A command launched through a shell need not be a *shell-language script*: the Node and Python CLIs in these skills are linked to `ShellCommandExecution`, not `ShellScriptExecution`. The universal graph also models `ShellProcess`, output, environment, exit status, script file, and working-directory resource kinds.
+`ar:ShellExecution` is a tool-endpoint kind, not a world resource or a generic operation. `ar:ShellCommandExecution` and `ar:ShellScriptExecution` are narrower invocation kinds under it. A command launched through a shell need not be a *shell-language script*: the Node and Python CLIs in these skills are linked to `ShellCommandExecution`, not `ShellScriptExecution`. The universal graph also models `ShellProcess`, output, environment, exit status, script file, and working-directory resource kinds.
 
 `ar:specializesInvocationKind` links concrete call channels to the general mechanism. For example, the GitHub skill's `CurlCLI` and `GitCLI` are kinds of shell-command execution, while `GitHubREST` remains a separate remote endpoint. An operation is **shell-mediated** if one of its `ar:invokedThroughKind` channels reaches `ShellExecution` through this hierarchy. This is not a claim that the GitHub API, its resources, or every GitHub-skill orchestration step is a subtype of a shell script. In `gh-issues`, eight described operations are shell-mediated; the two subagent-spawn operations and Telegram notification are not.
 
@@ -34,9 +42,9 @@ The mediator graph contains no operations or effects. Its routes describe possib
 
 ## Loading and validation
 
-Run `python loader.py --universal-only` to inspect the three always-loaded graphs without skill operations or on-demand dependencies. The old `--resources-only` and `--baseline-only` spellings remain aliases. Run `python loader.py discord gh-issues` to add those two skill graphs and their shared messaging dependency; no arguments select those two by default. The loader requires `rdflib` and `pyshacl`.
+Run `python loader.py --universal-only` to inspect the four always-loaded graphs without skill operations or on-demand dependencies. The old `--resources-only` and `--baseline-only` spellings remain aliases. Run `python loader.py discord gh-issues` to add those two skill graphs and their shared messaging dependency; no arguments select those two by default. The loader requires `rdflib` and `pyshacl`.
 
-The loader preserves one named graph per file, verifies each selected skill's `SKILL.md` SHA-256 against `manifest.json`, validates the union against `shapes.ttl`, checks resource and invocation relationships, and prints resource kinds, invocation hierarchies, mediation routes, and skill-stated potential effects with shell-mediated and messaging-route flags. Loading policy and source hashes are metadata outside the ontology. Loading a graph does **not** prove runtime permissions. No harness hook, graph unloading mechanism, or verified harness tool inventory is installed in this prototype.
+The loader preserves one named graph per file, verifies each selected skill's `SKILL.md` SHA-256 against `manifest.json`, validates the union against `shapes.ttl`, checks resource and invocation relationships, and prints resource kinds, tool-endpoint kinds, invocation hierarchies, mediation routes, and skill-stated potential effects with shell-mediated and messaging-route flags. Loading policy and source hashes are metadata outside the ontology. Loading a graph does **not** prove runtime permissions. No harness hook, graph unloading mechanism, or verified harness tool inventory is installed in this prototype.
 
 On the combined graph, a SPARQL property path can query all broader resource kinds:
 
@@ -55,6 +63,15 @@ For shell mediation on the combined graph:
 PREFIX ar: <urn:agent-risk:>
 SELECT DISTINCT ?operation WHERE {
   ?operation ar:invokedThroughKind/ar:specializesInvocationKind* ar:ShellExecution .
+}
+```
+
+To list callable endpoint kinds, including future subclasses added by other graphs:
+
+```sparql
+PREFIX ar: <urn:agent-risk:>
+SELECT DISTINCT ?kind WHERE {
+  ?kind ar:specializesInvocationKind* ar:ToolEndpoint .
 }
 ```
 

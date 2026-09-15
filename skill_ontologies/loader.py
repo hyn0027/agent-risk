@@ -170,6 +170,19 @@ def invocation_ancestors(kind):
     return seen
 
 
+declared_tool_endpoint_kinds = set(combined.subjects(RDF.type, AR.ToolEndpointKind))
+for kind in declared_tool_endpoint_kinds:
+    if kind not in typed_invocation_kinds:
+        raise SystemExit(f"Tool endpoint kind is not an invocation kind: {kind}")
+    if kind != AR.ToolEndpoint and AR.ToolEndpoint not in invocation_ancestors(kind):
+        raise SystemExit(f"Tool endpoint kind lacks ToolEndpoint parent: {kind}")
+tool_endpoint_rows = sorted(
+    {(label(kind), "declared" if kind in declared_tool_endpoint_kinds else "inherited")
+     for kind in typed_invocation_kinds
+     if kind == AR.ToolEndpoint or AR.ToolEndpoint in invocation_ancestors(kind)}
+)
+
+
 def shell_mediated(operation):
     return any(
         channel == AR.ShellExecution or AR.ShellExecution in invocation_ancestors(channel)
@@ -261,6 +274,7 @@ print(f"Loaded skills: {', '.join(sorted(loaded_skills)) or '(none)'}")
 print(f"Resource kinds: {len(resource_rows)}")
 print(f"Resource relationships: {len(relationship_rows)}")
 print(f"Invocation subtype links: {len(invocation_rows)}")
+print(f"Tool endpoint kinds: {len(tool_endpoint_rows)}")
 print(f"Invocation routes: {len(route_rows)}")
 print(f"Skill potential-effect rows: {len(effect_rows)}\n")
 print_table(("Graph", "Resource kind"), resource_rows)
@@ -270,6 +284,9 @@ if relationship_rows:
 if invocation_rows:
     print()
     print_table(("Invocation kind", "Broader invocation kind"), invocation_rows)
+if tool_endpoint_rows:
+    print()
+    print_table(("Tool endpoint kind", "Classification"), tool_endpoint_rows)
 if route_rows:
     print()
     print_table(("Invocation kind", "Routes to kind"), route_rows)

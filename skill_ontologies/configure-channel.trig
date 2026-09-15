@@ -9,7 +9,8 @@ ar:g_configure_channel {
       ar:op_connect_channel, ar:op_doctor_fix, ar:op_dry_run_message,
       ar:op_real_test_message .
 
-  ar:ConnectChannelTool a ar:InvocationSurfaceKind .
+  ar:ConnectChannelTool a ar:InvocationSurfaceKind, ar:ToolEndpointKind ;
+    ar:specializesInvocationKind ar:ToolEndpoint .
   ar:OpenClawDoctorCLI a ar:InvocationSurfaceKind ;
     ar:specializesInvocationKind ar:ShellCommandExecution .
   ar:OpenClawConfigCLI ar:specializesInvocationKind ar:ShellCommandExecution .

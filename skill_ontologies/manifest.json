@@ -1,9 +1,10 @@
 {
-  "schemaVersion": "0.6",
+  "schemaVersion": "0.7",
   "vocabulary": "vocabulary.ttl",
   "shapes": "shapes.ttl",
   "sourceRoot": "/Users/yhong3/Documents/Research/agent-risk/top_skills",
   "alwaysLoadedGraphs": [
+    {"file": "tool-endpoints.trig", "graph": "urn:agent-risk:g_tool_endpoints"},
     {"file": "local-filesystem.trig", "graph": "urn:agent-risk:g_local_filesystem", "resourcesOnly": true},
     {"file": "freeform-internet.trig", "graph": "urn:agent-risk:g_freeform_internet", "resourcesOnly": true},
     {"file": "shell-execution.trig", "graph": "urn:agent-risk:g_shell_execution"}

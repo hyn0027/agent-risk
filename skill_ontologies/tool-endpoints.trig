@@ -1,0 +1,11 @@
+@prefix ar: <urn:agent-risk:> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+
+ar:g_tool_endpoints {
+  ar:ToolEndpoint a ar:InvocationSurfaceKind, ar:ToolEndpointKind ;
+    rdfs:comment "Parent kind for callable surfaces exposed to an agent or invoked on its behalf. This is a taxonomy kind, not an OWL superclass of all concrete tools." .
+  ar:MCPToolEndpoint a ar:InvocationSurfaceKind, ar:ToolEndpointKind ;
+    ar:specializesInvocationKind ar:ToolEndpoint ;
+    rdfs:comment "One callable MCP server tool exposed to a host/client via tools/list and invoked via tools/call. Not the MCP server, connection, transport, resource, or prompt." ;
+    rdfs:seeAlso <https://modelcontextprotocol.io/specification/2026-07-28/server/tools> .
+}

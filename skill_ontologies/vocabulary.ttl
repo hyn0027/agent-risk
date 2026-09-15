@@ -10,6 +10,8 @@ ar:EndpointSurfaceOntology a owl:Ontology ;
 ar:Skill a rdfs:Class .
 ar:SurfaceKind a rdfs:Class .
 ar:InvocationSurfaceKind a rdfs:Class ; rdfs:subClassOf ar:SurfaceKind .
+ar:ToolEndpointKind a rdfs:Class ; rdfs:subClassOf ar:InvocationSurfaceKind ;
+  rdfs:comment "Class of callable tool-endpoint kinds. Membership does not assert that a concrete endpoint is enabled in a runtime." .
 ar:WorldSurfaceKind a rdfs:Class ; rdfs:subClassOf ar:SurfaceKind .
 ar:Operation a rdfs:Class .
 ar:PotentialEffect a rdfs:Class .
@@ -61,8 +63,10 @@ ar:Notify a ar:EffectType .
 # Cross-skill kinds are types, not claims that the harness exposes them.
 ar:OpenClawConfigCLI a ar:InvocationSurfaceKind .
 ar:OpenClawTaskFlowRuntime a ar:InvocationSurfaceKind .
-ar:SubagentSpawnTool a ar:InvocationSurfaceKind .
-ar:ProcessControlTool a ar:InvocationSurfaceKind .
+ar:SubagentSpawnTool a ar:InvocationSurfaceKind, ar:ToolEndpointKind ;
+  ar:specializesInvocationKind ar:ToolEndpoint .
+ar:ProcessControlTool a ar:InvocationSurfaceKind, ar:ToolEndpointKind ;
+  ar:specializesInvocationKind ar:ToolEndpoint .
 ar:ProcessEnvironment a ar:WorldSurfaceKind .
 ar:OpenClawConfiguration a ar:WorldSurfaceKind ;
   ar:mayBeStoredAsKind ar:LocalFile ;

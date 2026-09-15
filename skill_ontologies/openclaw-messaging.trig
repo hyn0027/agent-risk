@@ -13,11 +13,12 @@ ar:g_openclaw_messaging {
     ar:specializesInvocationKind ar:OpenClawChannelPlugin ;
     rdfs:comment "Channel-plugin action/outbound adapter behind OpenClaw messaging; provider-specific adapters are narrower kinds." ;
     rdfs:seeAlso <https://docs.openclaw.ai/plugins/architecture>, <https://docs.openclaw.ai/plugins/sdk-channel-plugins> .
-  ar:OpenClawMessageTool a ar:InvocationSurfaceKind ;
+  ar:OpenClawMessageTool a ar:InvocationSurfaceKind, ar:ToolEndpointKind ;
+    ar:specializesInvocationKind ar:ToolEndpoint ;
     ar:routesToKind ar:OpenClawChannelAdapter ;
     rdfs:comment "Core-owned agent-facing shared message tool; not the openclaw message CLI." ;
     rdfs:seeAlso <https://docs.openclaw.ai/plugins/architecture> .
-  ar:OpenClawMessageCLI a ar:InvocationSurfaceKind ;
+  ar:OpenClawMessageCLI a ar:InvocationSurfaceKind, ar:ToolEndpointKind ;
     ar:specializesInvocationKind ar:ShellCommandExecution ;
     ar:routesToKind ar:OpenClawChannelPlugin ;
     rdfs:comment "Shell-invoked openclaw message command, distinct from the agent-facing message tool." ;

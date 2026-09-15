@@ -7,7 +7,8 @@ ar:g_skill_creator {
     ar:declaresOperation ar:op_creator_inspect, ar:op_creator_propose,
       ar:op_creator_repo_edit, ar:op_creator_validate .
 
-  ar:SkillWorkshopTool a ar:InvocationSurfaceKind .
+  ar:SkillWorkshopTool a ar:InvocationSurfaceKind, ar:ToolEndpointKind ;
+    ar:specializesInvocationKind ar:ToolEndpoint .
   ar:SkillValidationScript a ar:InvocationSurfaceKind ;
     ar:specializesInvocationKind ar:ShellCommandExecution .
   ar:SkillWorkshopTool ar:routesToKind ar:PendingSkillProposal .
