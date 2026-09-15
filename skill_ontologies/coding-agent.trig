@@ -61,7 +61,7 @@ ar:g_coding_agent {
     ar:hasPotentialEffect [ a ar:PotentialEffect ; ar:effectType ar:Update ; ar:affectsKind ar:LocalGitRepository, ar:RemoteGitRepository ],
       [ a ar:PotentialEffect ; ar:effectType ar:Create ; ar:affectsKind ar:GitHubPullRequest ] .
 
-  ar:op_worker_notify a ar:Operation ; ar:invokedThroughKind ar:OpenClawMessageTool ;
+  ar:op_worker_notify a ar:Operation ; ar:invokedThroughKind ar:OpenClawMessageCLI ;
     ar:targetsKind ar:NotificationDestination ; ar:requires ar:cond_notification_route ;
     ar:sourceStatus ar:SkillText ;
     ar:hasPotentialEffect [ a ar:PotentialEffect ; ar:effectType ar:Notify ; ar:affectsKind ar:NotificationDestination ] .

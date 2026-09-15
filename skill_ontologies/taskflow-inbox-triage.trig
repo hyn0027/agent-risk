@@ -10,7 +10,9 @@ ar:g_taskflow_inbox_triage {
       ar:op_taskflow_slack_post, ar:op_taskflow_personal_notify,
       ar:op_taskflow_eod_summary .
 
-  ar:SlackMessageChannel a ar:InvocationSurfaceKind .
+  ar:SlackMessageChannel a ar:InvocationSurfaceKind ;
+    ar:specializesInvocationKind ar:MessagingChannelInvocation ;
+    ar:sourceNote "The example names Slack as a route but does not specify whether the OpenClaw message tool, CLI, or another Slack integration sends the message." .
   ar:OwnerNotificationChannel a ar:InvocationSurfaceKind .
   ar:SlackMessageChannel ar:routesToKind ar:SlackWorkspace .
   ar:OwnerNotificationChannel ar:routesToKind ar:OwnerNotificationDestination .

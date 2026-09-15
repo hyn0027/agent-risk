@@ -9,7 +9,9 @@ ar:g_discord {
       ar:op_discord_delete, ar:op_discord_react, ar:op_discord_poll,
       ar:op_discord_pin, ar:op_discord_thread, ar:op_discord_presence .
 
-  ar:DiscordAdapter a ar:InvocationSurfaceKind ; ar:routesToKind ar:DiscordService .
+  ar:DiscordAdapter a ar:InvocationSurfaceKind ;
+    ar:specializesInvocationKind ar:OpenClawChannelAdapter ;
+    ar:routesToKind ar:DiscordService .
   ar:OpenClawMessageTool ar:routesToKind ar:DiscordAdapter .
   ar:DiscordService a ar:WorldSurfaceKind .
   ar:DiscordGuild a ar:WorldSurfaceKind .

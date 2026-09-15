@@ -67,6 +67,38 @@ for entry in always_loaded_graphs:
     ):
         raise SystemExit(f"Resource-only graph contains an invocation kind: {entry['file']}")
 
+# Skill-declared dependencies are loaded once, before the corresponding skill graph.
+# Ontology modules are not universally active; selecting an unrelated skill leaves
+# these mediator kinds out of the active union.
+ontology_modules = {entry["id"]: entry for entry in manifest.get("ontologyModules", [])}
+if len(ontology_modules) != len(manifest.get("ontologyModules", [])):
+    raise SystemExit("Duplicate ontology module id in manifest")
+resolved_dependencies = []
+visiting = set()
+loaded_dependencies = set()
+
+
+def load_dependency(module_id):
+    if module_id in loaded_dependencies:
+        return
+    if module_id in visiting:
+        raise SystemExit(f"Cycle in ontology dependencies at {module_id}")
+    entry = ontology_modules.get(module_id)
+    if entry is None:
+        raise SystemExit(f"Unknown ontology dependency: {module_id}")
+    visiting.add(module_id)
+    for required_id in entry.get("dependsOn", []):
+        load_dependency(required_id)
+    load_named_graph(entry)
+    visiting.remove(module_id)
+    loaded_dependencies.add(module_id)
+    resolved_dependencies.append(module_id)
+
+
+for skill_name in sorted(loaded_skills):
+    for required_id in modules[skill_name].get("dependsOn", []):
+        load_dependency(required_id)
+
 for skill_name in sorted(loaded_skills):
     module = modules[skill_name]
     source = Path(manifest["sourceRoot"]) / skill_name / "SKILL.md"
@@ -99,6 +131,11 @@ if combined.query(
     "ASK { ?kind <urn:agent-risk:specializesInvocationKind>+ ?kind }"
 ).askAnswer:
     raise SystemExit("Cycle in invocation-kind hierarchy")
+for source, destination in combined.subject_objects(AR.routesToKind):
+    if source not in typed_invocation_kinds or destination not in (
+        typed_invocation_kinds | typed_kinds
+    ):
+        raise SystemExit(f"Untyped mediation route: {source} -> {destination}")
 
 shapes = Graph().parse(str(ONTOLOGY_DIR / manifest["shapes"]), format="turtle")
 conforms, _, report = validate(combined, shacl_graph=shapes)
@@ -140,6 +177,15 @@ def shell_mediated(operation):
     )
 
 
+def messaging_route(operation):
+    return any(
+        channel in (AR.OpenClawMessageTool, AR.OpenClawMessageCLI)
+        or channel == AR.MessagingChannelInvocation
+        or AR.MessagingChannelInvocation in invocation_ancestors(channel)
+        for channel in combined.objects(operation, AR.invokedThroughKind)
+    )
+
+
 resource_rows = sorted(
     {
         (label(URIRef(entry["graph"])), label(kind))
@@ -162,6 +208,12 @@ invocation_rows = sorted(
         for narrower, broader in combined.subject_objects(AR.specializesInvocationKind)
     }
 )
+route_rows = sorted(
+    {
+        (label(source), label(destination))
+        for source, destination in combined.subject_objects(AR.routesToKind)
+    }
+)
 
 effect_query = """
 PREFIX ar: <urn:agent-risk:>
@@ -182,6 +234,7 @@ effect_rows = [
         label(row.resourceKind),
         ", ".join(label(parent) for parent in ancestors(row.resourceKind)),
         "yes" if shell_mediated(row.operation) else "no",
+        "yes" if messaging_route(row.operation) else "no",
     )
     for row in active.query(effect_query)
 ]
@@ -203,10 +256,12 @@ def print_table(headers, rows):
 
 
 print("Always-loaded graphs: " + ", ".join(e["file"] for e in always_loaded_graphs))
+print("Auto-loaded ontology dependencies: " + (", ".join(resolved_dependencies) or "(none)"))
 print(f"Loaded skills: {', '.join(sorted(loaded_skills)) or '(none)'}")
 print(f"Resource kinds: {len(resource_rows)}")
 print(f"Resource relationships: {len(relationship_rows)}")
 print(f"Invocation subtype links: {len(invocation_rows)}")
+print(f"Invocation routes: {len(route_rows)}")
 print(f"Skill potential-effect rows: {len(effect_rows)}\n")
 print_table(("Graph", "Resource kind"), resource_rows)
 if relationship_rows:
@@ -215,6 +270,9 @@ if relationship_rows:
 if invocation_rows:
     print()
     print_table(("Invocation kind", "Broader invocation kind"), invocation_rows)
+if route_rows:
+    print()
+    print_table(("Invocation kind", "Routes to kind"), route_rows)
 if effect_rows:
     print()
-    print_table(("Graph", "Operation", "Effect", "Resource kind", "Broader kinds", "Shell-mediated"), effect_rows)
+    print_table(("Graph", "Operation", "Effect", "Resource kind", "Broader kinds", "Shell-mediated", "Messaging-route"), effect_rows)

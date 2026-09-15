@@ -14,7 +14,10 @@ ar:g_gh_issues {
   ar:GitCLI a ar:InvocationSurfaceKind ; ar:specializesInvocationKind ar:ShellCommandExecution .
   ar:CurlCLI ar:routesToKind ar:GitHubREST .
   ar:GitCLI ar:routesToKind ar:LocalGitRepository, ar:GitHubRepository .
-  ar:TelegramAdapter a ar:InvocationSurfaceKind ; ar:routesToKind ar:TelegramDestination .
+  ar:TelegramAdapter a ar:InvocationSurfaceKind ;
+    ar:specializesInvocationKind ar:OpenClawChannelAdapter ;
+    ar:routesToKind ar:TelegramDestination .
+  ar:OpenClawMessageTool ar:routesToKind ar:TelegramAdapter .
   ar:GitHubRepository a ar:WorldSurfaceKind .
   ar:GitHubIssue a ar:WorldSurfaceKind .
   ar:GitHubPullRequest a ar:WorldSurfaceKind .

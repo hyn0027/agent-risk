@@ -14,7 +14,7 @@ ar:g_configure_channel {
     ar:specializesInvocationKind ar:ShellCommandExecution .
   ar:OpenClawConfigCLI ar:specializesInvocationKind ar:ShellCommandExecution .
   ar:OpenClawConfigCLI ar:routesToKind ar:OpenClawConfiguration .
-  ar:OpenClawMessageTool ar:routesToKind ar:ConfiguredChatChannel .
+  ar:OpenClawMessageCLI ar:routesToKind ar:ConfiguredChatChannel .
   ar:ConfiguredChatChannel a ar:WorldSurfaceKind .
   ar:ChannelSecretReference a ar:WorldSurfaceKind .
   ar:ChannelStatus a ar:WorldSurfaceKind .
@@ -50,12 +50,12 @@ ar:g_configure_channel {
     ar:sourceStatus ar:SkillText ;
     ar:hasPotentialEffect [ a ar:PotentialEffect ; ar:effectType ar:Update ; ar:affectsKind ar:OpenClawConfiguration ] .
 
-  ar:op_dry_run_message a ar:Operation ; ar:invokedThroughKind ar:OpenClawMessageTool ;
+  ar:op_dry_run_message a ar:Operation ; ar:invokedThroughKind ar:OpenClawMessageCLI ;
     ar:targetsKind ar:ChannelTestPayload ; ar:sourceStatus ar:SkillText ;
     ar:sourceNote "Dry-run inspects the outgoing payload; it does not claim remote delivery." ;
     ar:hasPotentialEffect [ a ar:PotentialEffect ; ar:effectType ar:Validate ; ar:affectsKind ar:ChannelTestPayload ] .
 
-  ar:op_real_test_message a ar:Operation ; ar:invokedThroughKind ar:OpenClawMessageTool ;
+  ar:op_real_test_message a ar:Operation ; ar:invokedThroughKind ar:OpenClawMessageCLI ;
     ar:targetsKind ar:ConfiguredChatChannel ; ar:requires ar:cond_channel_auth, ar:cond_test_destination ;
     ar:sourceNote "A labeled real test send is an external side effect. Delivery confirmation does not prove a human read it." ;
     ar:sourceStatus ar:SkillText ;
