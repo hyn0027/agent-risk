@@ -11,12 +11,15 @@ from pyshacl import validate
 ONTOLOGY_DIR = Path(__file__).resolve().parent
 AR = Namespace("urn:agent-risk:")
 
-# --resources-only replaces --baseline-only; the old spelling still works.
+# --universal-only selects all always-loaded graphs without skill graphs.
+# Previous spellings remain aliases.
 arguments = sys.argv[1:]
-resource_only = arguments in (["--resources-only"], ["--baseline-only"])
-if any(arg.startswith("--") for arg in arguments) and not resource_only:
-    raise SystemExit("Use --resources-only by itself, or pass skill directory names.")
-loaded_skills = set() if resource_only else set(arguments) or {"discord", "gh-issues"}
+universal_only = arguments in (
+    ["--universal-only"], ["--resources-only"], ["--baseline-only"]
+)
+if any(arg.startswith("--") for arg in arguments) and not universal_only:
+    raise SystemExit("Use --universal-only by itself, or pass skill directory names.")
+loaded_skills = set() if universal_only else set(arguments) or {"discord", "gh-issues"}
 
 manifest = json.loads((ONTOLOGY_DIR / "manifest.json").read_text())
 modules = {module["directory"]: module for module in manifest["modules"]}
@@ -48,17 +51,21 @@ def load_named_graph(entry):
 
 
 # Loading policy lives in the manifest, not in the ontology vocabulary.
-resource_graphs = manifest["alwaysLoadedGraphs"]
-for entry in resource_graphs:
+always_loaded_graphs = manifest["alwaysLoadedGraphs"]
+for entry in always_loaded_graphs:
     graph = load_named_graph(entry)
     if any(graph.subjects(RDF.type, AR.Operation)) or any(
         graph.subjects(RDF.type, AR.PotentialEffect)
-    ) or any(graph.subjects(RDF.type, AR.InvocationSurfaceKind)):
-        raise SystemExit(f"Resource graph contains an action construct: {entry['file']}")
+    ):
+        raise SystemExit(f"Always-loaded graph contains an operation/effect: {entry['file']}")
     if any(graph.triples((None, AR.declaresOperation, None))) or any(
         graph.triples((None, AR.hasPotentialEffect, None))
     ):
-        raise SystemExit(f"Resource graph contains an operation relation: {entry['file']}")
+        raise SystemExit(f"Always-loaded graph contains an operation relation: {entry['file']}")
+    if entry.get("resourcesOnly") and any(
+        graph.subjects(RDF.type, AR.InvocationSurfaceKind)
+    ):
+        raise SystemExit(f"Resource-only graph contains an invocation kind: {entry['file']}")
 
 for skill_name in sorted(loaded_skills):
     module = modules[skill_name]
@@ -69,6 +76,7 @@ for skill_name in sorted(loaded_skills):
     load_named_graph(module)
 
 typed_kinds = set(combined.subjects(RDF.type, AR.WorldSurfaceKind))
+typed_invocation_kinds = set(combined.subjects(RDF.type, AR.InvocationSurfaceKind))
 relations = (
     (AR.specializesKind, "is-a"),
     (AR.containsKind, "contains"),
@@ -84,6 +92,13 @@ if combined.query(
     "ASK { ?kind <urn:agent-risk:specializesKind>+ ?kind }"
 ).askAnswer:
     raise SystemExit("Cycle in is-a hierarchy")
+for narrower, broader in combined.subject_objects(AR.specializesInvocationKind):
+    if narrower not in typed_invocation_kinds or broader not in typed_invocation_kinds:
+        raise SystemExit(f"Untyped invocation kind: {narrower} -> {broader}")
+if combined.query(
+    "ASK { ?kind <urn:agent-risk:specializesInvocationKind>+ ?kind }"
+).askAnswer:
+    raise SystemExit("Cycle in invocation-kind hierarchy")
 
 shapes = Graph().parse(str(ONTOLOGY_DIR / manifest["shapes"]), format="turtle")
 conforms, _, report = validate(combined, shacl_graph=shapes)
@@ -107,10 +122,28 @@ def ancestors(kind):
     return sorted(seen, key=str)
 
 
+def invocation_ancestors(kind):
+    seen = set()
+    frontier = list(combined.objects(kind, AR.specializesInvocationKind))
+    while frontier:
+        parent = frontier.pop()
+        if parent not in seen:
+            seen.add(parent)
+            frontier.extend(combined.objects(parent, AR.specializesInvocationKind))
+    return seen
+
+
+def shell_mediated(operation):
+    return any(
+        channel == AR.ShellExecution or AR.ShellExecution in invocation_ancestors(channel)
+        for channel in combined.objects(operation, AR.invokedThroughKind)
+    )
+
+
 resource_rows = sorted(
     {
         (label(URIRef(entry["graph"])), label(kind))
-        for entry in resource_graphs
+        for entry in always_loaded_graphs
         for kind in active.graph(URIRef(entry["graph"])).subjects(
             RDF.type, AR.WorldSurfaceKind
         )
@@ -121,6 +154,12 @@ relationship_rows = sorted(
         (label(subject), relation_name, label(related))
         for predicate, relation_name in relations
         for subject, related in combined.subject_objects(predicate)
+    }
+)
+invocation_rows = sorted(
+    {
+        (label(narrower), label(broader))
+        for narrower, broader in combined.subject_objects(AR.specializesInvocationKind)
     }
 )
 
@@ -142,6 +181,7 @@ effect_rows = [
         label(row.graph), label(row.operation), label(row.effectType),
         label(row.resourceKind),
         ", ".join(label(parent) for parent in ancestors(row.resourceKind)),
+        "yes" if shell_mediated(row.operation) else "no",
     )
     for row in active.query(effect_query)
 ]
@@ -162,15 +202,19 @@ def print_table(headers, rows):
         print_row(row)
 
 
-print("Always-loaded resource graphs: " + ", ".join(e["file"] for e in resource_graphs))
+print("Always-loaded graphs: " + ", ".join(e["file"] for e in always_loaded_graphs))
 print(f"Loaded skills: {', '.join(sorted(loaded_skills)) or '(none)'}")
 print(f"Resource kinds: {len(resource_rows)}")
 print(f"Resource relationships: {len(relationship_rows)}")
+print(f"Invocation subtype links: {len(invocation_rows)}")
 print(f"Skill potential-effect rows: {len(effect_rows)}\n")
 print_table(("Graph", "Resource kind"), resource_rows)
 if relationship_rows:
     print()
     print_table(("Kind", "Relation", "Related kind"), relationship_rows)
+if invocation_rows:
+    print()
+    print_table(("Invocation kind", "Broader invocation kind"), invocation_rows)
 if effect_rows:
     print()
-    print_table(("Graph", "Operation", "Effect", "Resource kind", "Broader kinds"), effect_rows)
+    print_table(("Graph", "Operation", "Effect", "Resource kind", "Broader kinds", "Shell-mediated"), effect_rows)

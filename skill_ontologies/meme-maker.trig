@@ -7,7 +7,10 @@ ar:g_meme_maker {
     ar:declaresOperation ar:op_meme_catalog, ar:op_meme_local_render,
       ar:op_meme_hosted_render, ar:op_meme_refresh .
 
-  ar:MemeScript a ar:InvocationSurfaceKind ; ar:routesToKind ar:LocalFileSystem, ar:ImgflipService .
+  ar:MemeScript a ar:InvocationSurfaceKind ;
+    ar:specializesInvocationKind ar:ShellCommandExecution ;
+    ar:routesToKind ar:LocalFileSystem, ar:ImgflipService ;
+    rdfs:comment "Node program launched by command; not a script for a shell interpreter." .
   ar:ImgflipAPI a ar:InvocationSurfaceKind ; ar:routesToKind ar:ImgflipService .
   ar:CuratedTemplateRegistry a ar:WorldSurfaceKind ; ar:specializesKind ar:LocalFile .
   ar:TemplateImage a ar:WorldSurfaceKind ; ar:specializesKind ar:RemoteWebResource .

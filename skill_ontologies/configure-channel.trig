@@ -10,7 +10,9 @@ ar:g_configure_channel {
       ar:op_real_test_message .
 
   ar:ConnectChannelTool a ar:InvocationSurfaceKind .
-  ar:OpenClawDoctorCLI a ar:InvocationSurfaceKind .
+  ar:OpenClawDoctorCLI a ar:InvocationSurfaceKind ;
+    ar:specializesInvocationKind ar:ShellCommandExecution .
+  ar:OpenClawConfigCLI ar:specializesInvocationKind ar:ShellCommandExecution .
   ar:OpenClawConfigCLI ar:routesToKind ar:OpenClawConfiguration .
   ar:OpenClawMessageTool ar:routesToKind ar:ConfiguredChatChannel .
   ar:ConfiguredChatChannel a ar:WorldSurfaceKind .

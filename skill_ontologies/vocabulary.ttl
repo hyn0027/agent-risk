@@ -20,6 +20,9 @@ ar:EvidenceStatus a rdfs:Class .
 ar:declaresOperation a rdf:Property ; rdfs:domain ar:Skill ; rdfs:range ar:Operation .
 ar:specializesKind a rdf:Property ; rdfs:domain ar:WorldSurfaceKind ; rdfs:range ar:WorldSurfaceKind ;
   rdfs:comment "A narrower resource kind. Multiple parents are allowed; these kinds are individuals, so rdfs:subClassOf is not used." .
+ar:specializesInvocationKind a rdf:Property ;
+  rdfs:domain ar:InvocationSurfaceKind ; rdfs:range ar:InvocationSurfaceKind ;
+  rdfs:comment "A narrower action channel or execution mechanism. It is not a resource containment relation." .
 ar:mayBeStoredAsKind a rdf:Property ; rdfs:domain ar:WorldSurfaceKind ; rdfs:range ar:WorldSurfaceKind ;
   rdfs:comment "Possible physical storage representation, not an identity or guaranteed effect." .
 ar:sourcePath a rdf:Property ; rdfs:domain ar:Skill ; rdfs:range xsd:string .
@@ -56,7 +59,6 @@ ar:Validate a ar:EffectType .
 ar:Notify a ar:EffectType .
 
 # Cross-skill kinds are types, not claims that the harness exposes them.
-ar:ShellExecution a ar:InvocationSurfaceKind .
 ar:OpenClawMessageTool a ar:InvocationSurfaceKind .
 ar:OpenClawConfigCLI a ar:InvocationSurfaceKind .
 ar:OpenClawTaskFlowRuntime a ar:InvocationSurfaceKind .

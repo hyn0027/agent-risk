@@ -7,8 +7,8 @@ ar:g_coding_agent {
     ar:declaresOperation ar:op_prepare_worktree, ar:op_launch_coding_worker,
       ar:op_monitor_worker, ar:op_worker_issue_pr, ar:op_worker_notify .
 
-  ar:GitCLI a ar:InvocationSurfaceKind .
-  ar:CodingWorkerCLI a ar:InvocationSurfaceKind .
+  ar:GitCLI a ar:InvocationSurfaceKind ; ar:specializesInvocationKind ar:ShellCommandExecution .
+  ar:CodingWorkerCLI a ar:InvocationSurfaceKind ; ar:specializesInvocationKind ar:ShellCommandExecution .
   ar:GitCLI ar:routesToKind ar:LocalGitRepository, ar:RemoteGitRepository .
   ar:CodingWorkerCLI ar:routesToKind ar:WorkerProcess .
   ar:LocalGitRepository a ar:WorldSurfaceKind ; ar:specializesKind ar:LocalDirectory .
@@ -16,7 +16,7 @@ ar:g_coding_agent {
   ar:IsolatedWorktree a ar:WorldSurfaceKind ; ar:specializesKind ar:LocalDirectory .
   ar:CodeFile a ar:WorldSurfaceKind ; ar:specializesKind ar:LocalFile .
   ar:LocalBranch a ar:WorldSurfaceKind .
-  ar:WorkerProcess a ar:WorldSurfaceKind .
+  ar:WorkerProcess a ar:WorldSurfaceKind ; ar:specializesKind ar:ShellProcess .
   ar:GitHubIssue a ar:WorldSurfaceKind .
   ar:GitHubPullRequest a ar:WorldSurfaceKind .
   ar:NotificationDestination a ar:WorldSurfaceKind .
