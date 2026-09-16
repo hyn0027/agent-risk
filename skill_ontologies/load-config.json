@@ -1,0 +1,11 @@
+{
+  "schemaVersion": "0.1",
+  "alwaysLoaded": [
+    "tool-endpoints",
+    "local-filesystem",
+    "freeform-internet",
+    "shell-execution",
+    "git-resources",
+    "openclaw-messaging"
+  ]
+}

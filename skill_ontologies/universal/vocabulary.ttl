@@ -21,10 +21,10 @@ ar:EvidenceStatus a rdfs:Class .
 
 ar:declaresOperation a rdf:Property ; rdfs:domain ar:Skill ; rdfs:range ar:Operation .
 ar:specializesKind a rdf:Property ; rdfs:domain ar:WorldSurfaceKind ; rdfs:range ar:WorldSurfaceKind ;
-  rdfs:comment "A narrower resource kind. Multiple parents are allowed; these kinds are individuals, so rdfs:subClassOf is not used." .
+  rdfs:comment "A narrower resource kind. Multiple parents are allowed. The loader projects this relation into rdfs:subClassOf in its OWL reasoning graph." .
 ar:specializesInvocationKind a rdf:Property ;
   rdfs:domain ar:InvocationSurfaceKind ; rdfs:range ar:InvocationSurfaceKind ;
-  rdfs:comment "A narrower action channel or execution mechanism. It is not a resource containment relation." .
+  rdfs:comment "A narrower action channel or execution mechanism. The loader projects it into rdfs:subClassOf in its OWL reasoning graph; it is not a resource containment relation." .
 ar:mayBeStoredAsKind a rdf:Property ; rdfs:domain ar:WorldSurfaceKind ; rdfs:range ar:WorldSurfaceKind ;
   rdfs:comment "Possible physical storage representation, not an identity or guaranteed effect." .
 ar:sourcePath a rdf:Property ; rdfs:domain ar:Skill ; rdfs:range xsd:string .

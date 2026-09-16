@@ -4,22 +4,41 @@ import json
 import sys
 
 from rdflib import Dataset, Graph, Namespace, URIRef
-from rdflib.namespace import RDF
+from rdflib.namespace import OWL, RDF, RDFS
+from owlrl import DeductiveClosure, OWLRL_Semantics
 from pyshacl import validate
 
 
 ONTOLOGY_DIR = Path(__file__).resolve().parent
 AR = Namespace("urn:agent-risk:")
+SH = Namespace("http://www.w3.org/ns/shacl#")
 
 # --universal-only selects all always-loaded graphs without skill graphs.
-# Previous spellings remain aliases.
+# --data FILE adds concrete observations for OWL-RL classification and SHACL.
+# Previous universal-only spellings remain aliases.
 arguments = sys.argv[1:]
-universal_only = arguments in (
-    ["--universal-only"], ["--resources-only"], ["--baseline-only"]
-)
-if any(arg.startswith("--") for arg in arguments) and not universal_only:
-    raise SystemExit("Use --universal-only by itself, or pass skill directory names.")
-loaded_skills = set() if universal_only else set(arguments) or {"discord", "gh-issues"}
+universal_flags = {"--universal-only", "--resources-only", "--baseline-only"}
+universal_only = False
+data_path = None
+skill_arguments = []
+index = 0
+while index < len(arguments):
+    argument = arguments[index]
+    if argument in universal_flags:
+        universal_only = True
+    elif argument == "--data":
+        index += 1
+        if index == len(arguments):
+            raise SystemExit("--data requires an RDF file path")
+        data_path = Path(arguments[index]).expanduser()
+    elif argument.startswith("--"):
+        raise SystemExit("Use --universal-only, --data FILE, or skill directory names.")
+    else:
+        skill_arguments.append(argument)
+    index += 1
+if universal_only and skill_arguments:
+    raise SystemExit("--universal-only cannot be combined with skill directory names.")
+loaded_skills = set() if universal_only else set(skill_arguments) or {"discord", "gh-issues"}
 
 manifest = json.loads((ONTOLOGY_DIR / "manifest.json").read_text())
 modules = {module["directory"]: module for module in manifest["modules"]}
@@ -50,8 +69,62 @@ def load_named_graph(entry):
     return target_graph
 
 
-# Loading policy lives in the manifest, not in the ontology vocabulary.
-always_loaded_graphs = manifest["alwaysLoadedGraphs"]
+# The manifest catalogs graph modules; load-config.json holds deployment policy.
+ontology_modules = {entry["id"]: entry for entry in manifest.get("ontologyModules", [])}
+if len(ontology_modules) != len(manifest.get("ontologyModules", [])):
+    raise SystemExit("Duplicate ontology module id in manifest")
+load_config_path = ONTOLOGY_DIR / manifest["loadConfig"]
+load_config = json.loads(load_config_path.read_text())
+always_loaded_ids = load_config.get("alwaysLoaded", [])
+if len(always_loaded_ids) != len(set(always_loaded_ids)):
+    raise SystemExit("Duplicate module id in load-config.json alwaysLoaded")
+unknown_always_loaded = set(always_loaded_ids) - ontology_modules.keys()
+if unknown_always_loaded:
+    raise SystemExit(
+        "Unknown always-loaded ontology modules: "
+        + ", ".join(sorted(unknown_always_loaded))
+    )
+
+# Dependency resolution is deliberately static. A dependency declaration never
+# causes a graph to load: every required module must already be introduced by
+# load-config.json. Preflight completes before any named graph is loaded.
+dependency_requirements = []
+for module_id in always_loaded_ids:
+    for required_id in ontology_modules[module_id].get("dependsOn", []):
+        dependency_requirements.append((module_id, required_id))
+for skill_name in sorted(loaded_skills):
+    for required_id in modules[skill_name].get("dependsOn", []):
+        dependency_requirements.append((skill_name, required_id))
+
+unknown_required = {
+    required_id
+    for _, required_id in dependency_requirements
+    if required_id not in ontology_modules
+}
+missing_dependencies = [
+    (requester, required_id)
+    for requester, required_id in dependency_requirements
+    if required_id in ontology_modules and required_id not in always_loaded_ids
+]
+if unknown_required or missing_dependencies:
+    for required_id in sorted(unknown_required):
+        print(
+            f"WARNING: required ontology dependency {required_id} is not cataloged "
+            "in manifest.json",
+            file=sys.stderr,
+        )
+    for requester, required_id in missing_dependencies:
+        print(
+            f"WARNING: {requester} requires ontology dependency {required_id}, but "
+            f"{manifest['loadConfig']} does not introduce it in alwaysLoaded",
+            file=sys.stderr,
+        )
+    raise SystemExit(
+        "Dependency preflight failed; no ontology graphs were loaded. "
+        f"Add every required module to {manifest['loadConfig']} alwaysLoaded."
+    )
+
+always_loaded_graphs = [ontology_modules[module_id] for module_id in always_loaded_ids]
 for entry in always_loaded_graphs:
     graph = load_named_graph(entry)
     if any(graph.subjects(RDF.type, AR.Operation)) or any(
@@ -67,38 +140,6 @@ for entry in always_loaded_graphs:
     ):
         raise SystemExit(f"Resource-only graph contains an invocation kind: {entry['file']}")
 
-# Skill-declared dependencies are loaded once, before the corresponding skill graph.
-# Ontology modules are not universally active; selecting an unrelated skill leaves
-# these mediator kinds out of the active union.
-ontology_modules = {entry["id"]: entry for entry in manifest.get("ontologyModules", [])}
-if len(ontology_modules) != len(manifest.get("ontologyModules", [])):
-    raise SystemExit("Duplicate ontology module id in manifest")
-resolved_dependencies = []
-visiting = set()
-loaded_dependencies = set()
-
-
-def load_dependency(module_id):
-    if module_id in loaded_dependencies:
-        return
-    if module_id in visiting:
-        raise SystemExit(f"Cycle in ontology dependencies at {module_id}")
-    entry = ontology_modules.get(module_id)
-    if entry is None:
-        raise SystemExit(f"Unknown ontology dependency: {module_id}")
-    visiting.add(module_id)
-    for required_id in entry.get("dependsOn", []):
-        load_dependency(required_id)
-    load_named_graph(entry)
-    visiting.remove(module_id)
-    loaded_dependencies.add(module_id)
-    resolved_dependencies.append(module_id)
-
-
-for skill_name in sorted(loaded_skills):
-    for required_id in modules[skill_name].get("dependsOn", []):
-        load_dependency(required_id)
-
 for skill_name in sorted(loaded_skills):
     module = modules[skill_name]
     source = Path(manifest["sourceRoot"]) / skill_name / "SKILL.md"
@@ -106,6 +147,19 @@ for skill_name in sorted(loaded_skills):
     if actual_hash != module["skillSha256"]:
         raise SystemExit(f"Ontology for {skill_name} is stale: SKILL.md has changed.")
     load_named_graph(module)
+
+observation_subjects = set()
+asserted_observation_types = set()
+if data_path is not None:
+    if not data_path.is_absolute():
+        data_path = (Path.cwd() / data_path).resolve()
+    observations = Graph().parse(str(data_path))
+    observation_subjects = set(observations.subjects())
+    asserted_observation_types = set(observations.triples((None, RDF.type, None)))
+    observation_graph = active.graph(URIRef("urn:agent-risk:g_observations"))
+    for triple in observations:
+        observation_graph.add(triple)
+        combined.add(triple)
 
 typed_kinds = set(combined.subjects(RDF.type, AR.WorldSurfaceKind))
 typed_invocation_kinds = set(combined.subjects(RDF.type, AR.InvocationSurfaceKind))
@@ -137,10 +191,46 @@ for source, destination in combined.subject_objects(AR.routesToKind):
     ):
         raise SystemExit(f"Untyped mediation route: {source} -> {destination}")
 
+subtype_kinds = set(combined.subjects(AR.specializesKind, None)) | set(
+    combined.subjects(AR.specializesInvocationKind, None)
+)
+defined_kinds = {
+    kind for kind in combined.subjects(OWL.equivalentClass, None)
+    if kind in typed_kinds or kind in typed_invocation_kinds
+}
+
 shapes = Graph().parse(str(ONTOLOGY_DIR / manifest["shapes"]), format="turtle")
+shape_targets = set(shapes.objects(None, SH.targetClass))
+missing_validation_shapes = defined_kinds - shape_targets
+if missing_validation_shapes:
+    raise SystemExit(
+        "Necessary-and-sufficient kinds missing SHACL validation shapes: "
+        + ", ".join(sorted(str(kind) for kind in missing_validation_shapes))
+    )
 conforms, _, report = validate(combined, shacl_graph=shapes)
 if not conforms:
     raise SystemExit(f"SHACL validation failed:\n{report}")
+
+# OWL supplies positive, open-world inference for necessary-and-sufficient
+# definitions. A second, focus-limited SHACL pass checks inferred observation
+# memberships without applying ontology-meta-shapes to OWL's internal blank nodes.
+reasoned = Graph()
+for triple in combined:
+    reasoned.add(triple)
+for predicate in (AR.specializesKind, AR.specializesInvocationKind):
+    for narrower, broader in combined.subject_objects(predicate):
+        reasoned.add((narrower, RDF.type, OWL.Class))
+        reasoned.add((broader, RDF.type, OWL.Class))
+        reasoned.add((narrower, RDFS.subClassOf, broader))
+DeductiveClosure(OWLRL_Semantics).expand(reasoned)
+if observation_subjects:
+    conforms, _, report = validate(
+        reasoned,
+        shacl_graph=shapes,
+        focus_nodes=list(observation_subjects),
+    )
+    if not conforms:
+        raise SystemExit(f"SHACL validation failed for observation data:\n{report}")
 
 
 def label(value):
@@ -227,6 +317,29 @@ route_rows = sorted(
         for source, destination in combined.subject_objects(AR.routesToKind)
     }
 )
+definition_rows = sorted(
+    {
+        (
+            label(kind),
+            "necessary+sufficient (OWL + SHACL)"
+            if kind in defined_kinds else "necessary only (primitive)",
+        )
+        for kind in subtype_kinds
+    }
+)
+classification_rows = sorted(
+    {
+        (
+            label(subject),
+            label(kind),
+            "asserted" if (subject, RDF.type, kind) in asserted_observation_types
+            else "inferred",
+        )
+        for subject in observation_subjects
+        for kind in defined_kinds
+        if (subject, RDF.type, kind) in reasoned
+    }
+)
 
 effect_query = """
 PREFIX ar: <urn:agent-risk:>
@@ -268,14 +381,18 @@ def print_table(headers, rows):
         print_row(row)
 
 
-print("Always-loaded graphs: " + ", ".join(e["file"] for e in always_loaded_graphs))
-print("Auto-loaded ontology dependencies: " + (", ".join(resolved_dependencies) or "(none)"))
+print(f"Load configuration: {manifest['loadConfig']}")
+print("Always-loaded modules: " + ", ".join(always_loaded_ids))
+print("Dynamic dependency loading: disabled")
+print("Dependency preflight: satisfied")
 print(f"Loaded skills: {', '.join(sorted(loaded_skills)) or '(none)'}")
+print(f"Observation data: {data_path if data_path is not None else '(none)'}")
 print(f"Resource kinds: {len(resource_rows)}")
 print(f"Resource relationships: {len(relationship_rows)}")
 print(f"Invocation subtype links: {len(invocation_rows)}")
 print(f"Tool endpoint kinds: {len(tool_endpoint_rows)}")
 print(f"Invocation routes: {len(route_rows)}")
+print(f"Subtype definitions: {len(definition_rows)} ({len(defined_kinds)} necessary+sufficient)")
 print(f"Skill potential-effect rows: {len(effect_rows)}\n")
 print_table(("Graph", "Resource kind"), resource_rows)
 if relationship_rows:
@@ -290,6 +407,15 @@ if tool_endpoint_rows:
 if route_rows:
     print()
     print_table(("Invocation kind", "Routes to kind"), route_rows)
+if definition_rows:
+    print()
+    print_table(("Subtype kind", "Definition strength"), definition_rows)
+if data_path is not None:
+    print()
+    if classification_rows:
+        print_table(("Observed resource", "Defined kind", "Classification"), classification_rows)
+    else:
+        print("No necessary-and-sufficient kind classifications were inferred from the observations.")
 if effect_rows:
     print()
     print_table(("Graph", "Operation", "Effect", "Resource kind", "Broader kinds", "Shell-mediated", "Messaging-route"), effect_rows)

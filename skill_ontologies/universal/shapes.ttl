@@ -1,4 +1,5 @@
 @prefix ar: <urn:agent-risk:> .
+@prefix owl: <http://www.w3.org/2002/07/owl#> .
 @prefix sh: <http://www.w3.org/ns/shacl#> .
 @prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
 
@@ -17,3 +18,42 @@ ar:SkillShape a sh:NodeShape ;
   sh:targetClass ar:Skill ;
   sh:property [ sh:path ar:sourcePath ; sh:datatype xsd:string ; sh:minCount 1 ] ;
   sh:property [ sh:path ar:declaresOperation ; sh:class ar:Operation ; sh:minCount 1 ] .
+
+# Every necessary-and-sufficient OWL definition must also have a closed-world
+# validation shape. OWL infers positive membership; SHACL catches incomplete
+# evidence on resources that are asserted or inferred to be members.
+ar:EquivalentKindDefinitionShape a sh:NodeShape ;
+  sh:targetSubjectsOf owl:equivalentClass ;
+  sh:or (
+    [ sh:class ar:WorldSurfaceKind ]
+    [ sh:class ar:InvocationSurfaceKind ]
+  ) .
+
+ar:GitMetadataEntryCandidateShape a sh:NodeShape ;
+  sh:targetClass ar:GitMetadataEntryCandidate ;
+  sh:property [
+    sh:path ar:entryName ;
+    sh:hasValue ".git" ;
+    sh:minCount 1
+  ] .
+
+ar:ConventionalGitWorkingTreeCandidateShape a sh:NodeShape ;
+  sh:targetClass ar:ConventionalGitWorkingTreeCandidate ;
+  sh:property [
+    sh:path ar:containsEntry ;
+    sh:qualifiedValueShape [
+      sh:class ar:FileSystemEntry ;
+      sh:property [ sh:path ar:entryName ; sh:hasValue ".git" ; sh:minCount 1 ]
+    ] ;
+    sh:qualifiedMinCount 1
+  ] .
+
+ar:ConventionalGitWorkingTreeShape a sh:NodeShape ;
+  sh:targetClass ar:ConventionalGitWorkingTree ;
+  sh:node ar:ConventionalGitWorkingTreeCandidateShape ;
+  sh:property [
+    sh:path ar:gitRepositoryValidated ;
+    sh:hasValue true ;
+    sh:minCount 1 ;
+    sh:maxCount 1
+  ] .

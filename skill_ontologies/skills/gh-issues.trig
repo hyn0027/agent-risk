@@ -24,7 +24,6 @@ ar:g_gh_issues {
   ar:GitHubBranch a ar:WorldSurfaceKind .
   ar:GitHubReview a ar:WorldSurfaceKind .
   ar:GitHubComment a ar:WorldSurfaceKind .
-  ar:LocalGitRepository a ar:WorldSurfaceKind ; ar:specializesKind ar:LocalDirectory .
   ar:LocalBranch a ar:WorldSurfaceKind .
   ar:LocalGitConfiguration a ar:WorldSurfaceKind ; ar:specializesKind ar:LocalFile .
   ar:GlobalGitConfiguration a ar:WorldSurfaceKind ; ar:specializesKind ar:LocalFile .

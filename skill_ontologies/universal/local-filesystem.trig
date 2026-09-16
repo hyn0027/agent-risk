@@ -1,5 +1,7 @@
 @prefix ar: <urn:agent-risk:> .
+@prefix owl: <http://www.w3.org/2002/07/owl#> .
 @prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
 
 ar:g_local_filesystem {
   ar:LocalFileSystem a ar:WorldSurfaceKind ;
@@ -9,6 +11,14 @@ ar:g_local_filesystem {
   ar:LocalFileMetadata a ar:WorldSurfaceKind ;
     rdfs:comment "Permissions, timestamps, ownership, and similar file or directory metadata." .
   ar:LocalSymbolicLink a ar:WorldSurfaceKind .
+  ar:FileSystemEntry a ar:WorldSurfaceKind, owl:Class ;
+    rdfs:comment "Concrete entry observed inside a directory. This instance-level class supports qualified structural definitions." .
+
+  ar:containsEntry a owl:ObjectProperty ;
+    rdfs:domain ar:LocalDirectory ; rdfs:range ar:FileSystemEntry ;
+    rdfs:comment "Instance-level directory membership; distinct from containsKind, which relates resource kinds." .
+  ar:entryName a owl:DatatypeProperty ;
+    rdfs:domain ar:FileSystemEntry ; rdfs:range xsd:string .
 
   ar:LocalFileSystem ar:containsKind ar:LocalDirectory, ar:LocalFile,
     ar:LocalSymbolicLink .
