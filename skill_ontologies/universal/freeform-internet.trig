@@ -2,6 +2,10 @@
 @prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
 
 ar:g_freeform_internet {
+  ar:FreeformInternetModule a ar:OntologyModule ;
+    ar:ontologyModuleId "freeform-internet" ;
+    ar:resourcesOnly true .
+
   ar:Internet a ar:WorldSurfaceKind ;
     rdfs:comment "Abstract network resource kind; this graph does not assert egress, reachability, provider behavior, or authentication." .
   ar:InternetHost a ar:WorldSurfaceKind .

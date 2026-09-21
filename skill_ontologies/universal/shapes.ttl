@@ -7,7 +7,8 @@ ar:OperationShape a sh:NodeShape ;
   sh:targetClass ar:Operation ;
   sh:property [ sh:path ar:invokedThroughKind ; sh:class ar:InvocationSurfaceKind ; sh:minCount 1 ] ;
   sh:property [ sh:path ar:hasPotentialEffect ; sh:class ar:PotentialEffect ; sh:minCount 1 ] ;
-  sh:property [ sh:path ar:sourceStatus ; sh:class ar:EvidenceStatus ; sh:minCount 1 ] .
+  sh:property [ sh:path ar:sourceStatus ; sh:class ar:EvidenceStatus ; sh:minCount 1 ] ;
+  sh:property [ sh:path ar:adaptationStatus ; sh:class ar:EvidenceStatus ] .
 
 ar:EffectShape a sh:NodeShape ;
   sh:targetClass ar:PotentialEffect ;
@@ -16,8 +17,30 @@ ar:EffectShape a sh:NodeShape ;
 
 ar:SkillShape a sh:NodeShape ;
   sh:targetClass ar:Skill ;
-  sh:property [ sh:path ar:sourcePath ; sh:datatype xsd:string ; sh:minCount 1 ] ;
+  sh:property [ sh:path ar:skillDirectory ; sh:datatype xsd:string ; sh:minCount 1 ; sh:maxCount 1 ] ;
+  sh:property [ sh:path ar:sourcePath ; sh:datatype xsd:string ; sh:minCount 1 ; sh:maxCount 1 ] ;
+  sh:property [ sh:path ar:sourceSha256 ; sh:datatype xsd:string ; sh:minCount 1 ; sh:maxCount 1 ] ;
+  sh:property [ sh:path ar:requiresOntologyModule ; sh:datatype xsd:string ] ;
+  sh:property [ sh:path ar:hasAdaptationMapping ; sh:class ar:AdaptationMapping ; sh:minCount 1 ] ;
+  sh:property [ sh:path ar:governedByAdaptationPolicy ; sh:class ar:AdaptationPolicy ; sh:minCount 1 ; sh:maxCount 1 ] ;
   sh:property [ sh:path ar:declaresOperation ; sh:class ar:Operation ; sh:minCount 1 ] .
+
+ar:OntologyModuleShape a sh:NodeShape ;
+  sh:targetClass ar:OntologyModule ;
+  sh:property [ sh:path ar:ontologyModuleId ; sh:datatype xsd:string ; sh:minCount 1 ; sh:maxCount 1 ] ;
+  sh:property [ sh:path ar:requiresOntologyModule ; sh:datatype xsd:string ] ;
+  sh:property [ sh:path ar:resourcesOnly ; sh:datatype xsd:boolean ; sh:maxCount 1 ] ;
+  sh:property [ sh:path ar:sourceRepositoryPath ; sh:datatype xsd:string ; sh:maxCount 1 ] ;
+  sh:property [ sh:path ar:sourceRevision ; sh:datatype xsd:string ; sh:maxCount 1 ] .
+
+ar:AdaptationMappingShape a sh:NodeShape ;
+  sh:targetClass ar:AdaptationMapping ;
+  sh:property [ sh:path [ sh:inversePath ar:hasAdaptationMapping ] ; sh:class ar:Skill ; sh:minCount 1 ; sh:maxCount 1 ] ;
+  sh:property [ sh:path ar:sourceAssumption ; sh:datatype xsd:string ; sh:minCount 1 ; sh:maxCount 1 ] ;
+  sh:property [ sh:path ar:nanoclawModel ; sh:datatype xsd:string ; sh:minCount 1 ; sh:maxCount 1 ] ;
+  sh:property [ sh:path ar:adaptationDisposition ; sh:class ar:AdaptationDisposition ; sh:minCount 1 ] ;
+  sh:property [ sh:path ar:semanticDifference ; sh:datatype xsd:string ; sh:minCount 1 ; sh:maxCount 1 ] ;
+  sh:property [ sh:path ar:adaptedOperation ; sh:class ar:Operation ] .
 
 # Every necessary-and-sufficient OWL definition must also have a closed-world
 # validation shape. OWL infers positive membership; SHACL catches incomplete

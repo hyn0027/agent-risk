@@ -8,6 +8,8 @@ ar:EndpointSurfaceOntology a owl:Ontology ;
   rdfs:comment "Lightweight vocabulary for potential invocation surfaces, affected world surfaces, and skill-described operations. Assertions are claims, not verified runtime authority or guaranteed effects." .
 
 ar:Skill a rdfs:Class .
+ar:OntologyModule a rdfs:Class ;
+  rdfs:comment "A statically discoverable ontology graph and its load dependencies. Declaring a module does not cause dynamic loading." .
 ar:SurfaceKind a rdfs:Class .
 ar:InvocationSurfaceKind a rdfs:Class ; rdfs:subClassOf ar:SurfaceKind .
 ar:ToolEndpointKind a rdfs:Class ; rdfs:subClassOf ar:InvocationSurfaceKind ;
@@ -22,8 +24,27 @@ ar:PotentialEffect a rdfs:Class .
 ar:EffectType a rdfs:Class .
 ar:Requirement a rdfs:Class .
 ar:EvidenceStatus a rdfs:Class .
+ar:AdaptationMapping a rdfs:Class ;
+  rdfs:comment "Auditable crosswalk from one source-skill assumption or action to its NanoClaw interpretation." .
+ar:AdaptationDisposition a rdfs:Class .
+ar:AdaptationPolicy a rdfs:Class .
 
 ar:declaresOperation a rdf:Property ; rdfs:domain ar:Skill ; rdfs:range ar:Operation .
+ar:ontologyModuleId a rdf:Property ; rdfs:domain ar:OntologyModule ; rdfs:range xsd:string .
+ar:requiresOntologyModule a rdf:Property ; rdfs:range xsd:string ;
+  rdfs:comment "Static identifier of an ontology module required by a skill or another module. The loader validates this metadata against load-config.json but never loads it dynamically." .
+ar:resourcesOnly a rdf:Property ; rdfs:domain ar:OntologyModule ; rdfs:range xsd:boolean .
+ar:sourceRepositoryPath a rdf:Property ; rdfs:domain ar:OntologyModule ; rdfs:range xsd:string .
+ar:sourceRevision a rdf:Property ; rdfs:domain ar:OntologyModule ; rdfs:range xsd:string .
+ar:skillDirectory a rdf:Property ; rdfs:domain ar:Skill ; rdfs:range xsd:string .
+ar:sourceSha256 a rdf:Property ; rdfs:domain ar:Skill ; rdfs:range xsd:string .
+ar:hasAdaptationMapping a rdf:Property ; rdfs:domain ar:Skill ; rdfs:range ar:AdaptationMapping .
+ar:governedByAdaptationPolicy a rdf:Property ; rdfs:domain ar:Skill ; rdfs:range ar:AdaptationPolicy .
+ar:sourceAssumption a rdf:Property ; rdfs:domain ar:AdaptationMapping ; rdfs:range xsd:string .
+ar:nanoclawModel a rdf:Property ; rdfs:domain ar:AdaptationMapping ; rdfs:range xsd:string .
+ar:adaptationDisposition a rdf:Property ; rdfs:domain ar:AdaptationMapping ; rdfs:range ar:AdaptationDisposition .
+ar:semanticDifference a rdf:Property ; rdfs:domain ar:AdaptationMapping ; rdfs:range xsd:string .
+ar:adaptedOperation a rdf:Property ; rdfs:domain ar:AdaptationMapping ; rdfs:range ar:Operation .
 ar:specializesKind a rdf:Property ; rdfs:domain ar:WorldSurfaceKind ; rdfs:range ar:WorldSurfaceKind ;
   rdfs:comment "A narrower resource kind. Multiple parents are allowed. The loader projects this relation into rdfs:subClassOf in its OWL reasoning graph." .
 ar:specializesInvocationKind a rdf:Property ;
@@ -33,6 +54,8 @@ ar:mayBeStoredAsKind a rdf:Property ; rdfs:domain ar:WorldSurfaceKind ; rdfs:ran
   rdfs:comment "Possible physical storage representation, not an identity or guaranteed effect." .
 ar:sourcePath a rdf:Property ; rdfs:domain ar:Skill ; rdfs:range xsd:string .
 ar:sourceStatus a rdf:Property ; rdfs:range ar:EvidenceStatus .
+ar:adaptationStatus a rdf:Property ; rdfs:domain ar:Operation ; rdfs:range ar:EvidenceStatus ;
+  rdfs:comment "Evidence status for an environment-specific translation, kept separate from the source evidence for the operation." .
 ar:sourceNote a rdf:Property ; rdfs:range xsd:string .
 ar:invokedThroughKind a rdf:Property ; rdfs:domain ar:Operation ; rdfs:range ar:InvocationSurfaceKind .
 ar:routesToKind a rdf:Property ; rdfs:range ar:SurfaceKind .
@@ -54,6 +77,27 @@ ar:SkillText a ar:EvidenceStatus ; rdfs:label "asserted by skill text" .
 ar:ScriptInspected a ar:EvidenceStatus ; rdfs:label "supported by inspected bundled script" .
 ar:ExampleOnly a ar:EvidenceStatus ; rdfs:label "illustrative example; not verified deployment" .
 ar:RuntimeUnverified a ar:EvidenceStatus ; rdfs:label "runtime presence and authority unverified" .
+ar:InferredForNanoClaw a ar:EvidenceStatus ;
+  rdfs:label "conservative NanoClaw adaptation; not asserted by the source skill" ;
+  rdfs:comment "The operation or route is a reviewed translation into the inspected NanoClaw architecture. It must not be read as a claim about the original skill or a deployed installation." .
+
+ar:NativeAdaptation a ar:AdaptationDisposition ;
+  rdfs:label "native" ;
+  rdfs:comment "An inspected NanoClaw endpoint has the relevant contract. Native classification still does not prove that the endpoint is deployed or authorized." .
+ar:ConditionalAdaptation a ar:AdaptationDisposition ;
+  rdfs:label "conditional" ;
+  rdfs:comment "Behavior depends on provider tools, installed adapters, mounts, credentials, configuration, or policy." .
+ar:ApproximateAdaptation a ar:AdaptationDisposition ;
+  rdfs:label "approximation" ;
+  rdfs:comment "NanoClaw lacks the same abstraction, so the translated workflow has materially different semantics." .
+ar:UnsupportedAdaptation a ar:AdaptationDisposition ;
+  rdfs:label "unsupported or omitted" ;
+  rdfs:comment "No matching built-in NanoClaw endpoint was found; the operation is omitted unless an additional endpoint is introduced." .
+
+ar:NanoClawSkillAdaptationPolicy a ar:AdaptationPolicy ;
+  rdfs:label "NanoClaw skill-ontology adaptation policy" ;
+  rdfs:comment "Records where source skills differ from their ontology translation. It is an audit model, not executable skill text. Source skills span several environments and some explicitly assume OpenClaw; mappings describe plausible execution in NanoClaw revision 7902716b5b930215dbee4f56b8fb5b938d40468d." ;
+  ar:sourceNote "Every adapted operation uses ar:adaptationStatus ar:InferredForNanoClaw while ar:sourceStatus independently records skill-text, inspected-script, or example evidence. Effects are conservative possibilities, not proof of deployment, permission, successful execution, or behavioral equivalence. An absent exact endpoint must be omitted or represented as an explicit approximation with its requirements; the model must not silently widen NanoClaw's interface." .
 
 ar:Read a ar:EffectType ; rdfs:comment "Access or obtain information; does not assert world-state mutation." .
 ar:Create a ar:EffectType .

@@ -4,7 +4,7 @@ import json
 import subprocess
 import sys
 
-from rdflib import Dataset, Graph, Namespace, URIRef
+from rdflib import Dataset, Graph, Literal, Namespace, URIRef
 from rdflib.namespace import OWL, RDF, RDFS
 from owlrl import DeductiveClosure, OWLRL_Semantics
 from pyshacl import validate
@@ -14,9 +14,27 @@ ONTOLOGY_DIR = Path(__file__).resolve().parent
 AR = Namespace("urn:agent-risk:")
 SH = Namespace("http://www.w3.org/ns/shacl#")
 
+# manifest.json intentionally contains only the default skill selection. Files,
+# graph ids, hashes, dependencies, and source pins are owned by RDF metadata or
+# derived from directory conventions.
+manifest = json.loads((ONTOLOGY_DIR / "manifest.json").read_text())
+unexpected_manifest_keys = set(manifest) - {"loadedSkills"}
+if unexpected_manifest_keys:
+    raise SystemExit(
+        "manifest.json may contain only loadedSkills; unexpected keys: "
+        + ", ".join(sorted(unexpected_manifest_keys))
+    )
+default_skills = manifest.get("loadedSkills", [])
+if not isinstance(default_skills, list) or not all(
+    isinstance(name, str) and name for name in default_skills
+):
+    raise SystemExit("manifest.json loadedSkills must be a list of non-empty strings")
+if len(default_skills) != len(set(default_skills)):
+    raise SystemExit("Duplicate skill in manifest.json loadedSkills")
+
 # --universal-only selects all always-loaded graphs without skill graphs.
 # --data FILE adds concrete observations for OWL-RL classification and SHACL.
-# Previous universal-only spellings remain aliases.
+# Explicit skill arguments override manifest.json loadedSkills.
 arguments = sys.argv[1:]
 universal_flags = {"--universal-only", "--resources-only", "--baseline-only"}
 universal_only = False
@@ -39,66 +57,110 @@ while index < len(arguments):
     index += 1
 if universal_only and skill_arguments:
     raise SystemExit("--universal-only cannot be combined with skill directory names.")
-loaded_skills = set() if universal_only else set(skill_arguments) or {"discord", "gh-issues"}
+loaded_skills = (
+    set() if universal_only else set(skill_arguments) if skill_arguments else set(default_skills)
+)
 
-manifest = json.loads((ONTOLOGY_DIR / "manifest.json").read_text())
 
-# Pin the universal environment model to the NanoClaw checkout it was reviewed
-# against. Like skill hashes below, this detects source drift; it does not
-# attest to a deployed process or live configuration.
-environment_source = manifest.get("environmentSource")
-if environment_source:
-    repository_path = Path(environment_source["repositoryPath"])
-    expected_revision = environment_source["revision"]
-    if not repository_path.exists():
-        raise SystemExit(f"NanoClaw source checkout not found: {repository_path}")
-    result = subprocess.run(
-        ["git", "-C", str(repository_path), "rev-parse", "HEAD"],
-        check=False,
-        capture_output=True,
-        text=True,
-    )
-    if result.returncode != 0:
-        raise SystemExit(f"Cannot read NanoClaw source revision: {result.stderr.strip()}")
-    actual_revision = result.stdout.strip()
-    if actual_revision != expected_revision:
+def parse_single_named_graph(path):
+    parsed = Dataset()
+    parsed.parse(str(path), format="trig")
+    populated = [graph for graph in parsed.graphs() if len(graph)]
+    if len(populated) != 1:
         raise SystemExit(
-            "NanoClaw ontology is stale: source checkout is at "
-            f"{actual_revision}, expected {expected_revision}."
+            f"{path.relative_to(ONTOLOGY_DIR)} must contain exactly one non-empty "
+            f"named graph; found {len(populated)}."
         )
-modules = {module["directory"]: module for module in manifest["modules"]}
+    graph = populated[0]
+    if not isinstance(graph.identifier, URIRef):
+        raise SystemExit(f"Named graph id must be an IRI in {path.relative_to(ONTOLOGY_DIR)}")
+    return graph
+
+
+def literal_values(graph, subject, predicate, description):
+    values = list(graph.objects(subject, predicate))
+    non_literals = [value for value in values if not isinstance(value, Literal)]
+    if non_literals:
+        raise SystemExit(f"{description} must use RDF literals")
+    return [str(value) for value in values]
+
+
+def one_literal(graph, subject, predicate, description):
+    values = literal_values(graph, subject, predicate, description)
+    if len(values) != 1 or not values[0]:
+        raise SystemExit(f"{description} must have exactly one non-empty value")
+    return values[0]
+
+
+# Discover ontology modules by their own RDF metadata. This includes universal
+# files and support modules such as skills/git-resources.trig.
+ontology_modules = {}
+candidate_graph_files = sorted((ONTOLOGY_DIR / "universal").glob("*.trig")) + sorted(
+    (ONTOLOGY_DIR / "skills").glob("*.trig")
+)
+for path in candidate_graph_files:
+    graph = parse_single_named_graph(path)
+    module_resources = set(graph.subjects(RDF.type, AR.OntologyModule))
+    if not module_resources:
+        continue
+    if len(module_resources) != 1:
+        raise SystemExit(
+            f"{path.relative_to(ONTOLOGY_DIR)} must contain one ar:OntologyModule"
+        )
+    module_resource = next(iter(module_resources))
+    module_id = one_literal(
+        graph, module_resource, AR.ontologyModuleId,
+        f"ontology module id in {path.relative_to(ONTOLOGY_DIR)}",
+    )
+    if module_id in ontology_modules:
+        raise SystemExit(f"Duplicate ontology module id: {module_id}")
+    dependencies = sorted(set(literal_values(
+        graph, module_resource, AR.requiresOntologyModule,
+        f"dependencies for ontology module {module_id}",
+    )))
+    resources_only_values = list(graph.objects(module_resource, AR.resourcesOnly))
+    resources_only = any(bool(value.toPython()) for value in resources_only_values)
+    ontology_modules[module_id] = {
+        "id": module_id,
+        "file": str(path.relative_to(ONTOLOGY_DIR)),
+        "graph": str(graph.identifier),
+        "dependsOn": dependencies,
+        "resourcesOnly": resources_only,
+        "metadataResource": module_resource,
+        "metadataGraph": graph,
+    }
+
+# Discover skill graphs and their source-integrity metadata.
+modules = {}
+for path in sorted((ONTOLOGY_DIR / "skills").glob("*.trig")):
+    graph = parse_single_named_graph(path)
+    skill_resources = set(graph.subjects(RDF.type, AR.Skill))
+    if not skill_resources:
+        continue
+    if len(skill_resources) != 1:
+        raise SystemExit(f"{path.name} must contain exactly one ar:Skill resource")
+    skill_resource = next(iter(skill_resources))
+    directory = one_literal(graph, skill_resource, AR.skillDirectory, f"skill directory in {path.name}")
+    if directory in modules:
+        raise SystemExit(f"Duplicate skill directory metadata: {directory}")
+    modules[directory] = {
+        "directory": directory,
+        "file": str(path.relative_to(ONTOLOGY_DIR)),
+        "graph": str(graph.identifier),
+        "skillResource": skill_resource,
+        "sourcePath": one_literal(graph, skill_resource, AR.sourcePath, f"source path in {path.name}"),
+        "sourceSha256": one_literal(graph, skill_resource, AR.sourceSha256, f"source hash in {path.name}"),
+        "dependsOn": sorted(set(literal_values(
+            graph, skill_resource, AR.requiresOntologyModule,
+            f"dependencies for skill {directory}",
+        ))),
+    }
+
 unknown = loaded_skills - modules.keys()
 if unknown:
     raise SystemExit(f"Unknown skills: {', '.join(sorted(unknown))}")
 
-active = Dataset()  # Retains provenance as one named graph per source file.
-combined = Graph()  # Union for cross-graph checks, hierarchy, and SHACL.
-vocabulary = Graph().parse(
-    str(ONTOLOGY_DIR / manifest["vocabulary"]), format="turtle"
-)
-for triple in vocabulary:
-    combined.add(triple)
-
-
-def load_named_graph(entry):
-    parsed = Dataset()
-    parsed.parse(str(ONTOLOGY_DIR / entry["file"]), format="trig")
-    graph_id = URIRef(entry["graph"])
-    source_graph = parsed.graph(graph_id)
-    if len(source_graph) == 0:
-        raise SystemExit(f"Missing or empty named graph: {graph_id}")
-    target_graph = active.graph(graph_id)
-    for triple in source_graph:
-        target_graph.add(triple)
-        combined.add(triple)
-    return target_graph
-
-
-# The manifest catalogs graph modules; load-config.json holds deployment policy.
-ontology_modules = {entry["id"]: entry for entry in manifest.get("ontologyModules", [])}
-if len(ontology_modules) != len(manifest.get("ontologyModules", [])):
-    raise SystemExit("Duplicate ontology module id in manifest")
-load_config_path = ONTOLOGY_DIR / manifest["loadConfig"]
+load_config_path = ONTOLOGY_DIR / "load-config.json"
 load_config = json.loads(load_config_path.read_text())
 always_loaded_ids = load_config.get("alwaysLoaded", [])
 if len(always_loaded_ids) != len(set(always_loaded_ids)):
@@ -110,44 +172,97 @@ if unknown_always_loaded:
         + ", ".join(sorted(unknown_always_loaded))
     )
 
-# Dependency resolution is deliberately static. A dependency declaration never
-# causes a graph to load: every required module must already be introduced by
-# load-config.json. Preflight completes before any named graph is loaded.
+# Source pins belong to ontology modules. They detect source drift but do not
+# attest to a deployed process or live configuration.
+for module_id in always_loaded_ids:
+    entry = ontology_modules[module_id]
+    graph = entry["metadataGraph"]
+    subject = entry["metadataResource"]
+    repository_paths = literal_values(
+        graph, subject, AR.sourceRepositoryPath, f"source repository for {module_id}"
+    )
+    revisions = literal_values(
+        graph, subject, AR.sourceRevision, f"source revision for {module_id}"
+    )
+    if bool(repository_paths) != bool(revisions) or len(repository_paths) > 1 or len(revisions) > 1:
+        raise SystemExit(f"{module_id} must declare one sourceRepositoryPath/sourceRevision pair")
+    if repository_paths:
+        repository_path = Path(repository_paths[0])
+        expected_revision = revisions[0]
+        if not repository_path.exists():
+            raise SystemExit(f"Ontology source checkout not found: {repository_path}")
+        result = subprocess.run(
+            ["git", "-C", str(repository_path), "rev-parse", "HEAD"],
+            check=False, capture_output=True, text=True,
+        )
+        if result.returncode != 0:
+            raise SystemExit(f"Cannot read ontology source revision: {result.stderr.strip()}")
+        actual_revision = result.stdout.strip()
+        if actual_revision != expected_revision:
+            raise SystemExit(
+                f"{module_id} ontology is stale: source checkout is at "
+                f"{actual_revision}, expected {expected_revision}."
+            )
+
+# Dependency declarations never load graphs. Every requirement must already be
+# listed in load-config.json, and preflight finishes before the active dataset
+# receives any named graph.
 dependency_requirements = []
 for module_id in always_loaded_ids:
-    for required_id in ontology_modules[module_id].get("dependsOn", []):
-        dependency_requirements.append((module_id, required_id))
+    dependency_requirements.extend(
+        (module_id, required_id)
+        for required_id in ontology_modules[module_id]["dependsOn"]
+    )
 for skill_name in sorted(loaded_skills):
-    for required_id in modules[skill_name].get("dependsOn", []):
-        dependency_requirements.append((skill_name, required_id))
+    dependency_requirements.extend(
+        (skill_name, required_id)
+        for required_id in modules[skill_name]["dependsOn"]
+    )
 
 unknown_required = {
-    required_id
-    for _, required_id in dependency_requirements
+    required_id for _, required_id in dependency_requirements
     if required_id not in ontology_modules
 }
 missing_dependencies = [
-    (requester, required_id)
-    for requester, required_id in dependency_requirements
+    (requester, required_id) for requester, required_id in dependency_requirements
     if required_id in ontology_modules and required_id not in always_loaded_ids
 ]
 if unknown_required or missing_dependencies:
     for required_id in sorted(unknown_required):
         print(
-            f"WARNING: required ontology dependency {required_id} is not cataloged "
-            "in manifest.json",
+            f"WARNING: required ontology dependency {required_id} has no discoverable "
+            "ar:OntologyModule metadata",
             file=sys.stderr,
         )
     for requester, required_id in missing_dependencies:
         print(
             f"WARNING: {requester} requires ontology dependency {required_id}, but "
-            f"{manifest['loadConfig']} does not introduce it in alwaysLoaded",
+            "load-config.json does not introduce it in alwaysLoaded",
             file=sys.stderr,
         )
     raise SystemExit(
         "Dependency preflight failed; no ontology graphs were loaded. "
-        f"Add every required module to {manifest['loadConfig']} alwaysLoaded."
+        "Add every required module to load-config.json alwaysLoaded."
     )
+
+active = Dataset()  # Retains provenance as one named graph per source file.
+combined = Graph()  # Union for cross-graph checks, hierarchy, and SHACL.
+vocabulary = Graph().parse(str(ONTOLOGY_DIR / "universal/vocabulary.ttl"), format="turtle")
+for triple in vocabulary:
+    combined.add(triple)
+
+
+def load_named_graph(entry):
+    source_graph = parse_single_named_graph(ONTOLOGY_DIR / entry["file"])
+    graph_id = URIRef(entry["graph"])
+    if source_graph.identifier != graph_id:
+        raise SystemExit(f"Named graph id changed in {entry['file']}")
+    target_graph = active.graph(graph_id)
+    for triple in source_graph:
+        target_graph.add(triple)
+        combined.add(triple)
+    return target_graph
+
 
 always_loaded_graphs = [ontology_modules[module_id] for module_id in always_loaded_ids]
 for entry in always_loaded_graphs:
@@ -160,17 +275,17 @@ for entry in always_loaded_graphs:
         graph.triples((None, AR.hasPotentialEffect, None))
     ):
         raise SystemExit(f"Always-loaded graph contains an operation relation: {entry['file']}")
-    if entry.get("resourcesOnly") and any(
-        graph.subjects(RDF.type, AR.InvocationSurfaceKind)
-    ):
+    if entry["resourcesOnly"] and any(graph.subjects(RDF.type, AR.InvocationSurfaceKind)):
         raise SystemExit(f"Resource-only graph contains an invocation kind: {entry['file']}")
 
 for skill_name in sorted(loaded_skills):
     module = modules[skill_name]
-    source = Path(manifest["sourceRoot"]) / skill_name / "SKILL.md"
+    source = Path(module["sourcePath"])
+    if not source.exists():
+        raise SystemExit(f"Skill source not found: {source}")
     actual_hash = hashlib.sha256(source.read_bytes()).hexdigest()
-    if actual_hash != module["skillSha256"]:
-        raise SystemExit(f"Ontology for {skill_name} is stale: SKILL.md has changed.")
+    if actual_hash != module["sourceSha256"]:
+        raise SystemExit(f"Ontology for {skill_name} is stale: source skill has changed.")
     load_named_graph(module)
 
 observation_subjects = set()
@@ -230,7 +345,7 @@ defined_kinds = {
     if kind in typed_kinds or kind in typed_invocation_kinds
 }
 
-shapes = Graph().parse(str(ONTOLOGY_DIR / manifest["shapes"]), format="turtle")
+shapes = Graph().parse(str(ONTOLOGY_DIR / "universal/shapes.ttl"), format="turtle")
 shape_targets = set(shapes.objects(None, SH.targetClass))
 missing_validation_shapes = defined_kinds - shape_targets
 if missing_validation_shapes:
@@ -336,30 +451,24 @@ def route_reaches(source, target):
 
 
 def nanoclaw_mailbox_route(operation):
+    mailbox_stages = {
+        AR.NanoClawOutboundMailboxWrite,
+        AR.NanoClawInboundMailboxWrite,
+        AR.NanoClawAgentRunnerMailboxRead,
+    }
     return any(
-        route_reaches(channel, AR.NanoClawOutboundMailboxWrite)
-        or route_reaches(channel, AR.NanoClawInboundMailboxWrite)
+        channel in mailbox_stages
+        or any(route_reaches(channel, stage) for stage in mailbox_stages)
         for channel in combined.objects(operation, AR.invokedThroughKind)
     )
 
 
-legacy_openclaw_surfaces = {
-    AR.OpenClawMessageTool,
-    AR.OpenClawMessageCLI,
-    AR.OpenClawConfigCLI,
-    AR.OpenClawTaskFlowRuntime,
-}
-legacy_openclaw_operations = sorted(
-    {
-        operation
-        for operation in combined.subjects(RDF.type, AR.Operation)
-        if any(
-            channel in legacy_openclaw_surfaces
-            or AR.OpenClawChannelPlugin in invocation_ancestors(channel)
-            for channel in combined.objects(operation, AR.invokedThroughKind)
-        )
-    },
-    key=str,
+nanoclaw_adapted_operations = sorted(
+    set(combined.subjects(AR.adaptationStatus, AR.InferredForNanoClaw)), key=str
+)
+adaptation_mappings = set(combined.subjects(RDF.type, AR.AdaptationMapping))
+adaptation_disposition_links = set(
+    combined.subject_objects(AR.adaptationDisposition)
 )
 
 
@@ -462,16 +571,19 @@ def print_table(headers, rows):
         print_row(row)
 
 
-print(f"Load configuration: {manifest['loadConfig']}")
+print("Manifest defaults: " + (", ".join(default_skills) or "(none)"))
+print("Load configuration: load-config.json")
+print("Graph/catalog metadata: discovered from RDF and directory conventions")
 print("Always-loaded modules: " + ", ".join(always_loaded_ids))
 print("Dynamic dependency loading: disabled")
+print("Skill dependency source: ar:requiresOntologyModule metadata in each skill graph")
 print("Dependency preflight: satisfied")
 print(f"Loaded skills: {', '.join(sorted(loaded_skills)) or '(none)'}")
-if legacy_openclaw_operations:
+if nanoclaw_adapted_operations:
     print(
-        "Compatibility note: "
-        f"{len(legacy_openclaw_operations)} selected operation(s) use OpenClaw-specific "
-        "interfaces and are not automatically mapped to NanoClaw endpoints."
+        "Adaptation note: "
+        f"{len(nanoclaw_adapted_operations)} selected operation(s) are conservative "
+        "NanoClaw translations rather than claims made by their source skills."
     )
 print(f"Observation data: {data_path if data_path is not None else '(none)'}")
 print(f"Resource kinds: {len(resource_rows)}")
@@ -480,6 +592,8 @@ print(f"Invocation subtype links: {len(invocation_rows)}")
 print(f"Tool endpoint kinds: {len(tool_endpoint_rows)}")
 print(f"Invocation routes: {len(route_rows)}")
 print(f"Security-control links: {len(control_rows)}")
+print(f"Skill adaptation mappings: {len(adaptation_mappings)}")
+print(f"Adaptation disposition links: {len(adaptation_disposition_links)}")
 print(f"Subtype definitions: {len(definition_rows)} ({len(defined_kinds)} necessary+sufficient)")
 print(f"Skill potential-effect rows: {len(effect_rows)}\n")
 print_table(("Graph", "Resource kind"), resource_rows)

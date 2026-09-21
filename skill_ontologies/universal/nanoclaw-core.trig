@@ -2,6 +2,12 @@
 @prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
 
 ar:g_nanoclaw_core {
+  ar:NanoClawCoreModule a ar:OntologyModule ;
+    ar:ontologyModuleId "nanoclaw-core" ;
+    ar:requiresOntologyModule "local-filesystem" ;
+    ar:sourceRepositoryPath "/Users/yhong3/Documents/Research/nanoclaw" ;
+    ar:sourceRevision "7902716b5b930215dbee4f56b8fb5b938d40468d" .
+
   ar:NanoClawRuntime a ar:WorldSurfaceKind, ar:SystemComponentKind ;
     rdfs:comment "The NanoClaw installation described by checkout 7902716b5b930215dbee4f56b8fb5b938d40468d. Types in this graph are architectural possibilities, not observations about a running instance." ;
     rdfs:seeAlso <https://github.com/hyn0027/nanoclaw/tree/7902716b5b930215dbee4f56b8fb5b938d40468d> .

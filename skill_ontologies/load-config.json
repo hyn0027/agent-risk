@@ -10,7 +10,6 @@
     "nanoclaw-control",
     "nanoclaw-runtime",
     "nanoclaw-network",
-    "git-resources",
-    "openclaw-skill-surfaces"
+    "git-resources"
   ]
 }

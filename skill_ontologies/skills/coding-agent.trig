@@ -3,14 +3,28 @@
 
 ar:g_coding_agent {
   ar:skill_coding_agent a ar:Skill ;
+    ar:skillDirectory "coding-agent" ;
     ar:sourcePath "/Users/yhong3/Documents/Research/agent-risk/top_skills/coding-agent/SKILL.md" ;
+    ar:sourceSha256 "67dff2389503d4a47ef757afa637458e00bb9560f898ff072e35a825e065174d" ;
+    ar:requiresOntologyModule "git-resources", "nanoclaw-runtime", "nanoclaw-messaging" ;
+    ar:governedByAdaptationPolicy ar:NanoClawSkillAdaptationPolicy ;
+    ar:hasAdaptationMapping ar:adapt_coding_worker_launch,
+      ar:adapt_coding_repository_visibility, ar:adapt_coding_notification ;
+    ar:sourceNote "NanoClaw adaptation: workers run inside the session container, and completion is sent with NanoClaw send_message instead of an OpenClaw CLI." ;
     ar:declaresOperation ar:op_prepare_worktree, ar:op_launch_coding_worker,
       ar:op_monitor_worker, ar:op_worker_issue_pr, ar:op_worker_notify .
 
-  ar:GitCLI a ar:InvocationSurfaceKind ; ar:specializesInvocationKind ar:ShellCommandExecution .
-  ar:CodingWorkerCLI a ar:InvocationSurfaceKind ; ar:specializesInvocationKind ar:ShellCommandExecution .
-  ar:GitCLI ar:routesToKind ar:LocalGitRepository, ar:RemoteGitRepository .
-  ar:CodingWorkerCLI ar:routesToKind ar:WorkerProcess .
+  ar:NanoClawGitCLI a ar:InvocationSurfaceKind, ar:ToolEndpointKind ;
+    ar:specializesInvocationKind ar:NanoClawContainerShellExecution ;
+    ar:routesToKind ar:LocalGitRepository, ar:RemoteGitRepository .
+  ar:NanoClawCodingWorkerCLI a ar:InvocationSurfaceKind, ar:ToolEndpointKind ;
+    ar:specializesInvocationKind ar:NanoClawContainerShellExecution ;
+    ar:routesToKind ar:WorkerProcess .
+  ar:NanoClawWorkerProcessControl a ar:InvocationSurfaceKind, ar:ToolEndpointKind ;
+    ar:specializesInvocationKind ar:ProcessControlTool ;
+    ar:routesToKind ar:WorkerProcess ;
+    rdfs:comment "Provider/runtime process control available inside the NanoClaw container; exact background and PTY support remains provider-dependent." .
+
   ar:RemoteGitRepository a ar:WorldSurfaceKind .
   ar:IsolatedWorktree a ar:WorldSurfaceKind ; ar:specializesKind ar:LocalDirectory .
   ar:CodeFile a ar:WorldSurfaceKind ; ar:specializesKind ar:LocalFile .
@@ -18,7 +32,7 @@ ar:g_coding_agent {
   ar:WorkerProcess a ar:WorldSurfaceKind ; ar:specializesKind ar:ShellProcess .
   ar:GitHubIssue a ar:WorldSurfaceKind .
   ar:GitHubPullRequest a ar:WorldSurfaceKind .
-  ar:NotificationDestination a ar:WorldSurfaceKind .
+  ar:NotificationDestination a ar:WorldSurfaceKind ; ar:specializesKind ar:NanoClawDestination .
   ar:LocalGitRepository ar:containsKind ar:IsolatedWorktree, ar:LocalBranch, ar:CodeFile .
   ar:IsolatedWorktree ar:containsKind ar:CodeFile .
   ar:RemoteGitRepository ar:containsKind ar:GitHubIssue, ar:GitHubPullRequest .
@@ -26,42 +40,69 @@ ar:g_coding_agent {
   ar:cond_trusted_ref a ar:Requirement .
   ar:cond_verified_base a ar:Requirement .
   ar:cond_isolated_worktree a ar:Requirement .
-  ar:cond_worker_available a ar:Requirement .
-  ar:cond_worker_auth a ar:Requirement .
-  ar:cond_notification_route a ar:Requirement .
+  ar:cond_worker_available_in_container a ar:Requirement .
+  ar:cond_worker_auth_in_container a ar:Requirement .
+  ar:cond_background_process_support a ar:Requirement .
+  ar:cond_notification_destination a ar:Requirement .
   ar:cond_remote_push_permission a ar:Requirement .
 
-  ar:op_prepare_worktree a ar:Operation ; ar:invokedThroughKind ar:ShellExecution, ar:GitCLI ;
+  ar:op_prepare_worktree a ar:Operation ;
+    ar:invokedThroughKind ar:NanoClawContainerShellExecution, ar:NanoClawGitCLI ;
     ar:targetsKind ar:LocalGitRepository, ar:IsolatedWorktree ;
-    ar:requires ar:cond_trusted_ref, ar:cond_verified_base ; ar:sourceStatus ar:SkillText ;
+    ar:requires ar:cond_trusted_ref, ar:cond_verified_base ; ar:sourceStatus ar:SkillText ; ar:adaptationStatus ar:InferredForNanoClaw ;
+    ar:sourceNote "The checkout must be visible inside the container, normally through a configured writable mount; this is not host-wide filesystem access." ;
     ar:hasPotentialEffect [ a ar:PotentialEffect ; ar:effectType ar:Read ; ar:affectsKind ar:RemoteGitRepository ],
       [ a ar:PotentialEffect ; ar:effectType ar:Create ; ar:affectsKind ar:IsolatedWorktree, ar:LocalBranch ] .
 
-  ar:op_launch_coding_worker a ar:Operation ; ar:invokedThroughKind ar:ShellExecution, ar:CodingWorkerCLI ;
+  ar:op_launch_coding_worker a ar:Operation ;
+    ar:invokedThroughKind ar:NanoClawContainerShellExecution, ar:NanoClawCodingWorkerCLI ;
     ar:targetsKind ar:WorkerProcess, ar:IsolatedWorktree ;
-    ar:requires ar:cond_isolated_worktree, ar:cond_worker_available, ar:cond_worker_auth ;
-    ar:sourceNote "The worker runs in the worktree; one documented Claude Code launch uses bypassPermissions. Worker effects are open-ended and not exhaustively enumerated here." ;
-    ar:sourceStatus ar:SkillText ;
+    ar:requires ar:cond_isolated_worktree, ar:cond_worker_available_in_container,
+      ar:cond_worker_auth_in_container, ar:cond_background_process_support ;
+    ar:sourceStatus ar:SkillText ; ar:adaptationStatus ar:InferredForNanoClaw ;
+    ar:sourceNote "NanoClaw does not itself guarantee the original skill's background/PTY process API. The ontology keeps this as a provider-dependent container capability." ;
     ar:hasPotentialEffect [ a ar:PotentialEffect ; ar:effectType ar:Execute ; ar:affectsKind ar:WorkerProcess ],
       [ a ar:PotentialEffect ; ar:effectType ar:Update ; ar:affectsKind ar:IsolatedWorktree ] .
 
-  ar:op_monitor_worker a ar:Operation ; ar:invokedThroughKind ar:ProcessControlTool ;
-    ar:targetsKind ar:WorkerProcess ; ar:sourceStatus ar:SkillText ;
-    ar:sourceNote "Process list/poll/log/read, submit/write/paste input, and kill are all described; these have different effects." ;
+  ar:op_monitor_worker a ar:Operation ; ar:invokedThroughKind ar:NanoClawWorkerProcessControl ;
+    ar:targetsKind ar:WorkerProcess ; ar:requires ar:cond_background_process_support ;
+    ar:sourceStatus ar:SkillText ; ar:adaptationStatus ar:InferredForNanoClaw ;
+    ar:sourceNote "This is conditional on a provider exposing process control comparable to the source skill's process tool." ;
     ar:hasPotentialEffect [ a ar:PotentialEffect ; ar:effectType ar:Read ; ar:affectsKind ar:WorkerProcess ],
       [ a ar:PotentialEffect ; ar:effectType ar:Update ; ar:affectsKind ar:WorkerProcess ],
       [ a ar:PotentialEffect ; ar:effectType ar:Delete ; ar:affectsKind ar:WorkerProcess ] .
 
-  ar:op_worker_issue_pr a ar:Operation ; ar:invokedThroughKind ar:CodingWorkerCLI ;
+  ar:op_worker_issue_pr a ar:Operation ; ar:invokedThroughKind ar:NanoClawCodingWorkerCLI ;
     ar:targetsKind ar:GitHubIssue, ar:LocalGitRepository, ar:RemoteGitRepository ;
-    ar:requires ar:cond_remote_push_permission ;
-    ar:sourceNote "Long issue-to-PR workflow is an instruction to a delegated worker, not a guaranteed outcome or a directly enumerated tool call." ;
-    ar:sourceStatus ar:SkillText ;
+    ar:requires ar:cond_remote_push_permission ; ar:sourceStatus ar:SkillText ; ar:adaptationStatus ar:InferredForNanoClaw ;
+    ar:sourceNote "The issue-to-PR sequence remains an instruction to the nested coding CLI, not a guaranteed atomic endpoint." ;
     ar:hasPotentialEffect [ a ar:PotentialEffect ; ar:effectType ar:Update ; ar:affectsKind ar:LocalGitRepository, ar:RemoteGitRepository ],
       [ a ar:PotentialEffect ; ar:effectType ar:Create ; ar:affectsKind ar:GitHubPullRequest ] .
 
-  ar:op_worker_notify a ar:Operation ; ar:invokedThroughKind ar:OpenClawMessageCLI ;
-    ar:targetsKind ar:NotificationDestination ; ar:requires ar:cond_notification_route ;
-    ar:sourceStatus ar:SkillText ;
+  ar:op_worker_notify a ar:Operation ; ar:invokedThroughKind ar:NanoClawSendMessageTool ;
+    ar:targetsKind ar:NotificationDestination ; ar:requires ar:cond_notification_destination ;
+    ar:sourceStatus ar:SkillText ; ar:adaptationStatus ar:InferredForNanoClaw ;
+    ar:sourceNote "The parent agent sends completion through a projected NanoClaw destination; a nested CLI does not automatically inherit the built-in MCP connection." ;
     ar:hasPotentialEffect [ a ar:PotentialEffect ; ar:effectType ar:Notify ; ar:affectsKind ar:NotificationDestination ] .
+
+  ar:adapt_coding_worker_launch a ar:AdaptationMapping ;
+    ar:sourceAssumption "Host shell launches Codex, Claude Code, or OpenCode with background/PTY controls." ;
+    ar:nanoclawModel "NanoClawContainerShellExecution, NanoClawCodingWorkerCLI, and a provider-dependent process-control endpoint." ;
+    ar:adaptationDisposition ar:ConditionalAdaptation ;
+    ar:semanticDifference "The worker runs inside the session container; NanoClaw does not itself promise the source skill's background/PTY/process API." ;
+    ar:adaptedOperation ar:op_launch_coding_worker, ar:op_monitor_worker .
+
+  ar:adapt_coding_repository_visibility a ar:AdaptationMapping ;
+    ar:sourceAssumption "Repository/worktree is reachable from the host." ;
+    ar:nanoclawModel "Repository must be visible in the container, normally via an approved writable mount." ;
+    ar:adaptationDisposition ar:ConditionalAdaptation ;
+    ar:semanticDifference "This is not general host filesystem authority." ;
+    ar:adaptedOperation ar:op_prepare_worktree, ar:op_worker_issue_pr .
+
+  ar:adapt_coding_notification a ar:AdaptationMapping ;
+    ar:sourceAssumption "Nested worker calls openclaw message send." ;
+    ar:nanoclawModel "Parent agent calls NanoClawSendMessageTool to a projected destination." ;
+    ar:adaptationDisposition ar:ApproximateAdaptation ;
+    ar:semanticDifference "A nested coding CLI does not automatically inherit NanoClaw's built-in MCP connection." ;
+    ar:adaptedOperation ar:op_worker_notify .
 }

@@ -11,7 +11,7 @@ All graphs use `ar: <urn:agent-risk:>`. These are local identifiers, not derefer
 
 ```text
 skill_ontologies/
-  manifest.json          graph catalog, source revision, and dependencies
+  manifest.json          default loaded skill names only
   load-config.json       complete static set of preloaded modules
   loader.py              dependency checks, validation, inference, reports
   examples/              observation graphs for classification tests
@@ -29,15 +29,43 @@ skill_ontologies/
     nanoclaw-network.trig
   skills/
     git-resources.trig
-    openclaw-skill-surfaces.trig
     ...one graph per skill...
 ```
 
 ## Static loading policy
 
-`load-config.json` preloads eleven modules. Five describe NanoClaw itself: core, messaging/mailboxes, management controls, container/filesystem runtime, and network/OneCLI paths. Generic tool, filesystem, internet, and shell graphs are also preloaded. Git resource definitions and the legacy OpenClaw skill-interface vocabulary live under `skills/` even though the current static policy preloads them; folder placement and loading policy are separate concerns.
+`load-config.json` preloads ten modules. Five describe NanoClaw itself: core, messaging/mailboxes, management controls, container/filesystem runtime, and network/OneCLI paths. Generic tool, filesystem, internet, and shell graphs are also preloaded. Git resource definitions live under `skills/` even though the current static policy preloads them; folder placement and loading policy are separate concerns.
 
-Dependencies never load dynamically. Before parsing any named graph, the loader verifies that every declared dependency is already in `alwaysLoaded`. A missing dependency produces a warning and aborts with no ontology graphs loaded.
+Dependencies never load dynamically. Every ontology module owns its metadata in RDF:
+
+```turtle
+ar:NanoClawMessagingModule a ar:OntologyModule ;
+  ar:ontologyModuleId "nanoclaw-messaging" ;
+  ar:requiresOntologyModule "tool-endpoints", "local-filesystem", "nanoclaw-core" .
+```
+
+Each skill likewise owns its directory name, source provenance, and dependencies on its `ar:Skill` resource:
+
+```turtle
+ar:skill_coding_agent a ar:Skill ;
+  ar:skillDirectory "coding-agent" ;
+  ar:sourcePath "/path/to/top_skills/coding-agent/SKILL.md" ;
+  ar:sourceSha256 "..." ;
+  ar:requiresOntologyModule "git-resources", "nanoclaw-runtime", "nanoclaw-messaging" ;
+  ...
+```
+
+The loader discovers module graphs in `universal/*.trig` and `skills/*.trig`, and discovers skill graphs in `skills/*.trig`. Each file contains one named graph. Fixed infrastructure files remain at `universal/vocabulary.ttl`, `universal/shapes.ttl`, and `load-config.json`; this avoids duplicating their paths in a catalog.
+
+During preflight, the loader parses graph metadata, checks that selected skills exist, verifies source hashes and the NanoClaw source revision, and requires every dependency to already be present in `load-config.json` `alwaysLoaded`. It does not add any skill graph to the active dataset until dependency preflight succeeds. A missing or unknown dependency produces a warning and aborts; dependencies are never introduced automatically.
+
+`manifest.json` has one responsibility: default skill selection. Explicit command-line skill names replace this default.
+
+```json
+{
+  "loadedSkills": ["discord", "gh-issues"]
+}
+```
 
 Every always-loaded graph is checked to contain no `ar:Operation`, `ar:PotentialEffect`, `ar:declaresOperation`, or `ar:hasPotentialEffect`. `local-filesystem.trig` and `freeform-internet.trig` are additionally marked `resourcesOnly` and cannot declare invocation kinds.
 
@@ -106,7 +134,7 @@ The split records single-writer authority:
 - container writes the outbound side and the host reads it;
 - host delivery records and container processing acknowledgements remain on their owning sides.
 
-`send_message`, `send_file`, `edit_message`, `add_reaction`, `ask_user_question`, and `send_card` are separate endpoint kinds. This matters because NanoClaw does not expose one universal OpenClaw-style `message` action with all read, search, delete, poll, pin, presence, and channel-management operations.
+`send_message`, `send_file`, `edit_message`, `add_reaction`, `ask_user_question`, and `send_card` are separate endpoint kinds. NanoClaw does not expose one universal message action with read, search, delete, poll, pin, presence, and channel-management operations.
 
 ## Management paths and authorization
 
@@ -162,18 +190,23 @@ provider → HTTP transport → remote MCP service
 
 Local stdio is not Internet traffic. A local server's later HTTP call can use OneCLI or attempt direct egress. For remote MCP, local controls cover the client-to-MCP leg; the remote service's later calls do not automatically traverse the local gateway or mailbox.
 
-## OpenClaw skill compatibility
+## Skill adaptation policy
 
-Some source skills explicitly require OpenClaw interfaces. Their shared types now live in `skills/openclaw-skill-surfaces.trig`, not `universal/`:
+The former compatibility vocabulary has been removed. Skill graphs now name NanoClaw endpoints directly. This is a **translation of the ontology models**, not a claim that the original skill text can execute unchanged. The source `SKILL.md` hashes remain pinned as provenance and drift checks.
 
-- OpenClaw broad `message` tool;
-- `openclaw message` and configuration CLIs;
-- OpenClaw channel plugin/adapter;
-- OpenClaw TaskFlow runtime and configuration.
+An operation translated beyond what its source states uses `ar:adaptationStatus ar:InferredForNanoClaw`. Its original `ar:sourceStatus` remains separate, so script-inspected and example-only evidence is not erased by the translation. The loader counts adapted operations and prints a note.
 
-Loading this compatibility graph preserves what the source says. It does **not** claim NanoClaw implements those interfaces. For example, the Discord skill's read/search/delete/poll/pin/presence actions cannot honestly be mapped to NanoClaw's narrower built-in messaging MCP without an additional adapter, MCP server, or rewritten skill.
+The detailed crosswalk is RDF inside each skill graph. Every skill links to named `ar:AdaptationMapping` resources with `ar:sourceAssumption`, `ar:nanoclawModel`, one or more `ar:adaptationDisposition` values, and `ar:semanticDifference`. When appropriate, `ar:adaptedOperation` links the crosswalk entry to the modeled operation. All skills also link to `ar:NanoClawSkillAdaptationPolicy`, which holds the shared interpretation rule and pinned NanoClaw revision.
 
-The loader's `Messaging-route` column recognizes both NanoClaw and legacy messaging interfaces through their common messaging ancestor. `NanoClaw-mailbox` is stricter: it is `yes` only when the operation's declared invocation route actually reaches a NanoClaw mailbox write/read stage. The current OpenClaw-native skills therefore show a messaging route but no NanoClaw-mailbox route. That is a compatibility warning, not a validation error.
+Important conservative choices include:
+
+- Discord retains only native send, file, edit, and reaction actions. Read/search/delete/poll/pin/thread/presence are omitted rather than invented.
+- channel configuration uses host-side `ncl` resource management plus a separately registered adapter; it does not assume a generic credential/config command.
+- coding workers execute inside the session container and need an explicitly visible repository mount. Background process control remains provider-dependent.
+- GitHub orchestration maps ephemeral sub-agents to NanoClaw's long-lived `create_agent` plus named-destination messaging.
+- TaskFlow is approximated with scheduled tasks, run logs, mailbox wakeups, and companion agents. It is not an exact suspend/wait/resume implementation.
+
+`Messaging-route` detects operations beneath the generic messaging invocation family. `NanoClaw-mailbox` is stricter and is `yes` only when the declared route reaches a NanoClaw mailbox read or write stage.
 
 ## Qualified subtype definitions
 
@@ -198,7 +231,7 @@ python loader.py discord gh-issues
 python loader.py coding-agent --data examples/git-working-tree.ttl
 ```
 
-The old `--resources-only` and `--baseline-only` spellings remain aliases for `--universal-only`. No arguments select `discord` and `gh-issues`, matching the original prototype behavior.
+The old `--resources-only` and `--baseline-only` spellings remain aliases for `--universal-only`. With no arguments, the loader uses `manifest.json` `loadedSkills`; explicit skill arguments override that list.
 
 Useful SPARQL paths:
 
@@ -218,6 +251,15 @@ SELECT DISTINCT ?operation WHERE {
 # Possible NanoClaw mediation chain from a concrete endpoint.
 SELECT ?next WHERE {
   ar:NanoClawSendMessageTool ar:routesToKind+ ?next .
+}
+
+# Auditable source-to-NanoClaw skill adaptations.
+SELECT ?skill ?assumption ?nanoclawModel ?disposition ?difference WHERE {
+  ?skill ar:hasAdaptationMapping ?mapping .
+  ?mapping ar:sourceAssumption ?assumption ;
+           ar:nanoclawModel ?nanoclawModel ;
+           ar:adaptationDisposition ?disposition ;
+           ar:semanticDifference ?difference .
 }
 ```
 

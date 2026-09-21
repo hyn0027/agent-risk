@@ -1,37 +1,3 @@
 {
-  "schemaVersion": "0.13",
-  "vocabulary": "universal/vocabulary.ttl",
-  "shapes": "universal/shapes.ttl",
-  "loadConfig": "load-config.json",
-  "sourceRoot": "/Users/yhong3/Documents/Research/agent-risk/top_skills",
-  "environmentSource": {
-    "name": "NanoClaw",
-    "repositoryPath": "/Users/yhong3/Documents/Research/nanoclaw",
-    "revision": "7902716b5b930215dbee4f56b8fb5b938d40468d"
-  },
-  "ontologyModules": [
-    {"id": "tool-endpoints", "file": "universal/tool-endpoints.trig", "graph": "urn:agent-risk:g_tool_endpoints"},
-    {"id": "local-filesystem", "file": "universal/local-filesystem.trig", "graph": "urn:agent-risk:g_local_filesystem", "resourcesOnly": true},
-    {"id": "freeform-internet", "file": "universal/freeform-internet.trig", "graph": "urn:agent-risk:g_freeform_internet", "resourcesOnly": true},
-    {"id": "shell-execution", "file": "universal/shell-execution.trig", "graph": "urn:agent-risk:g_shell_execution"},
-    {"id": "nanoclaw-core", "file": "universal/nanoclaw-core.trig", "graph": "urn:agent-risk:g_nanoclaw_core", "dependsOn": ["local-filesystem"], "sourceRevision": "7902716b5b930215dbee4f56b8fb5b938d40468d"},
-    {"id": "nanoclaw-messaging", "file": "universal/nanoclaw-messaging.trig", "graph": "urn:agent-risk:g_nanoclaw_messaging", "dependsOn": ["tool-endpoints", "local-filesystem", "nanoclaw-core"], "sourceRevision": "7902716b5b930215dbee4f56b8fb5b938d40468d"},
-    {"id": "nanoclaw-control", "file": "universal/nanoclaw-control.trig", "graph": "urn:agent-risk:g_nanoclaw_control", "dependsOn": ["shell-execution", "nanoclaw-messaging"], "sourceRevision": "7902716b5b930215dbee4f56b8fb5b938d40468d"},
-    {"id": "nanoclaw-runtime", "file": "universal/nanoclaw-runtime.trig", "graph": "urn:agent-risk:g_nanoclaw_runtime", "dependsOn": ["local-filesystem", "shell-execution", "nanoclaw-core"], "sourceRevision": "7902716b5b930215dbee4f56b8fb5b938d40468d"},
-    {"id": "nanoclaw-network", "file": "universal/nanoclaw-network.trig", "graph": "urn:agent-risk:g_nanoclaw_network", "dependsOn": ["freeform-internet", "tool-endpoints", "nanoclaw-core", "nanoclaw-runtime"], "sourceRevision": "7902716b5b930215dbee4f56b8fb5b938d40468d"},
-    {"id": "git-resources", "file": "skills/git-resources.trig", "graph": "urn:agent-risk:g_git_resources", "dependsOn": ["local-filesystem"]},
-    {"id": "openclaw-skill-surfaces", "file": "skills/openclaw-skill-surfaces.trig", "graph": "urn:agent-risk:g_openclaw_skill_surfaces", "dependsOn": ["tool-endpoints", "local-filesystem", "shell-execution"]}
-  ],
-  "modules": [
-    {"directory": "1password-1.0.0", "file": "skills/1password.trig", "graph": "urn:agent-risk:g_1password", "skillSha256": "c0f96ba727c68ebcbfdaed31bbf631f300e3ea3e717a72442cbd18143f347f55"},
-    {"directory": "coding-agent", "file": "skills/coding-agent.trig", "graph": "urn:agent-risk:g_coding_agent", "dependsOn": ["git-resources", "openclaw-skill-surfaces"], "skillSha256": "67dff2389503d4a47ef757afa637458e00bb9560f898ff072e35a825e065174d"},
-    {"directory": "configure-channel", "file": "skills/configure-channel.trig", "graph": "urn:agent-risk:g_configure_channel", "dependsOn": ["openclaw-skill-surfaces"], "skillSha256": "56f12cec97442410de68a5fc119dc5b198bedaadff9749188b48704d354b94fd"},
-    {"directory": "diagram-maker-1.0.0", "file": "skills/diagram-maker.trig", "graph": "urn:agent-risk:g_diagram_maker", "skillSha256": "b8a3355cf2b7ca1c18b672d3fb23fba331db0da75308b403721a9918094b7bcb"},
-    {"directory": "discord", "file": "skills/discord.trig", "graph": "urn:agent-risk:g_discord", "dependsOn": ["openclaw-skill-surfaces"], "skillSha256": "29897610e192ee367f0117dd992147dd7fe417820b79ad01329838f537019508"},
-    {"directory": "gh-issues", "file": "skills/gh-issues.trig", "graph": "urn:agent-risk:g_gh_issues", "dependsOn": ["git-resources", "openclaw-skill-surfaces"], "skillSha256": "f2a787203a90572835e7b7bfe939a422c7d7e1828662d60ad2e4a0db8c9f5577"},
-    {"directory": "meme-maker-1.0.0", "file": "skills/meme-maker.trig", "graph": "urn:agent-risk:g_meme_maker", "skillSha256": "05e5500023d6b432f695f680ca771b005ab66b03aceff9294dc0a9768dcf2301"},
-    {"directory": "sherpa-onnx-tts-1.0.0", "file": "skills/sherpa-onnx-tts.trig", "graph": "urn:agent-risk:g_sherpa_onnx_tts", "skillSha256": "afd52f85a94d8e46114fcd7e9bebcdf4c7dcf0de34fdebf178c38cab60246d7e"},
-    {"directory": "skill-creator-1.0.0", "file": "skills/skill-creator.trig", "graph": "urn:agent-risk:g_skill_creator", "skillSha256": "50ceafc65b49526d94b1263bc4a8ee381ce36249f2e370f3cdc414efa6a75c2f"},
-    {"directory": "taskflow-inbox-triage", "file": "skills/taskflow-inbox-triage.trig", "graph": "urn:agent-risk:g_taskflow_inbox_triage", "dependsOn": ["openclaw-skill-surfaces"], "skillSha256": "0fb413b107f9b0f5625136869cd5a979ecd65e1a756216705bee2ae0b8d1112c"}
-  ]
+  "loadedSkills": ["discord", "gh-issues"]
 }

@@ -2,6 +2,9 @@
 @prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
 
 ar:g_tool_endpoints {
+  ar:ToolEndpointsModule a ar:OntologyModule ;
+    ar:ontologyModuleId "tool-endpoints" .
+
   ar:ToolEndpoint a ar:InvocationSurfaceKind, ar:ToolEndpointKind ;
     rdfs:comment "Parent kind for callable surfaces exposed to an agent or invoked on its behalf. This is a taxonomy kind, not an OWL superclass of all concrete tools." .
   ar:MessagingChannelInvocation a ar:InvocationSurfaceKind ;

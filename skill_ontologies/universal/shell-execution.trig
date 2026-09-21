@@ -2,6 +2,9 @@
 @prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
 
 ar:g_shell_execution {
+  ar:ShellExecutionModule a ar:OntologyModule ;
+    ar:ontologyModuleId "shell-execution" .
+
   ar:ShellExecution a ar:InvocationSurfaceKind, ar:ToolEndpointKind ;
     ar:specializesInvocationKind ar:ToolEndpoint ;
     rdfs:comment "Execution through a shell-capable command channel; actual availability and privileges are runtime facts." .

@@ -59,7 +59,9 @@ ar:g_nanoclaw_runtime {
     ar:routesToKind ar:NanoClawContainerFileSystem ;
     rdfs:comment "Provider-supplied file read/write/edit/search interface, constrained by the container-visible filesystem rather than by a universal per-call host approval." .
 
-  ar:NanoClawRuntimeModule a rdfs:Resource ;
+  ar:NanoClawRuntimeModule a ar:OntologyModule ;
+    ar:ontologyModuleId "nanoclaw-runtime" ;
+    ar:requiresOntologyModule "local-filesystem", "shell-execution", "nanoclaw-core" ;
     rdfs:seeAlso
       <https://github.com/hyn0027/nanoclaw/blob/7902716b5b930215dbee4f56b8fb5b938d40468d/src/container-runner.ts>,
       <https://github.com/hyn0027/nanoclaw/blob/7902716b5b930215dbee4f56b8fb5b938d40468d/docs/SECURITY.md> .

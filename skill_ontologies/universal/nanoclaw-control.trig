@@ -6,6 +6,17 @@ ar:g_nanoclaw_control {
   ar:NanoClawManagementResponse a ar:WorldSurfaceKind .
   ar:NanoClawApprovalRequest a ar:WorldSurfaceKind .
   ar:NanoClawRoleMembershipState a ar:WorldSurfaceKind .
+  ar:NanoClawScheduledTask a ar:WorldSurfaceKind ;
+    rdfs:comment "One-shot or recurring task series managed by the ncl tasks resource and stored in a task session mailbox." .
+  ar:NanoClawTaskRunLog a ar:WorldSurfaceKind ;
+    ar:specializesKind ar:LocalFile ;
+    rdfs:comment "Host-timestamped task-series log under the agent-group tasks directory; it is state, not a delivery channel." .
+  ar:NanoClawMessagingRouteConfiguration a ar:WorldSurfaceKind ;
+    rdfs:comment "The combined messaging-group, wiring, destination, membership, and policy records managed by ncl." .
+
+  ar:NanoClawInboundMailbox ar:containsKind ar:NanoClawScheduledTask .
+  ar:NanoClawAgentGroupWorkspace ar:containsKind ar:NanoClawTaskRunLog .
+  ar:NanoClawCentralDatabase ar:containsKind ar:NanoClawMessagingRouteConfiguration .
 
   ar:NanoClawUserAccessControl a ar:WorldSurfaceKind, ar:SecurityControlKind ;
     rdfs:comment "Host checks user roles, group membership, and unknown-sender policy; messages remain untrusted input after admission." .
@@ -38,6 +49,19 @@ ar:g_nanoclaw_control {
     ar:specializesInvocationKind ar:ShellCommandExecution ;
     ar:routesToKind ar:NanoClawUnixSocketTransport ;
     rdfs:comment "Operator-side ncl command path through the host Unix socket; it does not use a session mailbox." .
+  ar:NanoClawHostMessagingAdminCLI a ar:InvocationSurfaceKind, ar:ToolEndpointKind ;
+    ar:specializesInvocationKind ar:NanoClawHostNclCLI ;
+    ar:routesToKind ar:NanoClawUnixSocketTransport, ar:NanoClawMessagingRouteConfiguration ;
+    rdfs:comment "Host ncl resource commands for messaging groups, wirings, destinations, users, roles, members, and policies." .
+  ar:NanoClawHostMessagingGroupSendCLI a ar:InvocationSurfaceKind, ar:ToolEndpointKind ;
+    ar:specializesInvocationKind ar:NanoClawHostNclCLI ;
+    ar:routesToKind ar:NanoClawUnixSocketTransport, ar:NanoClawHostRouterInvocation ;
+    rdfs:comment "Host ncl messaging-groups send command, which injects an event into the ordinary inbound routing path." .
+  ar:NanoClawContainerTasksCLI a ar:InvocationSurfaceKind, ar:ToolEndpointKind ;
+    ar:specializesInvocationKind ar:NanoClawContainerNclCLI ;
+    ar:routesToKind ar:NanoClawOutboundMailboxWrite, ar:NanoClawScheduledTask,
+      ar:NanoClawTaskRunLog ;
+    rdfs:comment "Container ncl tasks resource commands, mediated by cli_request/cli_response mailbox messages and host guards." .
 
   ar:NanoClawCreateAgentTool a ar:InvocationSurfaceKind, ar:ToolEndpointKind ;
     ar:specializesInvocationKind ar:NanoClawBuiltInMCPTool ;
@@ -56,7 +80,9 @@ ar:g_nanoclaw_control {
   ar:NanoClawHostRouterInvocation ar:protectedByKind ar:NanoClawUserAccessControl,
     ar:NanoClawCommandGateControl .
 
-  ar:NanoClawControlModule a rdfs:Resource ;
+  ar:NanoClawControlModule a ar:OntologyModule ;
+    ar:ontologyModuleId "nanoclaw-control" ;
+    ar:requiresOntologyModule "shell-execution", "nanoclaw-messaging", "nanoclaw-runtime" ;
     rdfs:seeAlso
       <https://github.com/hyn0027/nanoclaw/blob/7902716b5b930215dbee4f56b8fb5b938d40468d/container/agent-runner/src/cli/ncl.ts>,
       <https://github.com/hyn0027/nanoclaw/blob/7902716b5b930215dbee4f56b8fb5b938d40468d/src/cli/guard.ts>,

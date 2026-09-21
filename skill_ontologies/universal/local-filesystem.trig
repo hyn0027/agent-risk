@@ -4,6 +4,10 @@
 @prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
 
 ar:g_local_filesystem {
+  ar:LocalFilesystemModule a ar:OntologyModule ;
+    ar:ontologyModuleId "local-filesystem" ;
+    ar:resourcesOnly true .
+
   ar:LocalFileSystem a ar:WorldSurfaceKind ;
     rdfs:comment "Abstract resource kind; concrete paths, mounts, sandbox boundaries, and permissions require runtime inventory." .
   ar:LocalDirectory a ar:WorldSurfaceKind .

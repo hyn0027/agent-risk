@@ -3,63 +3,85 @@
 
 ar:g_configure_channel {
   ar:skill_configure_channel a ar:Skill ;
+    ar:skillDirectory "configure-channel" ;
     ar:sourcePath "/Users/yhong3/Documents/Research/agent-risk/top_skills/configure-channel/SKILL.md" ;
-    ar:sourceNote "Configuration is file-backed in the documented setup, but this skill explicitly forbids hand-editing config files; the CLI operations remain logical configuration effects." ;
+    ar:sourceSha256 "56f12cec97442410de68a5fc119dc5b198bedaadff9749188b48704d354b94fd" ;
+    ar:requiresOntologyModule "nanoclaw-messaging", "nanoclaw-control" ;
+    ar:governedByAdaptationPolicy ar:NanoClawSkillAdaptationPolicy ;
+    ar:hasAdaptationMapping ar:adapt_channel_configuration,
+      ar:adapt_channel_dry_run, ar:adapt_channel_outbound_test,
+      ar:adapt_channel_inbound_proof ;
+    ar:sourceNote "NanoClaw adaptation: configure registered adapters through ncl messaging-groups, wirings, destinations, users, roles, members, and policies rather than OpenClaw config/channel commands." ;
     ar:declaresOperation ar:op_channel_inspect, ar:op_channel_configure,
-      ar:op_connect_channel, ar:op_doctor_fix, ar:op_dry_run_message,
-      ar:op_real_test_message .
+      ar:op_channel_prove_inbound, ar:op_real_test_message .
 
-  ar:ConnectChannelTool a ar:InvocationSurfaceKind, ar:ToolEndpointKind ;
-    ar:specializesInvocationKind ar:ToolEndpoint .
-  ar:OpenClawDoctorCLI a ar:InvocationSurfaceKind ;
-    ar:specializesInvocationKind ar:ShellCommandExecution .
-  ar:OpenClawConfigCLI ar:specializesInvocationKind ar:ShellCommandExecution .
-  ar:OpenClawConfigCLI ar:routesToKind ar:OpenClawConfiguration .
-  ar:OpenClawMessageCLI ar:routesToKind ar:ConfiguredChatChannel .
-  ar:ConfiguredChatChannel a ar:WorldSurfaceKind .
-  ar:ChannelSecretReference a ar:WorldSurfaceKind .
+  ar:ConfiguredNanoClawChannel a ar:WorldSurfaceKind ; ar:specializesKind ar:MessagingGroup .
+  ar:ChannelAdapterRegistration a ar:WorldSurfaceKind ;
+    rdfs:comment "Installed and registered NanoClaw channel adapter instance. Adapter installation itself is outside this inferred skill." .
   ar:ChannelStatus a ar:WorldSurfaceKind .
-  ar:ChannelTestPayload a ar:WorldSurfaceKind .
-  ar:RemoteChatMessage a ar:WorldSurfaceKind .
-  ar:OpenClawConfiguration ar:containsKind ar:ChannelSecretReference .
-  ar:ConfiguredChatChannel ar:containsKind ar:RemoteChatMessage .
+  ar:RemoteChatMessage a ar:WorldSurfaceKind ; ar:specializesKind ar:MessagingMessage .
+  ar:ConfiguredNanoClawChannel ar:containsKind ar:RemoteChatMessage .
+  ar:NanoClawMessagingRouteConfiguration ar:containsKind ar:ConfiguredNanoClawChannel,
+    ar:NanoClawWiring, ar:NanoClawDestination .
 
-  ar:cond_exact_config_path a ar:Requirement .
-  ar:cond_secret_ref a ar:Requirement .
-  ar:cond_operator_secret_entry a ar:Requirement .
-  ar:cond_fix_approval a ar:Requirement .
-  ar:cond_channel_auth a ar:Requirement .
-  ar:cond_test_destination a ar:Requirement .
+  ar:cond_adapter_registered a ar:Requirement .
+  ar:cond_operator_authority a ar:Requirement .
+  ar:cond_channel_credentials_out_of_band a ar:Requirement .
+  ar:cond_channel_destination a ar:Requirement .
+  ar:cond_agent_destination_projected a ar:Requirement .
 
-  ar:op_channel_inspect a ar:Operation ; ar:invokedThroughKind ar:OpenClawConfigCLI ;
-    ar:targetsKind ar:OpenClawConfiguration, ar:ChannelStatus ; ar:sourceStatus ar:SkillText ;
-    ar:hasPotentialEffect [ a ar:PotentialEffect ; ar:effectType ar:Read ; ar:affectsKind ar:OpenClawConfiguration, ar:ChannelStatus ] .
+  ar:op_channel_inspect a ar:Operation ; ar:invokedThroughKind ar:NanoClawHostMessagingAdminCLI ;
+    ar:targetsKind ar:NanoClawMessagingRouteConfiguration, ar:ChannelStatus ;
+    ar:requires ar:cond_operator_authority ; ar:sourceStatus ar:SkillText ; ar:adaptationStatus ar:InferredForNanoClaw ;
+    ar:sourceNote "Use ncl resource list/get/help commands. NanoClaw has no direct equivalent of channels status --deep or doctor." ;
+    ar:hasPotentialEffect [ a ar:PotentialEffect ; ar:effectType ar:Read ; ar:affectsKind ar:NanoClawMessagingRouteConfiguration, ar:ChannelStatus ] .
 
-  ar:op_channel_configure a ar:Operation ; ar:invokedThroughKind ar:OpenClawConfigCLI ;
-    ar:targetsKind ar:OpenClawConfiguration ; ar:requires ar:cond_exact_config_path, ar:cond_secret_ref ;
-    ar:sourceNote "config set/patch can update channel enablement, token SecretRefs, and allowlists." ;
-    ar:sourceStatus ar:SkillText ;
-    ar:hasPotentialEffect [ a ar:PotentialEffect ; ar:effectType ar:Configure ; ar:affectsKind ar:OpenClawConfiguration, ar:ChannelSecretReference ] .
+  ar:op_channel_configure a ar:Operation ; ar:invokedThroughKind ar:NanoClawHostMessagingAdminCLI ;
+    ar:targetsKind ar:NanoClawMessagingRouteConfiguration, ar:ConfiguredNanoClawChannel ;
+    ar:requires ar:cond_adapter_registered, ar:cond_operator_authority, ar:cond_channel_credentials_out_of_band ;
+    ar:sourceStatus ar:SkillText ; ar:adaptationStatus ar:InferredForNanoClaw ;
+    ar:sourceNote "Creates or updates messaging-group and wiring records and any needed destination/access records. Adapter credentials remain adapter-specific operator setup, not a generic ncl SecretRef write." ;
+    ar:hasPotentialEffect [ a ar:PotentialEffect ; ar:effectType ar:Configure ; ar:affectsKind ar:NanoClawMessagingRouteConfiguration, ar:ConfiguredNanoClawChannel, ar:NanoClawWiring, ar:NanoClawDestination ] .
 
-  ar:op_connect_channel a ar:Operation ; ar:invokedThroughKind ar:ConnectChannelTool ;
-    ar:targetsKind ar:OpenClawConfiguration ; ar:requires ar:cond_operator_secret_entry ;
-    ar:sourceStatus ar:SkillText ;
-    ar:hasPotentialEffect [ a ar:PotentialEffect ; ar:effectType ar:Configure ; ar:affectsKind ar:OpenClawConfiguration ] .
+  ar:op_channel_prove_inbound a ar:Operation ; ar:invokedThroughKind ar:NanoClawHostMessagingGroupSendCLI ;
+    ar:targetsKind ar:ConfiguredNanoClawChannel, ar:NanoClawInboundMailbox ;
+    ar:requires ar:cond_adapter_registered, ar:cond_operator_authority ; ar:sourceStatus ar:SkillText ; ar:adaptationStatus ar:InferredForNanoClaw ;
+    ar:sourceNote "The messaging-groups send command injects a routed inbound test event. This proves routing into NanoClaw, not external-platform delivery." ;
+    ar:hasPotentialEffect [ a ar:PotentialEffect ; ar:effectType ar:Create ; ar:affectsKind ar:NanoClawInboundMessage ],
+      [ a ar:PotentialEffect ; ar:effectType ar:Validate ; ar:affectsKind ar:NanoClawMessagingRouteConfiguration ] .
 
-  ar:op_doctor_fix a ar:Operation ; ar:invokedThroughKind ar:OpenClawDoctorCLI ;
-    ar:targetsKind ar:OpenClawConfiguration ; ar:requires ar:cond_fix_approval ;
-    ar:sourceStatus ar:SkillText ;
-    ar:hasPotentialEffect [ a ar:PotentialEffect ; ar:effectType ar:Update ; ar:affectsKind ar:OpenClawConfiguration ] .
-
-  ar:op_dry_run_message a ar:Operation ; ar:invokedThroughKind ar:OpenClawMessageCLI ;
-    ar:targetsKind ar:ChannelTestPayload ; ar:sourceStatus ar:SkillText ;
-    ar:sourceNote "Dry-run inspects the outgoing payload; it does not claim remote delivery." ;
-    ar:hasPotentialEffect [ a ar:PotentialEffect ; ar:effectType ar:Validate ; ar:affectsKind ar:ChannelTestPayload ] .
-
-  ar:op_real_test_message a ar:Operation ; ar:invokedThroughKind ar:OpenClawMessageCLI ;
-    ar:targetsKind ar:ConfiguredChatChannel ; ar:requires ar:cond_channel_auth, ar:cond_test_destination ;
-    ar:sourceNote "A labeled real test send is an external side effect. Delivery confirmation does not prove a human read it." ;
-    ar:sourceStatus ar:SkillText ;
+  ar:op_real_test_message a ar:Operation ; ar:invokedThroughKind ar:NanoClawSendMessageTool ;
+    ar:targetsKind ar:ConfiguredNanoClawChannel ;
+    ar:requires ar:cond_channel_destination, ar:cond_agent_destination_projected ;
+    ar:sourceStatus ar:SkillText ; ar:adaptationStatus ar:InferredForNanoClaw ;
+    ar:sourceNote "send_message uses a projected named destination and the mailbox delivery path. NanoClaw has no generic dry-run equivalent, and host acceptance does not prove a human read the message." ;
     ar:hasPotentialEffect [ a ar:PotentialEffect ; ar:effectType ar:Create ; ar:affectsKind ar:RemoteChatMessage ],
-      [ a ar:PotentialEffect ; ar:effectType ar:Transmit ; ar:affectsKind ar:ConfiguredChatChannel ] .
+      [ a ar:PotentialEffect ; ar:effectType ar:Transmit ; ar:affectsKind ar:ConfiguredNanoClawChannel ] .
+
+  ar:adapt_channel_configuration a ar:AdaptationMapping ;
+    ar:sourceAssumption "Generic channel/config/doctor CLIs and SecretRefs." ;
+    ar:nanoclawModel "Host ncl manages messaging groups, wirings, destinations, users, roles, members, and policies after an adapter is registered." ;
+    ar:adaptationDisposition ar:ApproximateAdaptation ;
+    ar:semanticDifference "NanoClaw has no matching generic config schema, doctor command, or universal SecretRef flow. Adapter installation and credentials remain adapter-specific operator setup." ;
+    ar:adaptedOperation ar:op_channel_inspect, ar:op_channel_configure .
+
+  ar:adapt_channel_dry_run a ar:AdaptationMapping ;
+    ar:sourceAssumption "Generic dry-run for outbound message payload." ;
+    ar:nanoclawModel "Omitted from the skill graph." ;
+    ar:adaptationDisposition ar:UnsupportedAdaptation ;
+    ar:semanticDifference "The model does not convert inbound injection into a fake outbound dry-run." .
+
+  ar:adapt_channel_outbound_test a ar:AdaptationMapping ;
+    ar:sourceAssumption "Real test message from the CLI." ;
+    ar:nanoclawModel "Built-in send_message through a projected destination and outbound mailbox." ;
+    ar:adaptationDisposition ar:NativeAdaptation, ar:ConditionalAdaptation ;
+    ar:semanticDifference "The endpoint is native, but execution depends on destination projection and adapter authority." ;
+    ar:adaptedOperation ar:op_real_test_message .
+
+  ar:adapt_channel_inbound_proof a ar:AdaptationMapping ;
+    ar:sourceAssumption "Prove inbound routing." ;
+    ar:nanoclawModel "Host ncl messaging-groups send injects an event." ;
+    ar:adaptationDisposition ar:NativeAdaptation ;
+    ar:semanticDifference "This proves NanoClaw routing rather than real external-platform delivery." ;
+    ar:adaptedOperation ar:op_channel_prove_inbound .
 }

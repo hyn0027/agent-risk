@@ -68,7 +68,9 @@ ar:g_nanoclaw_network {
     ar:NanoClawDirectNetworkRequest, ar:RemoteMCPService ;
     rdfs:comment "The client-to-MCP leg may use the gateway or direct egress. The remote MCP service's later calls are outside local OneCLI and lockdown control." .
 
-  ar:NanoClawNetworkModule a rdfs:Resource ;
+  ar:NanoClawNetworkModule a ar:OntologyModule ;
+    ar:ontologyModuleId "nanoclaw-network" ;
+    ar:requiresOntologyModule "freeform-internet", "tool-endpoints", "nanoclaw-core", "nanoclaw-runtime" ;
     rdfs:seeAlso
       <https://github.com/hyn0027/nanoclaw/blob/7902716b5b930215dbee4f56b8fb5b938d40468d/src/gateway-providers/onecli.ts>,
       <https://github.com/hyn0027/nanoclaw/blob/7902716b5b930215dbee4f56b8fb5b938d40468d/src/egress-lockdown.ts>,

@@ -94,7 +94,9 @@ ar:g_nanoclaw_messaging {
     ar:specializesInvocationKind ar:NanoClawBuiltInMCPTool, ar:MessagingToolEndpoint ;
     ar:routesToKind ar:NanoClawOutboundMailboxWrite .
 
-  ar:NanoClawMessagingModule a rdfs:Resource ;
+  ar:NanoClawMessagingModule a ar:OntologyModule ;
+    ar:ontologyModuleId "nanoclaw-messaging" ;
+    ar:requiresOntologyModule "tool-endpoints", "local-filesystem", "nanoclaw-core" ;
     rdfs:seeAlso
       <https://github.com/hyn0027/nanoclaw/blob/7902716b5b930215dbee4f56b8fb5b938d40468d/src/channels/adapter.ts>,
       <https://github.com/hyn0027/nanoclaw/blob/7902716b5b930215dbee4f56b8fb5b938d40468d/src/mailbox/types.ts>,
