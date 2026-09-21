@@ -1,0 +1,66 @@
+@prefix ar: <urn:agent-risk:> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+
+ar:g_nanoclaw_runtime {
+  ar:NanoClawHostFileSystem a ar:WorldSurfaceKind ;
+    ar:specializesKind ar:LocalFileSystem .
+  ar:NanoClawContainerFileSystem a ar:WorldSurfaceKind ;
+    ar:specializesKind ar:LocalFileSystem ;
+    rdfs:comment "Filesystem namespace visible inside one session container, including container layers and explicit mounts." .
+  ar:NanoClawMount a ar:WorldSurfaceKind ;
+    rdfs:comment "Host-to-container exposure. Concrete runtime mode and source path must be inventoried per session." .
+  ar:NanoClawReadOnlyMount a ar:WorldSurfaceKind ;
+    ar:specializesKind ar:NanoClawMount .
+  ar:NanoClawReadWriteMount a ar:WorldSurfaceKind ;
+    ar:specializesKind ar:NanoClawMount .
+  ar:NanoClawFixedMount a ar:WorldSurfaceKind ;
+    ar:specializesKind ar:NanoClawMount .
+  ar:NanoClawAdditionalMount a ar:WorldSurfaceKind ;
+    ar:specializesKind ar:NanoClawMount .
+  ar:NanoClawSessionWorkspace a ar:WorldSurfaceKind ;
+    ar:specializesKind ar:LocalDirectory ;
+    rdfs:comment "Read-write /workspace session directory containing mailbox state, heartbeat, outbox, and provider state." .
+  ar:NanoClawAgentGroupWorkspace a ar:WorldSurfaceKind ;
+    ar:specializesKind ar:LocalDirectory ;
+    rdfs:comment "Read-write /workspace/agent group directory shared by sessions in one agent group, except nested read-only configuration mounts." .
+  ar:NanoClawSharedRunnerSource a ar:WorldSurfaceKind ;
+    ar:specializesKind ar:LocalDirectory ;
+    rdfs:comment "Read-only /app/src mount." .
+  ar:NanoClawSharedSkillsDirectory a ar:WorldSurfaceKind ;
+    ar:specializesKind ar:LocalDirectory ;
+    rdfs:comment "Read-only /app/skills mount." .
+  ar:NanoClawAdditionalHostDirectory a ar:WorldSurfaceKind ;
+    ar:specializesKind ar:LocalDirectory ;
+    rdfs:comment "Allowlisted operator-selected host directory mounted under /workspace/extra; read-write requires both request and allowlist permission." .
+
+  ar:NanoClawMountAllowlistControl a ar:WorldSurfaceKind, ar:SecurityControlKind ;
+    ar:mayBeStoredAsKind ar:LocalFile ;
+    rdfs:comment "Host-only allowlist, realpath check, blocked-pattern check, and requested-mode check for additional mounts." .
+  ar:NanoClawContainerIsolationControl a ar:WorldSurfaceKind, ar:SecurityControlKind ;
+    rdfs:comment "Container boundary including unprivileged execution, dropped capabilities, and no-new-privileges in the current Docker driver." .
+  ar:NanoClawResourceLimitControl a ar:WorldSurfaceKind, ar:SecurityControlKind ;
+    rdfs:comment "Optional CPU and memory limits plus configured PID limit; CPU and memory caps are unset by default." .
+
+  ar:NanoClawAgentContainer ar:containsKind ar:NanoClawContainerFileSystem,
+    ar:NanoClawSessionWorkspace, ar:NanoClawAgentGroupWorkspace,
+    ar:NanoClawSharedRunnerSource, ar:NanoClawSharedSkillsDirectory,
+    ar:NanoClawAdditionalHostDirectory, ar:ShellProcess .
+  ar:NanoClawMount ar:containsKind ar:NanoClawAdditionalHostDirectory .
+  ar:NanoClawAdditionalMount ar:protectedByKind ar:NanoClawMountAllowlistControl .
+  ar:NanoClawAgentContainer ar:protectedByKind ar:NanoClawContainerIsolationControl,
+    ar:NanoClawResourceLimitControl .
+
+  ar:NanoClawContainerShellExecution a ar:InvocationSurfaceKind, ar:ToolEndpointKind ;
+    ar:specializesInvocationKind ar:ShellExecution ;
+    ar:routesToKind ar:NanoClawContainerFileSystem, ar:NanoClawAgentContainer ;
+    rdfs:comment "Shell execution inside the agent container, not arbitrary host-shell execution. Writes through a RW mount can still change the underlying host directory." .
+  ar:NanoClawProviderFileTool a ar:InvocationSurfaceKind, ar:ToolEndpointKind ;
+    ar:specializesInvocationKind ar:ToolEndpoint ;
+    ar:routesToKind ar:NanoClawContainerFileSystem ;
+    rdfs:comment "Provider-supplied file read/write/edit/search interface, constrained by the container-visible filesystem rather than by a universal per-call host approval." .
+
+  ar:NanoClawRuntimeModule a rdfs:Resource ;
+    rdfs:seeAlso
+      <https://github.com/hyn0027/nanoclaw/blob/7902716b5b930215dbee4f56b8fb5b938d40468d/src/container-runner.ts>,
+      <https://github.com/hyn0027/nanoclaw/blob/7902716b5b930215dbee4f56b8fb5b938d40468d/docs/SECURITY.md> .
+}

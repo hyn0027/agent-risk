@@ -1,0 +1,46 @@
+@prefix ar: <urn:agent-risk:> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+
+ar:g_nanoclaw_core {
+  ar:NanoClawRuntime a ar:WorldSurfaceKind, ar:SystemComponentKind ;
+    rdfs:comment "The NanoClaw installation described by checkout 7902716b5b930215dbee4f56b8fb5b938d40468d. Types in this graph are architectural possibilities, not observations about a running instance." ;
+    rdfs:seeAlso <https://github.com/hyn0027/nanoclaw/tree/7902716b5b930215dbee4f56b8fb5b938d40468d> .
+  ar:NanoClawHostProcess a ar:WorldSurfaceKind, ar:SystemComponentKind ;
+    rdfs:comment "Trusted host-side orchestrator for routing, authorization, persistence, container lifecycle, and delivery." .
+  ar:NanoClawCentralDatabase a ar:WorldSurfaceKind, ar:SystemComponentKind ;
+    ar:mayBeStoredAsKind ar:LocalFile ;
+    rdfs:comment "Host-owned central state for agent groups, users, roles, wirings, sessions, and configuration; the default checkout uses data/v2.db." .
+  ar:NanoClawAgentGroup a ar:WorldSurfaceKind ;
+    rdfs:comment "Persistent agent identity and shared scope for configuration, workspace, instructions, memory, and gateway identity. It is not a team of agents." .
+  ar:NanoClawSession a ar:WorldSurfaceKind ;
+    rdfs:comment "Conversation/execution state with its own mailbox and container lifecycle. Several sessions can belong to one agent group." .
+  ar:NanoClawAgentContainer a ar:WorldSurfaceKind, ar:SystemComponentKind ;
+    rdfs:comment "Per-session sandbox runtime managed by the selected session driver; the current default is a Docker container." .
+  ar:NanoClawAgentRunner a ar:WorldSurfaceKind, ar:SystemComponentKind ;
+    rdfs:comment "Container-side Bun process that polls the mailbox, prepares context, calls a provider, and records output." .
+  ar:NanoClawProviderRuntime a ar:WorldSurfaceKind, ar:SystemComponentKind ;
+    rdfs:comment "Configured agent provider and its execution loop; provider behavior and tool policy are not identical across providers." .
+  ar:NanoClawContainerConfiguration a ar:WorldSurfaceKind ;
+    ar:mayBeStoredAsKind ar:LocalFile ;
+    rdfs:comment "Per-agent container.json materialized by the host and mounted read-only in the container." .
+  ar:NanoClawStandingInstructions a ar:WorldSurfaceKind ;
+    ar:mayBeStoredAsKind ar:LocalFile ;
+    rdfs:comment "Host-composed project document such as CLAUDE.md, mounted read-only." .
+  ar:NanoClawPersistentMemory a ar:WorldSurfaceKind ;
+    ar:mayBeStoredAsKind ar:LocalDirectory ;
+    rdfs:comment "Long-lived memory tree shared by sessions belonging to the same agent group." .
+  ar:NanoClawConversationContinuation a ar:WorldSurfaceKind ;
+    rdfs:comment "Provider-specific continuation state, such as a resumable provider session identifier." .
+
+  ar:NanoClawRuntime ar:containsKind ar:NanoClawHostProcess,
+    ar:NanoClawCentralDatabase, ar:NanoClawAgentGroup, ar:NanoClawSession,
+    ar:NanoClawAgentContainer .
+  ar:NanoClawAgentGroup ar:containsKind ar:NanoClawContainerConfiguration,
+    ar:NanoClawStandingInstructions, ar:NanoClawPersistentMemory .
+  ar:NanoClawSession ar:containsKind ar:NanoClawConversationContinuation,
+    ar:NanoClawAgentContainer .
+  ar:NanoClawAgentContainer ar:containsKind ar:NanoClawAgentRunner,
+    ar:NanoClawProviderRuntime .
+  ar:NanoClawSession ar:sharesKind ar:NanoClawPersistentMemory ;
+    rdfs:comment "Sessions in the same agent group may share group memory and working files; session separation alone is not a confidentiality boundary." .
+}

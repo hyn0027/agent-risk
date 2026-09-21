@@ -1,0 +1,64 @@
+@prefix ar: <urn:agent-risk:> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+
+ar:g_nanoclaw_control {
+  ar:NanoClawManagementRequest a ar:WorldSurfaceKind .
+  ar:NanoClawManagementResponse a ar:WorldSurfaceKind .
+  ar:NanoClawApprovalRequest a ar:WorldSurfaceKind .
+  ar:NanoClawRoleMembershipState a ar:WorldSurfaceKind .
+
+  ar:NanoClawUserAccessControl a ar:WorldSurfaceKind, ar:SecurityControlKind ;
+    rdfs:comment "Host checks user roles, group membership, and unknown-sender policy; messages remain untrusted input after admission." .
+  ar:NanoClawCommandGateControl a ar:WorldSurfaceKind, ar:SecurityControlKind ;
+    rdfs:comment "Host gate for filtered and administrator-only inbound slash commands." .
+  ar:NanoClawCLIScopeControl a ar:WorldSurfaceKind, ar:SecurityControlKind ;
+    rdfs:comment "Per-agent cli_scope: disabled, group, or global. Scope limits eligibility to request an action; it does not waive action-specific guards." .
+  ar:NanoClawHostActionGuard a ar:WorldSurfaceKind, ar:SecurityControlKind ;
+    rdfs:comment "Host-side ALLOW, HOLD, or DENY decision for registered management actions." .
+  ar:NanoClawHumanApprovalControl a ar:WorldSurfaceKind, ar:SecurityControlKind ;
+    rdfs:comment "Approval path for HOLD decisions; approval identity and the action guard are checked again before execution." .
+  ar:NanoClawDestinationACL a ar:WorldSurfaceKind, ar:SecurityControlKind ;
+    rdfs:comment "Named destination and agent-to-agent authorization checked by host delivery." .
+
+  ar:NanoClawHostCommandDispatch a ar:InvocationSurfaceKind ;
+    ar:routesToKind ar:NanoClawHostGuardInvocation .
+  ar:NanoClawHostGuardInvocation a ar:InvocationSurfaceKind ;
+    ar:routesToKind ar:NanoClawCentralDatabase ;
+    ar:protectedByKind ar:NanoClawHostActionGuard, ar:NanoClawHumanApprovalControl .
+  ar:NanoClawUnixSocketTransport a ar:InvocationSurfaceKind ;
+    ar:routesToKind ar:NanoClawHostCommandDispatch ;
+    rdfs:comment "Host-side ncl transport. Local socket access is treated as a trusted operator boundary by the current guard." .
+
+  ar:NanoClawContainerNclCLI a ar:InvocationSurfaceKind, ar:ToolEndpointKind ;
+    ar:specializesInvocationKind ar:ShellCommandExecution ;
+    ar:routesToKind ar:NanoClawOutboundMailboxWrite ;
+    ar:protectedByKind ar:NanoClawCLIScopeControl, ar:NanoClawHostActionGuard ;
+    rdfs:comment "Container edition of ncl: writes a cli_request system message to the outbound mailbox and polls the inbound mailbox for cli_response." .
+  ar:NanoClawHostNclCLI a ar:InvocationSurfaceKind, ar:ToolEndpointKind ;
+    ar:specializesInvocationKind ar:ShellCommandExecution ;
+    ar:routesToKind ar:NanoClawUnixSocketTransport ;
+    rdfs:comment "Operator-side ncl command path through the host Unix socket; it does not use a session mailbox." .
+
+  ar:NanoClawCreateAgentTool a ar:InvocationSurfaceKind, ar:ToolEndpointKind ;
+    ar:specializesInvocationKind ar:NanoClawBuiltInMCPTool ;
+    ar:routesToKind ar:NanoClawOutboundMailboxWrite .
+  ar:NanoClawInstallPackagesTool a ar:InvocationSurfaceKind, ar:ToolEndpointKind ;
+    ar:specializesInvocationKind ar:NanoClawBuiltInMCPTool ;
+    ar:routesToKind ar:NanoClawOutboundMailboxWrite ;
+    ar:protectedByKind ar:NanoClawHostActionGuard, ar:NanoClawHumanApprovalControl .
+  ar:NanoClawAddMCPServerTool a ar:InvocationSurfaceKind, ar:ToolEndpointKind ;
+    ar:specializesInvocationKind ar:NanoClawBuiltInMCPTool ;
+    ar:routesToKind ar:NanoClawOutboundMailboxWrite ;
+    ar:protectedByKind ar:NanoClawHostActionGuard, ar:NanoClawHumanApprovalControl ;
+    rdfs:comment "Approval to configure a third-party MCP server is distinct from policy on each later MCP tool call." .
+
+  ar:NanoClawHostDeliveryInvocation ar:protectedByKind ar:NanoClawDestinationACL .
+  ar:NanoClawHostRouterInvocation ar:protectedByKind ar:NanoClawUserAccessControl,
+    ar:NanoClawCommandGateControl .
+
+  ar:NanoClawControlModule a rdfs:Resource ;
+    rdfs:seeAlso
+      <https://github.com/hyn0027/nanoclaw/blob/7902716b5b930215dbee4f56b8fb5b938d40468d/container/agent-runner/src/cli/ncl.ts>,
+      <https://github.com/hyn0027/nanoclaw/blob/7902716b5b930215dbee4f56b8fb5b938d40468d/src/cli/guard.ts>,
+      <https://github.com/hyn0027/nanoclaw/blob/7902716b5b930215dbee4f56b8fb5b938d40468d/src/guard/guard.ts> .
+}

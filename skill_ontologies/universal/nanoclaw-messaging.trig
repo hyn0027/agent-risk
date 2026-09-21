@@ -1,0 +1,102 @@
+@prefix ar: <urn:agent-risk:> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+
+ar:g_nanoclaw_messaging {
+  # External and persistent resources.
+  ar:MessagingPlatform a ar:WorldSurfaceKind ;
+    rdfs:comment "External chat or event platform reached by a registered NanoClaw channel adapter." .
+  ar:MessagingGroup a ar:WorldSurfaceKind .
+  ar:MessagingThread a ar:WorldSurfaceKind .
+  ar:MessagingMessage a ar:WorldSurfaceKind .
+  ar:NanoClawWiring a ar:WorldSurfaceKind ;
+    rdfs:comment "Host-side association and routing policy between a messaging group and an agent group." .
+  ar:NanoClawDestination a ar:WorldSurfaceKind ;
+    rdfs:comment "Named route projected into a session for outbound channel or agent-to-agent delivery." .
+  ar:NanoClawSessionMailbox a ar:WorldSurfaceKind, ar:SystemComponentKind ;
+    rdfs:comment "Storage-neutral per-session mailbox contract. SQLite is the registered implementation in the inspected checkout." .
+  ar:NanoClawInboundMailbox a ar:WorldSurfaceKind, ar:SystemComponentKind ;
+    ar:specializesKind ar:NanoClawSessionMailbox ;
+    ar:mayBeStoredAsKind ar:LocalFile ;
+    rdfs:comment "Host-written, container-read side of a session mailbox; SQLite names it inbound.db." .
+  ar:NanoClawOutboundMailbox a ar:WorldSurfaceKind, ar:SystemComponentKind ;
+    ar:specializesKind ar:NanoClawSessionMailbox ;
+    ar:mayBeStoredAsKind ar:LocalFile ;
+    rdfs:comment "Container-written, host-read side of a session mailbox; SQLite names it outbound.db." .
+  ar:NanoClawInboundMessage a ar:WorldSurfaceKind .
+  ar:NanoClawOutboundMessage a ar:WorldSurfaceKind .
+  ar:NanoClawProcessingAck a ar:WorldSurfaceKind .
+  ar:NanoClawDeliveryRecord a ar:WorldSurfaceKind .
+  ar:NanoClawOutboxArtifact a ar:WorldSurfaceKind ;
+    ar:specializesKind ar:LocalFile .
+
+  ar:MessagingPlatform ar:containsKind ar:MessagingGroup, ar:MessagingMessage .
+  ar:MessagingGroup ar:containsKind ar:MessagingThread, ar:MessagingMessage .
+  ar:NanoClawSession ar:containsKind ar:NanoClawInboundMailbox,
+    ar:NanoClawOutboundMailbox .
+  ar:NanoClawInboundMailbox ar:containsKind ar:NanoClawInboundMessage,
+    ar:NanoClawDestination, ar:NanoClawDeliveryRecord .
+  ar:NanoClawOutboundMailbox ar:containsKind ar:NanoClawOutboundMessage,
+    ar:NanoClawProcessingAck .
+  ar:NanoClawOutboundMessage ar:containsKind ar:NanoClawOutboxArtifact .
+
+  # Inbound path: platform adapter -> host routing -> mailbox -> runner/provider.
+  ar:NanoClawChannelAdapterInvocation a ar:InvocationSurfaceKind ;
+    ar:specializesInvocationKind ar:MessagingChannelInvocation ;
+    rdfs:comment "Native or Chat-SDK-backed adapter invocation. Concrete adapters are installed and registered separately." .
+  ar:NanoClawChannelAdapterInbound a ar:InvocationSurfaceKind ;
+    ar:specializesInvocationKind ar:NanoClawChannelAdapterInvocation .
+  ar:NanoClawHostRouterInvocation a ar:InvocationSurfaceKind ;
+    rdfs:comment "Host routing stage that applies wiring, sender/engagement policy, session resolution, and command gating." .
+  ar:NanoClawInboundMailboxWrite a ar:InvocationSurfaceKind ;
+    rdfs:comment "Host-side insertion into the session's inbound mailbox." .
+  ar:NanoClawAgentRunnerMailboxRead a ar:InvocationSurfaceKind ;
+    rdfs:comment "Container-side polling and reading of pending inbound messages." .
+  ar:NanoClawProviderInvocation a ar:InvocationSurfaceKind ;
+    rdfs:comment "Agent-runner invocation of the configured provider." .
+  ar:NanoClawChannelAdapterInbound ar:routesToKind ar:NanoClawHostRouterInvocation .
+  ar:NanoClawHostRouterInvocation ar:routesToKind ar:NanoClawInboundMailboxWrite .
+  ar:NanoClawInboundMailboxWrite ar:routesToKind ar:NanoClawAgentRunnerMailboxRead .
+  ar:NanoClawAgentRunnerMailboxRead ar:routesToKind ar:NanoClawProviderInvocation .
+
+  # Outbound path: callable tool -> outbound mailbox -> host -> adapter -> platform.
+  ar:NanoClawOutboundMailboxWrite a ar:InvocationSurfaceKind ;
+    rdfs:comment "Container-side write of an outbound chat, file, system action, CLI request, or processing acknowledgement." .
+  ar:NanoClawHostDeliveryInvocation a ar:InvocationSurfaceKind ;
+    rdfs:comment "Host-side drain, authorization, action processing, retry, and delivery stage." .
+  ar:NanoClawChannelAdapterDelivery a ar:InvocationSurfaceKind ;
+    ar:specializesInvocationKind ar:NanoClawChannelAdapterInvocation ;
+    ar:routesToKind ar:MessagingPlatform .
+  ar:NanoClawOutboundMailboxWrite ar:routesToKind ar:NanoClawHostDeliveryInvocation .
+  ar:NanoClawHostDeliveryInvocation ar:routesToKind ar:NanoClawChannelAdapterDelivery .
+
+  # Built-in MCP server. These are exact endpoint families found in the
+  # inspected checkout, not a promise that every provider exposes them.
+  ar:NanoClawBuiltInMCPTool a ar:InvocationSurfaceKind, ar:ToolEndpointKind ;
+    ar:specializesInvocationKind ar:MCPToolEndpoint ;
+    rdfs:comment "Tool served by the container-local NanoClaw MCP server." .
+  ar:NanoClawSendMessageTool a ar:InvocationSurfaceKind, ar:ToolEndpointKind ;
+    ar:specializesInvocationKind ar:NanoClawBuiltInMCPTool, ar:MessagingToolEndpoint ;
+    ar:routesToKind ar:NanoClawOutboundMailboxWrite .
+  ar:NanoClawSendFileTool a ar:InvocationSurfaceKind, ar:ToolEndpointKind ;
+    ar:specializesInvocationKind ar:NanoClawBuiltInMCPTool, ar:MessagingToolEndpoint ;
+    ar:routesToKind ar:NanoClawOutboundMailboxWrite .
+  ar:NanoClawEditMessageTool a ar:InvocationSurfaceKind, ar:ToolEndpointKind ;
+    ar:specializesInvocationKind ar:NanoClawBuiltInMCPTool, ar:MessagingToolEndpoint ;
+    ar:routesToKind ar:NanoClawOutboundMailboxWrite .
+  ar:NanoClawAddReactionTool a ar:InvocationSurfaceKind, ar:ToolEndpointKind ;
+    ar:specializesInvocationKind ar:NanoClawBuiltInMCPTool, ar:MessagingToolEndpoint ;
+    ar:routesToKind ar:NanoClawOutboundMailboxWrite .
+  ar:NanoClawAskUserQuestionTool a ar:InvocationSurfaceKind, ar:ToolEndpointKind ;
+    ar:specializesInvocationKind ar:NanoClawBuiltInMCPTool, ar:MessagingToolEndpoint ;
+    ar:routesToKind ar:NanoClawOutboundMailboxWrite, ar:NanoClawAgentRunnerMailboxRead ;
+    rdfs:comment "Writes an interactive question outbound and waits for the matching inbound response." .
+  ar:NanoClawSendCardTool a ar:InvocationSurfaceKind, ar:ToolEndpointKind ;
+    ar:specializesInvocationKind ar:NanoClawBuiltInMCPTool, ar:MessagingToolEndpoint ;
+    ar:routesToKind ar:NanoClawOutboundMailboxWrite .
+
+  ar:NanoClawMessagingModule a rdfs:Resource ;
+    rdfs:seeAlso
+      <https://github.com/hyn0027/nanoclaw/blob/7902716b5b930215dbee4f56b8fb5b938d40468d/src/channels/adapter.ts>,
+      <https://github.com/hyn0027/nanoclaw/blob/7902716b5b930215dbee4f56b8fb5b938d40468d/src/mailbox/types.ts>,
+      <https://github.com/hyn0027/nanoclaw/blob/7902716b5b930215dbee4f56b8fb5b938d40468d/container/agent-runner/src/mcp-tools/core.ts> .
+}

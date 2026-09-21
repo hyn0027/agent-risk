@@ -1,0 +1,28 @@
+@prefix ar: <urn:agent-risk:> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+
+ar:g_openclaw_skill_surfaces {
+  # Compatibility vocabulary for source skills that explicitly describe
+  # OpenClaw. Loading this graph records their stated interface; it does not
+  # assert that NanoClaw implements or exposes it.
+  ar:OpenClawChannelPlugin a ar:InvocationSurfaceKind ;
+    ar:specializesInvocationKind ar:MessagingChannelInvocation ;
+    rdfs:comment "OpenClaw channel plugin named by the source skills; not a NanoClaw channel-adapter assertion." .
+  ar:OpenClawChannelAdapter a ar:InvocationSurfaceKind ;
+    ar:specializesInvocationKind ar:OpenClawChannelPlugin ;
+    rdfs:comment "OpenClaw outbound channel adapter described by the skill corpus." .
+  ar:OpenClawMessageTool a ar:InvocationSurfaceKind, ar:ToolEndpointKind ;
+    ar:specializesInvocationKind ar:MessagingToolEndpoint ;
+    ar:routesToKind ar:OpenClawChannelAdapter ;
+    rdfs:comment "OpenClaw's broad agent-facing message tool. NanoClaw's built-in MCP tools are narrower and are modeled separately." .
+  ar:OpenClawMessageCLI a ar:InvocationSurfaceKind, ar:ToolEndpointKind ;
+    ar:specializesInvocationKind ar:ShellCommandExecution, ar:MessagingChannelInvocation ;
+    ar:routesToKind ar:OpenClawChannelPlugin ;
+    rdfs:comment "Shell-invoked openclaw message command from the source skills; NanoClaw's ncl CLI has a different contract." .
+  ar:OpenClawConfigCLI a ar:InvocationSurfaceKind ;
+    ar:specializesInvocationKind ar:ShellCommandExecution .
+  ar:OpenClawTaskFlowRuntime a ar:InvocationSurfaceKind .
+  ar:OpenClawConfiguration a ar:WorldSurfaceKind ;
+    ar:mayBeStoredAsKind ar:LocalFile ;
+    rdfs:comment "Logical OpenClaw configuration referenced by legacy source skills." .
+}

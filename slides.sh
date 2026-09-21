@@ -1,1 +1,0 @@
-echo $API_KEY

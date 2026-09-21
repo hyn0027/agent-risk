@@ -13,6 +13,10 @@ ar:InvocationSurfaceKind a rdfs:Class ; rdfs:subClassOf ar:SurfaceKind .
 ar:ToolEndpointKind a rdfs:Class ; rdfs:subClassOf ar:InvocationSurfaceKind ;
   rdfs:comment "Class of callable tool-endpoint kinds. Membership does not assert that a concrete endpoint is enabled in a runtime." .
 ar:WorldSurfaceKind a rdfs:Class ; rdfs:subClassOf ar:SurfaceKind .
+ar:SystemComponentKind a rdfs:Class ; rdfs:subClassOf ar:WorldSurfaceKind ;
+  rdfs:comment "Architectural component kinds that may hold state, execute logic, or mediate access. Being a component kind does not assert that an instance is running." .
+ar:SecurityControlKind a rdfs:Class ; rdfs:subClassOf ar:WorldSurfaceKind ;
+  rdfs:comment "Configuration or enforcement mechanism relevant to reachability or authority. A declared control is not evidence that it is enabled or effective at runtime." .
 ar:Operation a rdfs:Class .
 ar:PotentialEffect a rdfs:Class .
 ar:EffectType a rdfs:Class .
@@ -32,6 +36,10 @@ ar:sourceStatus a rdf:Property ; rdfs:range ar:EvidenceStatus .
 ar:sourceNote a rdf:Property ; rdfs:range xsd:string .
 ar:invokedThroughKind a rdf:Property ; rdfs:domain ar:Operation ; rdfs:range ar:InvocationSurfaceKind .
 ar:routesToKind a rdf:Property ; rdfs:range ar:SurfaceKind .
+ar:protectedByKind a rdf:Property ; rdfs:domain ar:SurfaceKind ; rdfs:range ar:SecurityControlKind ;
+  rdfs:comment "A type-level protection or policy relationship. Runtime configuration and enforcement must be observed separately." .
+ar:sharesKind a rdf:Property ; rdfs:domain ar:WorldSurfaceKind ; rdfs:range ar:WorldSurfaceKind ;
+  rdfs:comment "Possible shared state or resource scope. This is neither subtype nor containment and does not imply universal visibility." .
 ar:targetsKind a rdf:Property ; rdfs:domain ar:Operation ; rdfs:range ar:WorldSurfaceKind .
 ar:requires a rdf:Property ; rdfs:domain ar:Operation ; rdfs:range ar:Requirement .
 ar:hasPotentialEffect a rdf:Property ; rdfs:domain ar:Operation ; rdfs:range ar:PotentialEffect .
@@ -61,16 +69,11 @@ ar:Validate a ar:EffectType .
 ar:Notify a ar:EffectType .
 
 # Cross-skill kinds are types, not claims that the harness exposes them.
-ar:OpenClawConfigCLI a ar:InvocationSurfaceKind .
-ar:OpenClawTaskFlowRuntime a ar:InvocationSurfaceKind .
 ar:SubagentSpawnTool a ar:InvocationSurfaceKind, ar:ToolEndpointKind ;
   ar:specializesInvocationKind ar:ToolEndpoint .
 ar:ProcessControlTool a ar:InvocationSurfaceKind, ar:ToolEndpointKind ;
   ar:specializesInvocationKind ar:ToolEndpoint .
 ar:ProcessEnvironment a ar:WorldSurfaceKind .
-ar:OpenClawConfiguration a ar:WorldSurfaceKind ;
-  ar:mayBeStoredAsKind ar:LocalFile ;
-  rdfs:comment "Logical configuration may be persisted in a local file; this relation does not assert direct file access by every config operation." .
 ar:ExternalService a ar:WorldSurfaceKind .
 ar:Credential a ar:WorldSurfaceKind .
 ar:HumanRecipient a ar:WorldSurfaceKind ;

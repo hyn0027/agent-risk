@@ -1,0 +1,76 @@
+@prefix ar: <urn:agent-risk:> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+
+ar:g_nanoclaw_network {
+  ar:OneCLIGateway a ar:WorldSurfaceKind, ar:SystemComponentKind ;
+    rdfs:comment "External gateway service that supplies container proxy/CA configuration and can inspect, authorize, inject credentials into, and forward requests it receives." .
+  ar:OneCLICredentialVault a ar:WorldSurfaceKind, ar:SystemComponentKind .
+  ar:OneCLIAgentIdentity a ar:WorldSurfaceKind ;
+    rdfs:comment "Stable OneCLI identity keyed by NanoClaw agent-group id." .
+  ar:OneCLICredentialStub a ar:WorldSurfaceKind ;
+    ar:specializesKind ar:LocalFile ;
+    rdfs:comment "Read-only credential stub contributed to a container; distinct from the real external-service credential." .
+  ar:OneCLICACertificate a ar:WorldSurfaceKind ;
+    ar:specializesKind ar:LocalFile ;
+    rdfs:comment "CA material mounted read-only so compatible clients can trust the gateway's HTTPS interception." .
+  ar:OneCLIGatewayPolicy a ar:WorldSurfaceKind, ar:SecurityControlKind ;
+    rdfs:comment "Gateway-side authorization, credential grant, approval, or rate-limit policy. Available semantics depend on the installed OneCLI version." .
+  ar:NanoClawEgressLockdownControl a ar:WorldSurfaceKind, ar:SecurityControlKind ;
+    rdfs:comment "Optional Docker internal-network control that removes direct public egress and makes the OneCLI gateway the reachable public-network hop. It is off by default." .
+  ar:NanoClawInternalEgressNetwork a ar:WorldSurfaceKind, ar:SystemComponentKind ;
+    rdfs:comment "Docker --internal network used when egress lockdown is enabled." .
+  ar:LocalMCPServerProcess a ar:WorldSurfaceKind ;
+    ar:specializesKind ar:ShellProcess .
+  ar:RemoteMCPService a ar:WorldSurfaceKind ;
+    ar:specializesKind ar:RemoteService ;
+    rdfs:comment "Remote MCP service. Its own downstream API calls occur outside the local NanoClaw container and local lockdown boundary." .
+
+  ar:OneCLIGateway ar:containsKind ar:OneCLICredentialVault,
+    ar:OneCLIAgentIdentity, ar:OneCLIGatewayPolicy .
+  ar:NanoClawAgentContainer ar:containsKind ar:OneCLICredentialStub,
+    ar:OneCLICACertificate .
+
+  ar:NanoClawContainerNetworkRequest a ar:InvocationSurfaceKind ;
+    rdfs:comment "Network connection initiated by code in the agent container." .
+  ar:NanoClawProxyAwareHTTPRequest a ar:InvocationSurfaceKind ;
+    ar:specializesInvocationKind ar:NanoClawContainerNetworkRequest ;
+    ar:routesToKind ar:OneCLIProxyInvocation .
+  ar:NanoClawDirectNetworkRequest a ar:InvocationSurfaceKind ;
+    ar:specializesInvocationKind ar:NanoClawContainerNetworkRequest ;
+    ar:routesToKind ar:RemoteNetworkEndpoint ;
+    ar:protectedByKind ar:NanoClawEgressLockdownControl ;
+    rdfs:comment "Possible direct path when the client ignores proxy configuration and lockdown is not effectively enabled. With effective lockdown, this path is blocked rather than transparently redirected." .
+  ar:OneCLIProxyInvocation a ar:InvocationSurfaceKind ;
+    ar:routesToKind ar:OneCLIGatewayInvocation .
+  ar:OneCLIGatewayInvocation a ar:InvocationSurfaceKind ;
+    ar:routesToKind ar:RemoteNetworkEndpoint ;
+    ar:protectedByKind ar:OneCLIGatewayPolicy ;
+    rdfs:comment "Gateway processing can see decrypted HTTP method, URL, headers, body, and response for intercepted HTTPS traffic; visibility does not imply complete logging." .
+
+  ar:NanoClawProviderWebTool a ar:InvocationSurfaceKind, ar:ToolEndpointKind ;
+    ar:specializesInvocationKind ar:ToolEndpoint ;
+    ar:routesToKind ar:NanoClawProxyAwareHTTPRequest, ar:NanoClawDirectNetworkRequest ;
+    rdfs:comment "Provider web-search/fetch surface. The two routes are alternatives determined by client proxy behavior and effective network configuration." .
+
+  ar:NanoClawLocalStdioMCPTool a ar:InvocationSurfaceKind, ar:ToolEndpointKind ;
+    ar:specializesInvocationKind ar:MCPToolEndpoint ;
+    ar:routesToKind ar:LocalStdioMCPTransport .
+  ar:NanoClawLocalMCPServerInvocation a ar:InvocationSurfaceKind ;
+    ar:routesToKind ar:LocalMCPServerProcess,
+      ar:NanoClawProxyAwareHTTPRequest, ar:NanoClawDirectNetworkRequest ;
+    rdfs:comment "Local MCP server process may perform no network access or may initiate a separate network request; the ontology conservatively records both possible network routes." .
+  ar:LocalStdioMCPTransport ar:routesToKind ar:NanoClawLocalMCPServerInvocation .
+
+  ar:NanoClawRemoteHTTPMCPTool a ar:InvocationSurfaceKind, ar:ToolEndpointKind ;
+    ar:specializesInvocationKind ar:MCPToolEndpoint ;
+    ar:routesToKind ar:RemoteHTTPMCPTransport .
+  ar:RemoteHTTPMCPTransport ar:routesToKind ar:NanoClawProxyAwareHTTPRequest,
+    ar:NanoClawDirectNetworkRequest, ar:RemoteMCPService ;
+    rdfs:comment "The client-to-MCP leg may use the gateway or direct egress. The remote MCP service's later calls are outside local OneCLI and lockdown control." .
+
+  ar:NanoClawNetworkModule a rdfs:Resource ;
+    rdfs:seeAlso
+      <https://github.com/hyn0027/nanoclaw/blob/7902716b5b930215dbee4f56b8fb5b938d40468d/src/gateway-providers/onecli.ts>,
+      <https://github.com/hyn0027/nanoclaw/blob/7902716b5b930215dbee4f56b8fb5b938d40468d/src/egress-lockdown.ts>,
+      <https://github.com/hyn0027/nanoclaw/blob/7902716b5b930215dbee4f56b8fb5b938d40468d/container/agent-runner/src/providers/claude-config.ts> .
+}

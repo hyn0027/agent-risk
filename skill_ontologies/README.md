@@ -1,112 +1,230 @@
-# Endpoint and resource ontologies — prototype
+# NanoClaw endpoint and resource ontologies — prototype
 
-`skills/` contains graphs derived from individual `top_skills/*/SKILL.md` files plus domain-specific support graphs shared by related skills. `skills/git-resources.trig`, for example, is a declared dependency of the two Git-related skills rather than a universal environment model. Cross-domain graphs and schemas live in `universal/`. `load-config.json` currently introduces six modules before any skill is selected: tool endpoints, local filesystem, freeform internet, shell execution, Git resources, and OpenClaw messaging. `local-filesystem.trig` and `freeform-internet.trig` are **resource-only** graphs. These support graphs contain no operations or effects. `manifest.json` catalogs graphs and skill dependencies; `load-config.json` contains the static loading policy. **Folder placement and loading policy are separate from ontological category.**
+This directory combines two different kinds of model:
 
-All graphs use `ar: <urn:agent-risk:>`. These are local identifiers, not dereferenceable Web URLs. For a published ontology, use an owned, persistent HTTPS namespace. `universal/vocabulary.ttl` defines the common terms, and `universal/shapes.ttl` validates skill operations. The source skills are not invoked by these files.
+- `universal/` describes the generic resource vocabulary and the NanoClaw harness architecture that is present independently of a selected skill.
+- `skills/` describes interfaces and potential effects asserted by individual `top_skills/*/SKILL.md` files, plus support graphs shared only by those skills.
+
+The NanoClaw model was checked against local checkout commit `7902716b5b930215dbee4f56b8fb5b938d40468d`. Repository code is treated as the primary source; the [shared architecture discussion](https://chatgpt.com/s/cx_6ab168a066788191a0767199e971bbd4) was useful orientation but is not the authority when it differs from code. The model is not a statement about the live configuration of any NanoClaw installation.
+
+All graphs use `ar: <urn:agent-risk:>`. These are local identifiers, not dereferenceable Web URLs. A published ontology should use an owned persistent HTTPS namespace.
 
 ```text
 skill_ontologies/
-  manifest.json          graph catalog and skill dependencies
-  load-config.json       complete set of preloaded ontology modules
-  loader.py              loads and validates a selected graph union
-  README.md
-  examples/              small observation graphs for inference/validation
-  universal/             reusable vocabulary, shapes, and shared graphs
-  skills/                skill graphs and domain-specific support graphs
+  manifest.json          graph catalog, source revision, and dependencies
+  load-config.json       complete static set of preloaded modules
+  loader.py              dependency checks, validation, inference, reports
+  examples/              observation graphs for classification tests
+  universal/
+    vocabulary.ttl
+    shapes.ttl
+    tool-endpoints.trig
+    local-filesystem.trig
+    freeform-internet.trig
+    shell-execution.trig
+    nanoclaw-core.trig
+    nanoclaw-messaging.trig
+    nanoclaw-control.trig
+    nanoclaw-runtime.trig
+    nanoclaw-network.trig
+  skills/
+    git-resources.trig
+    openclaw-skill-surfaces.trig
+    ...one graph per skill...
 ```
 
-## Resource relationships
+## Static loading policy
 
-Resource kinds remain RDF *individuals* typed `ar:WorldSurfaceKind` for the effect model, and are also usable as RDFS/OWL classes through OWL 2 punning. The following relationships can overlap and form multiple hierarchies:
+`load-config.json` preloads eleven modules. Five describe NanoClaw itself: core, messaging/mailboxes, management controls, container/filesystem runtime, and network/OneCLI paths. Generic tool, filesystem, internet, and shell graphs are also preloaded. Git resource definitions and the legacy OpenClaw skill-interface vocabulary live under `skills/` even though the current static policy preloads them; folder placement and loading policy are separate concerns.
 
-- `ar:specializesKind` means **is-a**: `ar:LocalAudioFile ar:specializesKind ar:LocalFile`. A kind may have multiple broader kinds. The loader follows all parents for the "Broader kinds" column.
-- `ar:containsKind` means **part/containment**: `ar:LocalDirectory ar:containsKind ar:LocalFile`. Containment does not imply subtype.
-- `ar:mayBeStoredAsKind` is a weaker physical-representation link: logical OpenClaw configuration may be stored as a local file. It does not assert that every configuration action directly edits a file.
+Dependencies never load dynamically. Before parsing any named graph, the loader verifies that every declared dependency is already in `alwaysLoaded`. A missing dependency produces a warning and aborts with no ontology graphs loaded.
 
-`ar:specializesKind` remains the project-facing property. In its separate reasoning graph, the loader projects every such edge to an explicit `rdfs:subClassOf` axiom and declares both endpoints as OWL classes. Thus every existing subtype edge supplies an OWL **necessary** superclass condition while preserving the current effect-query interface. The loader still uses direct graph traversal for its readable hierarchy and rejects cycles. This avoids trying to make a custom property a subproperty of the reserved `rdfs:subClassOf` predicate, which would not be clean OWL-DL modeling.
+Every always-loaded graph is checked to contain no `ar:Operation`, `ar:PotentialEffect`, `ar:declaresOperation`, or `ar:hasPotentialEffect`. `local-filesystem.trig` and `freeform-internet.trig` are additionally marked `resourcesOnly` and cannot declare invocation kinds.
 
-Per-skill kinds link directly to general kinds. For example, `ar:LocalSecretFile` is-a `ar:LocalFile`, and a Discord media send directly affects `ar:LocalFile` as a source. There is no module-level `usesSharedKind` citation: the resource relationship itself is the link across named graphs.
+## Resource and interface semantics
 
-Named provider endpoints (GitHub REST, Discord, Slack, Imgflip API, etc.) remain distinct from the freeform-internet taxonomy. Only unspecified websites and ordinary URL downloads are linked to general internet kinds. This classifies the described resource/access context; it does not establish actual reachability or authentication.
+Resource kinds are RDF individuals typed `ar:WorldSurfaceKind`; invocation kinds are individuals typed `ar:InvocationSurfaceKind`. They are also usable as RDFS/OWL classes through OWL 2 punning.
 
-## Tool-endpoint interface and hierarchy
+- `ar:specializesKind`: resource **is-a** relationship.
+- `ar:specializesInvocationKind`: interface/invocation **is-a** relationship.
+- `ar:containsKind`: possible part or containment relationship, not subtype.
+- `ar:mayBeStoredAsKind`: possible physical representation of logical state.
+- `ar:sharesKind`: possible shared state scope, not containment or universal visibility.
+- `ar:routesToKind`: possible mediation/dataflow step from an invocation kind.
+- `ar:protectedByKind`: a security control relevant to a surface; it does not prove that the control is enabled or effective.
 
-`ar:ToolEndpointKind` is an RDF class under `ar:InvocationSurfaceKind`. `ar:ToolEndpoint` is the common parent **kind** (an individual of that class); concrete callable kinds use `ar:specializesInvocationKind` to reach it. Like resource specialization, the loader projects this relation into the OWL reasoning graph as `rdfs:subClassOf`.
+Multiple parents are allowed. The loader projects specialization edges into `rdfs:subClassOf` only in its separate OWL reasoning graph. It rejects hierarchy cycles and validates the type of every relationship endpoint.
 
-`ShellExecution` and the agent-facing `OpenClawMessageTool` are separate children of `ToolEndpoint`. The shell-invoked `OpenClawMessageCLI` is a tool endpoint through `ShellCommandExecution`; it remains distinct from the agent-facing tool. `MCPToolEndpoint` is another child, representing an *individual callable MCP tool* discovered with `tools/list` and invoked with `tools/call`, not its server, transport, resources, or prompts. This branch intentionally has no concrete server/tools or effect claims. [MCP's tool specification](https://modelcontextprotocol.io/specification/2026-07-28/server/tools) defines those calls and notes that the available set depends on current capability and authorization.
+`ar:ToolEndpoint` is the common callable parent. Shell execution, messaging endpoints, MCP tool endpoints, NanoClaw built-in MCP tools, provider file/web tools, and both forms of `ncl` are represented beneath it. A mediation component such as a channel adapter or mailbox write is an invocation surface but is not automatically an agent-facing tool endpoint.
 
-Existing directly callable `SubagentSpawnTool`, `ProcessControlTool`, `ConnectChannelTool`, and `SkillWorkshopTool` also cite the parent. Provider APIs and channel-plugin adapters remain invocation/mediation surfaces rather than automatically becoming agent-facing tool endpoints. The loader prints declared endpoint kinds and narrower inherited kinds; it checks that every explicitly typed `ToolEndpointKind` has a path to the parent. The common operation-to-endpoint relation remains `ar:invokedThroughKind`, and mediation beyond a tool remains `ar:routesToKind`. This is a taxonomy/interface for analysis, not an inventory of tools actually exposed by a harness.
+## NanoClaw core scopes
 
-## Shell invocation hierarchy
+The central distinction is:
 
-`ar:ShellExecution` is a tool-endpoint kind, not a world resource or a generic operation. `ar:ShellCommandExecution` and `ar:ShellScriptExecution` are narrower invocation kinds under it. A command launched through a shell need not be a *shell-language script*: the Node and Python CLIs in these skills are linked to `ShellCommandExecution`, not `ShellScriptExecution`. The universal graph also models `ShellProcess`, output, environment, exit status, script file, and working-directory resource kinds.
+```text
+NanoClaw host process
+  ├─ central database: users, roles, groups, wirings, sessions, config
+  └─ orchestration: routing, guards, container lifecycle, delivery
 
-`ar:specializesInvocationKind` links concrete call channels to the general mechanism. For example, the GitHub skill's `CurlCLI` and `GitCLI` are kinds of shell-command execution, while `GitHubREST` remains a separate remote endpoint. An operation is **shell-mediated** if one of its `ar:invokedThroughKind` channels reaches `ShellExecution` through this hierarchy. This is not a claim that the GitHub API, its resources, or every GitHub-skill orchestration step is a subtype of a shell script. In `gh-issues`, eight described operations are shell-mediated; the two subagent-spawn operations and Telegram notification are not.
+Agent group
+  ├─ persistent identity and configuration
+  ├─ shared workspace / standing instructions
+  └─ shared long-term memory
 
-## OpenClaw messaging mediation
+Session
+  ├─ distinct conversation and provider continuation
+  ├─ distinct inbound/outbound mailbox pair
+  └─ per-session container lifecycle
+```
 
-Official OpenClaw documentation distinguishes the core-owned agent-facing `message` tool from the shell-invoked `openclaw message` CLI. The tool routes through a channel-plugin action adapter; the CLI resolves a channel plugin. Neither tool/CLI is a subtype of the plugin or adapter: `ar:routesToKind` records the mediation route, while `ar:specializesInvocationKind` records *is-a*. The CLI is a subtype of `ShellCommandExecution`. `DiscordAdapter` and `TelegramAdapter` are narrower `OpenClawChannelAdapter` invocation kinds. `SlackMessageChannel` is narrower only than the abstract `MessagingChannelInvocation`: the TaskFlow example says to post to Slack but gives no exact send API, so claiming it uses OpenClaw's shared message tool or plugin adapter would overstate the source.
+Several sessions in the same agent group can share group working files and memory. Session separation therefore does not by itself establish confidentiality.
 
-The `discord`, `gh-issues`, `configure-channel`, `coding-agent`, and `taskflow-inbox-triage` entries retain explicit `openclaw-messaging` dependencies even though `load-config.json` currently introduces that module for every run. This redundancy is intentional: it records what each skill needs and lets the loader detect a future configuration mismatch. Dependency declarations never load graphs. Before loading any named graph, the loader verifies that every selected skill dependency already appears in `alwaysLoaded`; if not, it prints a warning and aborts. `configure-channel` and `coding-agent` use `OpenClawMessageCLI`, while Discord and GitHub notifications explicitly use the agent-facing `message` tool.
+## Messaging and mailbox routes
 
-The mediator graph contains no operations or effects. Its routes describe possible type-level pathways, not deployed channel accounts, available actions, permissions, delivery, or recipient attention. Action discovery and permission checks are context-sensitive, so runtime authority must be verified independently. See [OpenClaw plugin architecture](https://docs.openclaw.ai/plugins/architecture), [channel plugin guide](https://docs.openclaw.ai/plugins/sdk-channel-plugins), and [`openclaw message` CLI](https://docs.openclaw.ai/cli/message).
+Inbound and outbound paths are modeled as separate chains:
+
+```text
+Inbound platform event
+  → NanoClaw channel-adapter inbound
+  → host router and access/command gates
+  → inbound mailbox write
+  → agent-runner mailbox read
+  → configured provider
+
+Built-in send/edit/reaction tool
+  → outbound mailbox write
+  → host delivery and authorization
+  → channel-adapter delivery
+  → external messaging platform
+```
+
+`NanoClawSessionMailbox` is storage-neutral. The inspected checkout registers SQLite and uses the familiar `inbound.db` / `outbound.db` split, but the ontology does not define the abstraction as SQLite-only.
+
+The split records single-writer authority:
+
+- host writes the inbound side and the container reads it;
+- container writes the outbound side and the host reads it;
+- host delivery records and container processing acknowledgements remain on their owning sides.
+
+`send_message`, `send_file`, `edit_message`, `add_reaction`, `ask_user_question`, and `send_card` are separate endpoint kinds. This matters because NanoClaw does not expose one universal OpenClaw-style `message` action with all read, search, delete, poll, pin, presence, and channel-management operations.
+
+## Management paths and authorization
+
+Container and host invocations of `ncl` are distinct:
+
+```text
+Container: ncl → shell → outbound cli_request → host guard → action
+Host:      ncl → shell → Unix socket → host dispatch → action
+```
+
+The container path is subject to `cli_scope` and action-specific guards. The host socket path is treated as trusted operator access by the current implementation. The ontology distinguishes scope eligibility from action decisions: `global` scope does not mean that every action bypasses approval.
+
+Built-in `create_agent`, `install_packages`, and `add_mcp_server` tools emit structured host actions through the outbound mailbox. Adding an MCP server and later calling its tools are different events. Approval of installation is not a general runtime policy for each third-party MCP call.
+
+The modeled controls include user/group admission, inbound command gate, CLI scope, host ALLOW/HOLD/DENY guard, human approval, destination ACLs, mount allowlisting, container isolation, optional resource limits, gateway policy, and optional egress lockdown. A `protectedByKind` edge is a candidate enforcement relationship, not runtime evidence.
+
+## Filesystem and shell boundaries
+
+`NanoClawContainerShellExecution` is a subtype of generic shell execution and runs inside the session container. It is not arbitrary host-shell access. The model separates:
+
+- session workspace (`/workspace`, RW);
+- agent-group workspace (`/workspace/agent`, RW but with nested RO configuration files);
+- composed standing instructions and `container.json` (RO nested mounts);
+- runner source and shared skills (RO);
+- operator-configured additional mounts under `/workspace/extra`.
+
+A write to a container path backed by a read-write host mount may change the underlying host directory. Additional mounts are modeled as protected by the host-side allowlist, but the actual path, realpath result, blocked patterns, and mode must be supplied by runtime observation.
+
+## Network, OneCLI, and MCP
+
+The ontology deliberately separates proxy configuration from forced egress:
+
+```text
+Proxy-aware request → OneCLI proxy/gateway → remote endpoint
+Direct request      ───────────────────────→ remote endpoint
+```
+
+With egress lockdown disabled—the default—the direct path may exist. Effective lockdown places the agent on a Docker internal network and blocks the direct path; it does not transparently convert arbitrary sockets into proxy requests. Gateway policy applies only to requests reaching the gateway.
+
+OneCLI gateway processing is modeled separately from the credential vault, per-agent identity, credential stubs, and CA material. For intercepted HTTPS, the gateway can access decrypted HTTP contents. This does not establish which contents are logged or how long they are retained.
+
+Third-party MCP has two important paths:
+
+```text
+Local stdio MCP:
+provider ↔ stdio transport ↔ local MCP process
+                              └─ optional, separate network request
+
+Remote HTTP MCP:
+provider → HTTP transport → remote MCP service
+                              └─ its downstream API calls occur remotely
+```
+
+Local stdio is not Internet traffic. A local server's later HTTP call can use OneCLI or attempt direct egress. For remote MCP, local controls cover the client-to-MCP leg; the remote service's later calls do not automatically traverse the local gateway or mailbox.
+
+## OpenClaw skill compatibility
+
+Some source skills explicitly require OpenClaw interfaces. Their shared types now live in `skills/openclaw-skill-surfaces.trig`, not `universal/`:
+
+- OpenClaw broad `message` tool;
+- `openclaw message` and configuration CLIs;
+- OpenClaw channel plugin/adapter;
+- OpenClaw TaskFlow runtime and configuration.
+
+Loading this compatibility graph preserves what the source says. It does **not** claim NanoClaw implements those interfaces. For example, the Discord skill's read/search/delete/poll/pin/presence actions cannot honestly be mapped to NanoClaw's narrower built-in messaging MCP without an additional adapter, MCP server, or rewritten skill.
+
+The loader's `Messaging-route` column recognizes both NanoClaw and legacy messaging interfaces through their common messaging ancestor. `NanoClaw-mailbox` is stricter: it is `yes` only when the operation's declared invocation route actually reaches a NanoClaw mailbox write/read stage. The current OpenClaw-native skills therefore show a messaging route but no NanoClaw-mailbox route. That is a compatibility warning, not a validation error.
 
 ## Qualified subtype definitions
 
-Every `specializesKind` or `specializesInvocationKind` assertion is a **necessary-only** definition: an instance of the narrower kind must also belong to the broader kind. A kind becomes **necessary-and-sufficient** only when it has an `owl:equivalentClass` class expression. The loader audits every subtype and labels it `necessary only (primitive)` or `necessary+sufficient (OWL + SHACL)`. It also requires every equivalent-class kind to have a SHACL shape targeting that kind.
+Every specialization edge is a necessary-only definition. A kind becomes necessary-and-sufficient only with `owl:equivalentClass`; the loader then requires a corresponding SHACL target shape.
 
-`skills/git-resources.trig` demonstrates the pattern without making the false claim that every Git repository is simply a directory containing `.git`:
+`skills/git-resources.trig` demonstrates the pattern without falsely defining every Git repository as a directory containing `.git`:
 
-- `GitMetadataEntryCandidate` is exactly a filesystem entry whose name is `.git`.
-- `ConventionalGitWorkingTreeCandidate` is exactly a local directory containing such an entry.
-- `ConventionalGitWorkingTree` additionally requires an explicit `gitRepositoryValidated true` observation.
-- `LocalGitRepository` remains a primitive broader kind because bare repositories, linked worktrees, and externally selected Git directories do not all satisfy the `.git`-entry condition.
+- `GitMetadataEntryCandidate`: exactly an entry named `.git`.
+- `ConventionalGitWorkingTreeCandidate`: exactly a local directory containing such an entry.
+- `ConventionalGitWorkingTree`: candidate plus explicit `gitRepositoryValidated true` evidence.
+- `LocalGitRepository`: primitive broader kind because bare repositories, linked worktrees, and external Git directories need not contain a `.git` entry.
 
-OWL-RL performs positive, open-world classification. SHACL separately checks necessary evidence for asserted or inferred members under the supplied observation graph. This means missing facts do not prove non-membership, while a resource explicitly claimed to be a conventional working tree fails validation if its `.git` evidence is absent.
+OWL-RL performs positive open-world inference. SHACL separately requires evidence for asserted or inferred observations. Missing facts do not prove non-membership.
 
-## Loading and validation
+## Run and validate
 
-Run `python loader.py --universal-only` to inspect the six modules named by `load-config.json` without skill operations. The old `--resources-only` and `--baseline-only` spellings remain aliases. Run `python loader.py discord gh-issues` to add those two skill graphs; no arguments select those two by default. `coding-agent` and `gh-issues` require `git-resources`, but do not load it dynamically—the current configuration introduces it beforehand. The loader requires `rdflib`, `owlrl`, and `pyshacl`.
-
-To classify concrete observations and validate the inferred types:
+Install `rdflib`, `owlrl`, and `pyshacl`, then:
 
 ```bash
+python loader.py --universal-only
+python loader.py discord gh-issues
 python loader.py coding-agent --data examples/git-working-tree.ttl
 ```
 
-The example infers `GitMetadataEntryCandidate`, `ConventionalGitWorkingTreeCandidate`, and `ConventionalGitWorkingTree`. Running the same command with `examples/invalid-git-working-tree.ttl` intentionally fails SHACL validation.
+The old `--resources-only` and `--baseline-only` spellings remain aliases for `--universal-only`. No arguments select `discord` and `gh-issues`, matching the original prototype behavior.
 
-The loader preserves one named graph per file, verifies each selected skill's `SKILL.md` SHA-256 against `manifest.json`, performs dependency preflight against `load-config.json`, validates the graph union against `shapes.ttl`, and performs optional OWL-RL classification. It never dynamically loads a dependency. Loading a graph does **not** prove runtime permissions. No harness hook, graph unloading mechanism, or verified harness tool inventory is installed in this prototype.
-
-On the combined graph, a SPARQL property path can query all broader resource kinds:
+Useful SPARQL paths:
 
 ```sparql
 PREFIX ar: <urn:agent-risk:>
+
+# All broader resource kinds.
 SELECT ?narrow ?broader WHERE {
   ?narrow ar:specializesKind+ ?broader .
 }
-```
 
-Do not combine `ar:specializesKind` and `ar:containsKind` in one path and interpret the result as a subtype. A file being inside a directory is not a kind of directory.
-
-For shell mediation on the combined graph:
-
-```sparql
-PREFIX ar: <urn:agent-risk:>
+# All shell-mediated operations.
 SELECT DISTINCT ?operation WHERE {
   ?operation ar:invokedThroughKind/ar:specializesInvocationKind* ar:ShellExecution .
 }
-```
 
-To list callable endpoint kinds, including future subclasses added by other graphs:
-
-```sparql
-PREFIX ar: <urn:agent-risk:>
-SELECT DISTINCT ?kind WHERE {
-  ?kind ar:specializesInvocationKind* ar:ToolEndpoint .
+# Possible NanoClaw mediation chain from a concrete endpoint.
+SELECT ?next WHERE {
+  ar:NanoClawSendMessageTool ar:routesToKind+ ?next .
 }
 ```
 
+Do not merge subtype, containment, route, and protection edges into one undifferentiated reachability relation. A file inside a directory is not a kind of directory; a route protected by a policy is not proof the policy allows it; a possible path is not proof that credentials and permissions make it executable.
+
 ## Limits
 
-This is a manually reviewed first-pass model for the ten current skill files, not an exhaustive code audit. Most current subtype kinds remain primitive because the available skills do not provide reliable necessary-and-sufficient recognition criteria; the loader reports this explicitly instead of manufacturing definitions. OWL-RL is not a complete OWL 2 DL reasoner, and SHACL validation only evaluates facts present in the loaded data. The TaskFlow example has no identified local-file or freeform-internet resource; its Slack messaging route is illustrative. Generic shell and delegated workers can have open-ended effects. Skill operations describe *potential* effects, not observed changes; joint effects still require call arguments, dataflow, and state-transition facts. The universal graphs do not define actual sandbox roots, destinations, accounts, network rights, or shell privileges. Add those from a separately verified harness/runtime inventory.
+This is a manually reviewed architecture model, not a complete code audit or deployed inventory. It does not observe installed channel adapters, live users or roles, actual mount paths, filesystem modes, container network membership, OneCLI policies, credentials, provider tool inventories, or remote MCP behavior. The repository documentation itself warns that some design documents can drift; stable source links in the graph pin the inspected commit, but later NanoClaw revisions require re-review.
+
+Most kinds are primitive because the code does not provide reliable necessary-and-sufficient recognition facts in RDF form. `routesToKind` is an over-approximation of possible mediation, not temporal semantics or guaranteed transitive execution. Inferring which resources can actually change still requires concrete tool availability, arguments, identity, authority, configuration, current state, and policy decisions. Generic shell execution and delegated workers remain open-ended.

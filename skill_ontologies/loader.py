@@ -1,6 +1,7 @@
 from pathlib import Path
 import hashlib
 import json
+import subprocess
 import sys
 
 from rdflib import Dataset, Graph, Namespace, URIRef
@@ -41,6 +42,30 @@ if universal_only and skill_arguments:
 loaded_skills = set() if universal_only else set(skill_arguments) or {"discord", "gh-issues"}
 
 manifest = json.loads((ONTOLOGY_DIR / "manifest.json").read_text())
+
+# Pin the universal environment model to the NanoClaw checkout it was reviewed
+# against. Like skill hashes below, this detects source drift; it does not
+# attest to a deployed process or live configuration.
+environment_source = manifest.get("environmentSource")
+if environment_source:
+    repository_path = Path(environment_source["repositoryPath"])
+    expected_revision = environment_source["revision"]
+    if not repository_path.exists():
+        raise SystemExit(f"NanoClaw source checkout not found: {repository_path}")
+    result = subprocess.run(
+        ["git", "-C", str(repository_path), "rev-parse", "HEAD"],
+        check=False,
+        capture_output=True,
+        text=True,
+    )
+    if result.returncode != 0:
+        raise SystemExit(f"Cannot read NanoClaw source revision: {result.stderr.strip()}")
+    actual_revision = result.stdout.strip()
+    if actual_revision != expected_revision:
+        raise SystemExit(
+            "NanoClaw ontology is stale: source checkout is at "
+            f"{actual_revision}, expected {expected_revision}."
+        )
 modules = {module["directory"]: module for module in manifest["modules"]}
 unknown = loaded_skills - modules.keys()
 if unknown:
@@ -167,6 +192,7 @@ relations = (
     (AR.specializesKind, "is-a"),
     (AR.containsKind, "contains"),
     (AR.mayBeStoredAsKind, "may be stored as"),
+    (AR.sharesKind, "shares"),
 )
 for predicate, relation_name in relations:
     for subject, related in combined.subject_objects(predicate):
@@ -190,6 +216,11 @@ for source, destination in combined.subject_objects(AR.routesToKind):
         typed_invocation_kinds | typed_kinds
     ):
         raise SystemExit(f"Untyped mediation route: {source} -> {destination}")
+for subject, control in combined.subject_objects(AR.protectedByKind):
+    if subject not in (typed_invocation_kinds | typed_kinds):
+        raise SystemExit(f"Untyped protected surface: {subject} -> {control}")
+    if control not in typed_kinds or (control, RDF.type, AR.SecurityControlKind) not in combined:
+        raise SystemExit(f"Untyped security control: {subject} -> {control}")
 
 subtype_kinds = set(combined.subjects(AR.specializesKind, None)) | set(
     combined.subjects(AR.specializesInvocationKind, None)
@@ -282,11 +313,54 @@ def shell_mediated(operation):
 
 def messaging_route(operation):
     return any(
-        channel in (AR.OpenClawMessageTool, AR.OpenClawMessageCLI)
-        or channel == AR.MessagingChannelInvocation
+        channel == AR.MessagingChannelInvocation
         or AR.MessagingChannelInvocation in invocation_ancestors(channel)
         for channel in combined.objects(operation, AR.invokedThroughKind)
     )
+
+
+def route_reaches(source, target):
+    """Follow type-level mediation routes; results are possible paths, not runtime reachability."""
+    seen = set()
+    frontier = list(combined.objects(source, AR.routesToKind))
+    while frontier:
+        item = frontier.pop()
+        if item == target:
+            return True
+        if item in seen:
+            continue
+        seen.add(item)
+        if item in typed_invocation_kinds:
+            frontier.extend(combined.objects(item, AR.routesToKind))
+    return False
+
+
+def nanoclaw_mailbox_route(operation):
+    return any(
+        route_reaches(channel, AR.NanoClawOutboundMailboxWrite)
+        or route_reaches(channel, AR.NanoClawInboundMailboxWrite)
+        for channel in combined.objects(operation, AR.invokedThroughKind)
+    )
+
+
+legacy_openclaw_surfaces = {
+    AR.OpenClawMessageTool,
+    AR.OpenClawMessageCLI,
+    AR.OpenClawConfigCLI,
+    AR.OpenClawTaskFlowRuntime,
+}
+legacy_openclaw_operations = sorted(
+    {
+        operation
+        for operation in combined.subjects(RDF.type, AR.Operation)
+        if any(
+            channel in legacy_openclaw_surfaces
+            or AR.OpenClawChannelPlugin in invocation_ancestors(channel)
+            for channel in combined.objects(operation, AR.invokedThroughKind)
+        )
+    },
+    key=str,
+)
 
 
 resource_rows = sorted(
@@ -315,6 +389,12 @@ route_rows = sorted(
     {
         (label(source), label(destination))
         for source, destination in combined.subject_objects(AR.routesToKind)
+    }
+)
+control_rows = sorted(
+    {
+        (label(subject), label(control))
+        for subject, control in combined.subject_objects(AR.protectedByKind)
     }
 )
 definition_rows = sorted(
@@ -361,6 +441,7 @@ effect_rows = [
         ", ".join(label(parent) for parent in ancestors(row.resourceKind)),
         "yes" if shell_mediated(row.operation) else "no",
         "yes" if messaging_route(row.operation) else "no",
+        "yes" if nanoclaw_mailbox_route(row.operation) else "no",
     )
     for row in active.query(effect_query)
 ]
@@ -386,12 +467,19 @@ print("Always-loaded modules: " + ", ".join(always_loaded_ids))
 print("Dynamic dependency loading: disabled")
 print("Dependency preflight: satisfied")
 print(f"Loaded skills: {', '.join(sorted(loaded_skills)) or '(none)'}")
+if legacy_openclaw_operations:
+    print(
+        "Compatibility note: "
+        f"{len(legacy_openclaw_operations)} selected operation(s) use OpenClaw-specific "
+        "interfaces and are not automatically mapped to NanoClaw endpoints."
+    )
 print(f"Observation data: {data_path if data_path is not None else '(none)'}")
 print(f"Resource kinds: {len(resource_rows)}")
 print(f"Resource relationships: {len(relationship_rows)}")
 print(f"Invocation subtype links: {len(invocation_rows)}")
 print(f"Tool endpoint kinds: {len(tool_endpoint_rows)}")
 print(f"Invocation routes: {len(route_rows)}")
+print(f"Security-control links: {len(control_rows)}")
 print(f"Subtype definitions: {len(definition_rows)} ({len(defined_kinds)} necessary+sufficient)")
 print(f"Skill potential-effect rows: {len(effect_rows)}\n")
 print_table(("Graph", "Resource kind"), resource_rows)
@@ -407,6 +495,9 @@ if tool_endpoint_rows:
 if route_rows:
     print()
     print_table(("Invocation kind", "Routes to kind"), route_rows)
+if control_rows:
+    print()
+    print_table(("Surface kind", "Protected by control"), control_rows)
 if definition_rows:
     print()
     print_table(("Subtype kind", "Definition strength"), definition_rows)
@@ -418,4 +509,4 @@ if data_path is not None:
         print("No necessary-and-sufficient kind classifications were inferred from the observations.")
 if effect_rows:
     print()
-    print_table(("Graph", "Operation", "Effect", "Resource kind", "Broader kinds", "Shell-mediated", "Messaging-route"), effect_rows)
+    print_table(("Graph", "Operation", "Effect", "Resource kind", "Broader kinds", "Shell-mediated", "Messaging-route", "NanoClaw-mailbox"), effect_rows)
