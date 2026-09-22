@@ -1,6 +1,61 @@
-# NanoClaw endpoint and resource ontologies — prototype
+# NanoClaw skill-surface ontology prototype
 
-This directory combines two different kinds of model:
+## Start here
+
+This project turns natural-language agent skills into a queryable, composable model of:
+
+1. **what an environment contains** — files, repositories, mailboxes, messages, services, credentials, processes, and other resource kinds;
+2. **how actions enter that environment** — shell, MCP tools, messaging tools, provider file/web tools, NanoClaw CLI paths, and other invocation kinds;
+3. **what a skill says can be done** — named operations with prerequisites and provenance; and
+4. **what those operations may affect** — typed potential effects such as read, create, update, delete, transmit, execute, configure, or notify.
+
+The central analysis path is:
+
+```text
+selected skill
+  → operation
+  → invocation endpoint/channel
+  → possible mediation route
+  → potential effect
+  → affected resource kind
+  → broader resource kinds
+```
+
+For example, the Discord skill does not merely say “send a message.” It records that the operation is invoked through `NanoClawSendMessageTool`, may traverse the outbound mailbox and channel adapter, may create a `DiscordMessage`, may transmit to a `DiscordChannel`, and requires a registered adapter, a projected destination, and platform permission.
+
+The intended use is conservative security analysis: assemble the environment ontology with one or more skill ontologies, then ask which resources could possibly be reached or changed and through which interfaces. Results are **over-approximations of modeled possibility**, not proof that an action is enabled, authorized, successful, or observed at runtime.
+
+### What this project is not
+
+This is not:
+
+- an ontology of the agent's beliefs, prompts, goals, or internal reasoning;
+- a planner or workflow engine that predicts action order;
+- a live inventory of deployed tools, mounts, credentials, users, or permissions;
+- a policy-enforcement mechanism;
+- proof that every effect in a skill will occur; or
+- a claim that an original skill executes unchanged under NanoClaw.
+
+The model describes **potential endpoints and world-facing consequences**. Runtime reachability still depends on concrete configuration, arguments, identity, authority, state, and policy decisions.
+
+### Thirty-second orientation
+
+```text
+universal/*.trig                     always-available type/model modules
+skills/<skill>.trig                  operations and potential effects for one skill
+skills/git-resources.trig            shared support ontology, not a skill
+universal/vocabulary.ttl             schema vocabulary
+universal/shapes.ttl                 SHACL integrity constraints
+manifest.json                        one list of selected ontology IDs
+loader.py                            assembly, validation, and reports
+examples/*.ttl                       standalone concrete observation fixtures
+```
+
+The loader never fetches or dynamically introduces a dependency. A dependency named by any selected ontology must already appear in `manifest.json`; otherwise loading aborts before an active dataset is assembled.
+
+### Sources and evidence boundary
+
+This directory combines two kinds of source-derived model:
 
 - `universal/` describes the generic resource vocabulary and the NanoClaw harness architecture that is present independently of a selected skill.
 - `skills/` describes interfaces and potential effects asserted by individual `top_skills/*/SKILL.md` files, plus support graphs shared only by those skills.
@@ -11,10 +66,9 @@ All graphs use `ar: <urn:agent-risk:>`. These are local identifiers, not derefer
 
 ```text
 skill_ontologies/
-  manifest.json          default loaded skill names only
-  load-config.json       complete static set of preloaded modules
-  loader.py              dependency checks, validation, inference, reports
-  examples/              observation graphs for classification tests
+  manifest.json          one list of selected ontology IDs
+  loader.py              dependency checks, validation, reports
+  examples/              sample observation graphs for external RDF tools
   universal/
     vocabulary.ttl
     shapes.ttl
@@ -32,9 +86,136 @@ skill_ontologies/
     ...one graph per skill...
 ```
 
+### Non-negotiable project invariants
+
+An agent changing this project should preserve these rules:
+
+- `manifest.json` is one JSON array of unique ontology IDs.
+- Every `.trig` file contains exactly one non-empty named graph with an IRI identifier.
+- Every module graph contains exactly one `ar:OntologyModule` with a unique `ar:ontologyModuleId`.
+- Every skill graph contains exactly one `ar:Skill` with a unique `ar:skillDirectory`, one source path, and one source hash.
+- Dependency metadata validates a static load policy; it never triggers dynamic loading.
+- Always-loaded graphs contain no operations, effects, or operation/effect links.
+- A module marked `ar:resourcesOnly true` contains no invocation kinds.
+- Every declared `ar:ToolEndpointKind` is an invocation kind and ultimately specializes `ar:ToolEndpoint`.
+- Resource and invocation specialization graphs are acyclic.
+- Every kind with an `owl:equivalentClass` definition has a SHACL target shape.
+- Skill-source hashes and pinned repository revisions are drift detectors, not security attestations.
+
+## Conceptual model
+
+The ontology deliberately keeps several concepts separate because collapsing them creates misleading security conclusions.
+
+| Concept | RDF type | Meaning | Example |
+|---|---|---|---|
+| Skill | `ar:Skill` | Provenance-bearing model derived from one `SKILL.md` | `ar:skill_discord` |
+| Ontology module | `ar:OntologyModule` | Statically discoverable graph and its dependencies | `ar:NanoClawMessagingModule` |
+| World surface kind | `ar:WorldSurfaceKind` | Kind of state, resource, component, recipient, or external object | `ar:LocalFile`, `ar:DiscordMessage` |
+| Invocation surface kind | `ar:InvocationSurfaceKind` | Kind of path through which behavior is invoked or mediated | `ar:ShellExecution`, `ar:NanoClawOutboundMailboxWrite` |
+| Tool endpoint kind | `ar:ToolEndpointKind` | Invocation kind callable by, or on behalf of, an agent | `ar:MCPToolEndpoint`, `ar:NanoClawSendMessageTool` |
+| Operation | `ar:Operation` | Action described by a selected skill | `ar:op_discord_send` |
+| Potential effect | `ar:PotentialEffect` | Possible typed consequence of an operation | create a message; transmit to a channel |
+| Requirement | `ar:Requirement` | Condition needed for the modeled action/effect | destination exists; permission is granted |
+| Security control kind | `ar:SecurityControlKind` | Kind of configuration or enforcement point | destination ACL; mount allowlist |
+| Adaptation mapping | `ar:AdaptationMapping` | Auditable source-skill-to-NanoClaw translation | generic message send → NanoClaw send tool |
+
+### Operations and effects
+
+A skill connects operations to interfaces, resources, conditions, evidence, and effects:
+
+```turtle
+ar:op_discord_send a ar:Operation ;
+  ar:invokedThroughKind ar:NanoClawSendMessageTool ;
+  ar:targetsKind ar:DiscordChannel ;
+  ar:requires ar:cond_discord_adapter_registered,
+    ar:cond_discord_target_permission ;
+  ar:sourceStatus ar:SkillText ;
+  ar:adaptationStatus ar:InferredForNanoClaw ;
+  ar:hasPotentialEffect [
+    a ar:PotentialEffect ;
+    ar:effectType ar:Create ;
+    ar:affectsKind ar:DiscordMessage
+  ] .
+```
+
+Important interpretation rules:
+
+- `targetsKind` says what an operation is directed at; it is not itself an effect.
+- `hasPotentialEffect` is a **may-effect**. It does not assert success or occurrence.
+- `requires` records a condition but does not evaluate it.
+- `sourceStatus` describes evidence from the source skill or bundled code.
+- `adaptationStatus` separately marks environment-specific translation.
+- `invokedThroughKind` identifies an entry point; `routesToKind` describes possible mediation after that point.
+- A read effect is still security-relevant even when it does not mutate world state.
+
+### Four relationships that must not be conflated
+
+```text
+specializesKind             subtype:       DiscordMessage is a MessagingMessage
+containsKind                composition:   DiscordChannel may contain DiscordMessage
+routesToKind                mediation:     SendMessageTool may route to mailbox write
+protectedByKind             control link:  host delivery is subject to destination ACL
+```
+
+Only specialization means “is a.” Containment does not imply subtype. A route is a possible architecture path, not runtime reachability. A protection edge says a control is relevant, not that it is enabled or permits the action.
+
+### Why both RDF/OWL and SHACL are used
+
+- RDF/TriG preserves named-graph provenance and supports cross-skill composition.
+- OWL class definitions support positive subtype and necessary-and-sufficient classification in an OWL reasoner.
+- SHACL enforces structural expectations and closed-world validation requirements.
+- Python performs checks that are operational or awkward to encode declaratively, including source hashes, Git revision pins, dependency policy, cycle detection, and report generation.
+
+OWL uses open-world semantics: an absent fact is unknown, not false. SHACL is used where the project intentionally needs closed-world validation. The loader checks the OWL definitions and SHACL shapes but does not run an OWL reasoner over instance observations.
+
+## What gets loaded
+
+The active model is assembled as follows:
+
+```text
+vocabulary.ttl
+  + shared ontology graphs listed in manifest.json
+  + skill graphs listed in manifest.json
+  = active named-graph dataset + combined validation graph
+```
+
+`manifest.json` lists selected ontology IDs without separate module and skill fields. RDF resources inside each graph own its identity, dependencies, and provenance. The loader discovers the corresponding graph files from that metadata.
+
+The current module inventory is:
+
+| Module ID | File | Responsibility |
+|---|---|---|
+| `tool-endpoints` | `universal/tool-endpoints.trig` | Common callable endpoint parent, messaging tools, and MCP tool/transport distinctions |
+| `local-filesystem` | `universal/local-filesystem.trig` | Files, directories, metadata, symlinks, and structural entry observations |
+| `freeform-internet` | `universal/freeform-internet.trig` | Uncontrolled Internet hosts, endpoints, services, web resources, logs, and accounts |
+| `shell-execution` | `universal/shell-execution.trig` | Shell/command/script invocation and process-related resources |
+| `nanoclaw-core` | `universal/nanoclaw-core.trig` | Host, database, agent groups, sessions, containers, runners, and provider runtime |
+| `nanoclaw-messaging` | `universal/nanoclaw-messaging.trig` | Channels, destinations, inbound/outbound mailboxes, delivery, and built-in messaging tools |
+| `nanoclaw-control` | `universal/nanoclaw-control.trig` | `ncl` management paths, tasks, guards, approval, roles, and destination controls |
+| `nanoclaw-runtime` | `universal/nanoclaw-runtime.trig` | Container/host filesystems, mounts, shell/file tools, isolation, and resource limits |
+| `nanoclaw-network` | `universal/nanoclaw-network.trig` | OneCLI, direct/proxied egress, local/remote MCP, and lockdown controls |
+| `git-resources` | `skills/git-resources.trig` | Reusable Git resource kinds and qualified working-tree definitions |
+
+`git-resources` lives under `skills/` because it is skill-oriented support vocabulary, but it is still an ontology module rather than an `ar:Skill`. It is selected because `gh-issues` requires it; `coding-agent` also requires it. Static dependency validation would reject either skill if this ontology were absent. Folder placement and loading policy are separate concerns.
+
+The current skill inventory is:
+
+| Skill directory | Graph file | Main modeled capability | Declared module dependencies |
+|---|---|---|---|
+| `1password-1.0.0` | `skills/1password.trig` | CLI/browser-oriented credential access and injection | `nanoclaw-runtime`, `nanoclaw-network` |
+| `coding-agent` | `skills/coding-agent.trig` | Worktrees, coding workers, process control, PRs, notification | `git-resources`, `nanoclaw-runtime`, `nanoclaw-messaging` |
+| `configure-channel` | `skills/configure-channel.trig` | Channel inspection/configuration and delivery tests | `nanoclaw-messaging`, `nanoclaw-control` |
+| `diagram-maker-1.0.0` | `skills/diagram-maker.trig` | Read/write/verify diagram artifacts | `nanoclaw-runtime` |
+| `discord` | `skills/discord.trig` | Send text/files, edit, and react through NanoClaw messaging | `nanoclaw-messaging` |
+| `gh-issues` | `skills/gh-issues.trig` | GitHub issue/PR orchestration, Git, delegation, notification | `git-resources`, `nanoclaw-core`, `nanoclaw-runtime`, `nanoclaw-network`, `nanoclaw-messaging` |
+| `meme-maker-1.0.0` | `skills/meme-maker.trig` | Local/hosted meme rendering and catalog refresh | `nanoclaw-runtime`, `nanoclaw-network` |
+| `sherpa-onnx-tts-1.0.0` | `skills/sherpa-onnx-tts.trig` | Download/configure/run local TTS and produce audio | `nanoclaw-core`, `nanoclaw-runtime`, `nanoclaw-network`, `nanoclaw-control` |
+| `skill-creator-1.0.0` | `skills/skill-creator.trig` | Inspect, stage, edit, and validate skill files | `nanoclaw-runtime` |
+| `taskflow-inbox-triage` | `skills/taskflow-inbox-triage.trig` | Approximate durable task coordination, triage, and notification | `nanoclaw-core`, `nanoclaw-messaging`, `nanoclaw-control` |
+
 ## Static loading policy
 
-`load-config.json` preloads ten modules. Five describe NanoClaw itself: core, messaging/mailboxes, management controls, container/filesystem runtime, and network/OneCLI paths. Generic tool, filesystem, internet, and shell graphs are also preloaded. Git resource definitions live under `skills/` even though the current static policy preloads them; folder placement and loading policy are separate concerns.
+The manifest currently lists ten shared ontologies and two skill ontologies. Five shared ontologies describe NanoClaw itself: core, messaging/mailboxes, management controls, container/filesystem runtime, and network/OneCLI paths. Generic tool, filesystem, internet, and shell graphs are also selected. Git resource definitions live under `skills/` even though they are selected on every run; folder placement and load policy are separate concerns.
 
 Dependencies never load dynamically. Every ontology module owns its metadata in RDF:
 
@@ -55,19 +236,53 @@ ar:skill_coding_agent a ar:Skill ;
   ...
 ```
 
-The loader discovers module graphs in `universal/*.trig` and `skills/*.trig`, and discovers skill graphs in `skills/*.trig`. Each file contains one named graph. Fixed infrastructure files remain at `universal/vocabulary.ttl`, `universal/shapes.ttl`, and `load-config.json`; this avoids duplicating their paths in a catalog.
+The loader discovers module graphs in `universal/*.trig` and `skills/*.trig`, and discovers skill graphs in `skills/*.trig`. Each file contains one named graph. Fixed infrastructure files remain at `universal/vocabulary.ttl` and `universal/shapes.ttl`; this avoids duplicating their paths in a catalog.
 
-During preflight, the loader parses graph metadata, checks that selected skills exist, verifies source hashes and the NanoClaw source revision, and requires every dependency to already be present in `load-config.json` `alwaysLoaded`. It does not add any skill graph to the active dataset until dependency preflight succeeds. A missing or unknown dependency produces a warning and aborts; dependencies are never introduced automatically.
+During dependency preflight, the loader parses graph metadata, checks that selected ontology IDs exist, verifies the NanoClaw source revision, and requires every dependency to already be selected in `manifest.json`. It does not create the active dataset until this dependency preflight succeeds. Before loading each selected skill graph, it separately verifies that skill's source hash. A missing or unknown dependency produces a warning and aborts; dependencies are never introduced automatically.
 
-`manifest.json` has one responsibility: default skill selection. Explicit command-line skill names replace this default.
+`manifest.json` is the only configuration file and is a literal JSON array. The loader resolves each ID against RDF metadata; no type label is needed in the list. To change the loaded ontologies, edit this list and run `python loader.py`. The loader accepts no command-line arguments.
 
 ```json
-{
-  "loadedSkills": ["discord", "gh-issues"]
-}
+[
+  "tool-endpoints",
+  "local-filesystem",
+  "freeform-internet",
+  "shell-execution",
+  "nanoclaw-core",
+  "nanoclaw-messaging",
+  "nanoclaw-control",
+  "nanoclaw-runtime",
+  "nanoclaw-network",
+  "git-resources",
+  "discord",
+  "gh-issues"
+]
 ```
 
 Every always-loaded graph is checked to contain no `ar:Operation`, `ar:PotentialEffect`, `ar:declaresOperation`, or `ar:hasPotentialEffect`. `local-filesystem.trig` and `freeform-internet.trig` are additionally marked `resourcesOnly` and cannot declare invocation kinds.
+
+### Loader sequence
+
+For an agent modifying this project, the order matters:
+
+1. Read `manifest.json` as a JSON array of unique ontology IDs.
+2. Discover every `*.trig` file under `universal/` and `skills/`. Each must contain exactly one non-empty named graph.
+3. Discover ontology modules by `rdf:type ar:OntologyModule` and index them by `ar:ontologyModuleId`.
+4. Discover skills by `rdf:type ar:Skill` and index them by `ar:skillDirectory`.
+5. Resolve the manifest IDs against discovered graphs and reject unknown or ambiguous IDs.
+6. Verify any `ar:sourceRepositoryPath` / `ar:sourceRevision` pair against the local Git checkout.
+7. Compute all declared dependencies for the selected graphs. If any dependency is unknown or absent from the manifest, print warnings and abort. No active graph has been loaded yet.
+8. Load `universal/vocabulary.ttl`, every selected module, and then the selected skill graphs.
+9. Hash each selected source `SKILL.md` and reject stale skill models.
+10. Check typed relationship endpoints, subtype cycles, endpoint parentage, shared-graph restrictions, and equivalent-class shape coverage.
+11. Run SHACL over the assembled graph.
+12. Print inventories, hierarchy edges, mediation routes, controls, adaptation counts, and potential-effect rows.
+
+This sequence prevents a dependency declaration from silently widening the environment model. It also separates asserted named-graph data from the temporary union graph used for validation and reporting.
+
+### Selection
+
+`manifest.json` is the complete selection. To run only shared environment ontologies, remove the skill IDs from the list and run `python loader.py`. To add a skill, add its `ar:skillDirectory` value and every declared dependency it needs. Missing dependencies produce a warning and abort; none are added automatically.
 
 ## Resource and interface semantics
 
@@ -81,7 +296,7 @@ Resource kinds are RDF individuals typed `ar:WorldSurfaceKind`; invocation kinds
 - `ar:routesToKind`: possible mediation/dataflow step from an invocation kind.
 - `ar:protectedByKind`: a security control relevant to a surface; it does not prove that the control is enabled or effective.
 
-Multiple parents are allowed. The loader projects specialization edges into `rdfs:subClassOf` only in its separate OWL reasoning graph. It rejects hierarchy cycles and validates the type of every relationship endpoint.
+Multiple parents are allowed. The loader traverses specialization edges directly when reporting broader kinds. It rejects hierarchy cycles and validates the type of every relationship endpoint. An external OWL reasoner can project these edges into `rdfs:subClassOf` when class-level reasoning is needed.
 
 `ar:ToolEndpoint` is the common callable parent. Shell execution, messaging endpoints, MCP tool endpoints, NanoClaw built-in MCP tools, provider file/web tools, and both forms of `ncl` are represented beneath it. A mediation component such as a channel adapter or mailbox write is an invocation surface but is not automatically an agent-facing tool endpoint.
 
@@ -208,6 +423,121 @@ Important conservative choices include:
 
 `Messaging-route` detects operations beneath the generic messaging invocation family. `NanoClaw-mailbox` is stricter and is `yes` only when the declared route reaches a NanoClaw mailbox read or write stage.
 
+## Extending the model
+
+### Add a new universal or support module
+
+1. Add one `.trig` file under `universal/` or `skills/`.
+2. Put exactly one non-empty named graph in that file.
+3. Declare exactly one `ar:OntologyModule` resource with a unique string ID.
+4. Declare every module dependency with `ar:requiresOntologyModule`.
+5. If the graph must contain resources only, set `ar:resourcesOnly true`.
+6. If it models a particular source checkout, add both `ar:sourceRepositoryPath` and `ar:sourceRevision`.
+7. Add the ontology ID to `manifest.json` only when it should be selected explicitly.
+8. Run the validation commands below.
+
+Minimal example:
+
+```turtle
+@prefix ar: <urn:agent-risk:> .
+
+ar:g_example_resources {
+  ar:ExampleResourcesModule a ar:OntologyModule ;
+    ar:ontologyModuleId "example-resources" ;
+    ar:requiresOntologyModule "local-filesystem" ;
+    ar:resourcesOnly true .
+
+  ar:ExampleArtifact a ar:WorldSurfaceKind ;
+    ar:specializesKind ar:LocalFile .
+}
+```
+
+Do not put skill operations or effects in an always-loaded module. Always-loaded graphs describe the environment available for composition; selected skill graphs introduce claims about actions.
+
+### Add a new skill ontology
+
+1. Read the entire source `SKILL.md` and any scripts or references needed to understand its actual interfaces.
+2. Create one file under `skills/` with one named graph.
+3. Declare exactly one `ar:Skill` resource.
+4. Record the exact source directory name in `ar:skillDirectory`.
+5. Record the absolute source file in `ar:sourcePath` and its SHA-256 in `ar:sourceSha256`.
+6. Declare all required environment modules with `ar:requiresOntologyModule`.
+7. Model resource kinds and invocation kinds separately.
+8. Model each supported action as an `ar:Operation` with at least one invocation kind, potential effect, and evidence status.
+9. Record requirements even when the loader cannot evaluate them.
+10. Add explicit `ar:AdaptationMapping` entries for every non-trivial NanoClaw translation, approximation, condition, or omission.
+11. Add the skill directory to `manifest.json` only if it should load by default.
+12. Validate the new skill explicitly before changing defaults.
+
+Minimal skeleton:
+
+```turtle
+@prefix ar: <urn:agent-risk:> .
+
+ar:g_example_skill {
+  ar:skill_example a ar:Skill ;
+    ar:skillDirectory "example-skill" ;
+    ar:sourcePath "/absolute/path/to/top_skills/example-skill/SKILL.md" ;
+    ar:sourceSha256 "<sha256>" ;
+    ar:requiresOntologyModule "nanoclaw-runtime" ;
+    ar:governedByAdaptationPolicy ar:NanoClawSkillAdaptationPolicy ;
+    ar:hasAdaptationMapping ar:adapt_example_action ;
+    ar:declaresOperation ar:op_example_action .
+
+  ar:ExampleOutput a ar:WorldSurfaceKind ;
+    ar:specializesKind ar:LocalFile .
+
+  ar:cond_example_writable a ar:Requirement .
+
+  ar:op_example_action a ar:Operation ;
+    ar:invokedThroughKind ar:NanoClawProviderFileTool ;
+    ar:targetsKind ar:ExampleOutput ;
+    ar:requires ar:cond_example_writable ;
+    ar:sourceStatus ar:SkillText ;
+    ar:adaptationStatus ar:InferredForNanoClaw ;
+    ar:hasPotentialEffect [
+      a ar:PotentialEffect ;
+      ar:effectType ar:Create ;
+      ar:affectsKind ar:ExampleOutput
+    ] .
+
+  ar:adapt_example_action a ar:AdaptationMapping ;
+    ar:sourceAssumption "The source skill can write an output file." ;
+    ar:nanoclawModel "NanoClawProviderFileTool in container-visible storage." ;
+    ar:adaptationDisposition ar:ConditionalAdaptation ;
+    ar:semanticDifference "The writable scope is limited to container-visible storage." ;
+    ar:adaptedOperation ar:op_example_action .
+}
+```
+
+Compute the source hash on macOS with:
+
+```bash
+shasum -a 256 /absolute/path/to/SKILL.md
+```
+
+When the source skill changes, do not merely update the hash. Re-review the skill, revise its ontology and adaptation mappings, and only then update `ar:sourceSha256`.
+
+### Add or change a subtype definition
+
+Use `ar:specializesKind` or `ar:specializesInvocationKind` for ordinary necessary-only taxonomy edges. Use `owl:equivalentClass` only when the RDF facts are genuinely sufficient to recognize membership.
+
+Every modeled kind with `owl:equivalentClass` must also be targeted by a SHACL shape. The loader enforces this coverage rule. If recognition depends on an external check, represent the check result as observation data rather than pretending OWL performed it. `gitRepositoryValidated true` is the existing example.
+
+### Modeling checklist
+
+Before accepting a new graph, ask:
+
+- Is this node a resource/state kind, an invocation path, an operation, or a concrete observation?
+- Is the relationship subtype, containment, storage representation, sharing, mediation, or protection?
+- Does the source actually assert the action, or is it a NanoClaw inference?
+- Is the effect a possibility, and have its requirements been recorded?
+- Does a remote MCP service create a control boundary different from a local stdio server?
+- Does a container path map to a read-write host mount, a read-only mount, or container-local state?
+- Does a messaging action use a built-in endpoint, a projected destination, an adapter, or an added third-party tool?
+- Would the graph accidentally imply broader host, network, credential, or message-history authority than the source supports?
+- Are unsupported actions omitted or explicitly recorded as unsupported rather than silently invented?
+
 ## Qualified subtype definitions
 
 Every specialization edge is a necessary-only definition. A kind becomes necessary-and-sufficient only with `owl:equivalentClass`; the loader then requires a corresponding SHACL target shape.
@@ -219,19 +549,65 @@ Every specialization edge is a necessary-only definition. A kind becomes necessa
 - `ConventionalGitWorkingTree`: candidate plus explicit `gitRepositoryValidated true` evidence.
 - `LocalGitRepository`: primitive broader kind because bare repositories, linked worktrees, and external Git directories need not contain a `.git` entry.
 
-OWL-RL performs positive open-world inference. SHACL separately requires evidence for asserted or inferred observations. Missing facts do not prove non-membership.
+An external OWL-RL reasoner can infer positive membership for concrete observations. SHACL can then check the required evidence. `loader.py` validates the selected ontology graphs and the matching SHACL shapes; it does not load observation files or perform instance classification. Missing facts do not prove non-membership.
 
 ## Run and validate
 
-Install `rdflib`, `owlrl`, and `pyshacl`, then:
+The prototype has no packaging wrapper. Run it from this directory with Python 3 and install `rdflib` and `pyshacl` in your environment:
 
 ```bash
-python loader.py --universal-only
-python loader.py discord gh-issues
-python loader.py coding-agent --data examples/git-working-tree.ttl
+python3 -m pip install rdflib pyshacl
 ```
 
-The old `--resources-only` and `--baseline-only` spellings remain aliases for `--universal-only`. With no arguments, the loader uses `manifest.json` `loadedSkills`; explicit skill arguments override that list.
+The loader takes no arguments. Edit `manifest.json` to select the ontologies, then run:
+
+```bash
+python3 loader.py
+```
+
+For example, add `coding-agent` to the manifest alongside its declared dependencies to include that skill. Remove `discord` or `gh-issues` from the list to exclude them. The files in `examples/` remain standalone observation fixtures for external RDF/OWL/SHACL experiments; this loader does not read them.
+
+### Reading the report
+
+The loader prints:
+
+- selected ontologies, active skills, and static dependency status;
+- resource kinds contributed by always-loaded named graphs;
+- resource subtype, containment, storage, and sharing relationships;
+- invocation subtype relationships and callable endpoint classifications;
+- possible mediation routes and associated security controls;
+- primitive versus necessary-and-sufficient subtype definitions; and
+- one row per skill operation/effect/resource combination.
+
+The final effect table adds three derived flags:
+
+- `Shell-mediated`: the operation's endpoint is `ShellExecution` or a subtype;
+- `Messaging-route`: the endpoint belongs to the generic messaging invocation family; and
+- `NanoClaw-mailbox`: following modeled invocation routes can reach a NanoClaw inbound/outbound mailbox stage.
+
+These flags describe the ontology graph, not a trace of a running system.
+
+### Expected failures and what they mean
+
+| Error | Meaning | Correct response |
+|---|---|---|
+| `Unknown ontologies in manifest.json` | A listed ID matches no discovered graph | Fix the selection or graph metadata |
+| `loader.py takes no arguments` | A command-line argument was supplied | Edit `manifest.json` and run `python3 loader.py` |
+| `Duplicate ontology module id` | Two graphs claim the same module identity | Give each module a unique ID |
+| `must contain exactly one non-empty named graph` | A TriG file violates the discovery convention | Keep one named graph per file |
+| `ontology is stale` | The pinned NanoClaw checkout moved | Re-review the changed source before updating the revision |
+| `source skill has changed` | `SKILL.md` no longer matches `ar:sourceSha256` | Re-review and update the skill graph, then its hash |
+| `Dependency preflight failed` | A declared requirement is unknown or absent from the selected ontologies | Add/review the required ontology and explicitly update `manifest.json` |
+| `Always-loaded graph contains an operation/effect` | Environment and selected-skill responsibilities were mixed | Move operations/effects into a skill graph |
+| `Cycle in ... hierarchy` | A specialization path loops back to itself | Correct the taxonomy; do not use subtype for containment/routes |
+| `Necessary-and-sufficient kinds missing SHACL validation shapes` | An OWL definition lacks its closed-world validator | Add a corresponding target shape |
+| `SHACL validation failed` | Selected ontology graph structure violates a shape | Read the focus node, path, and source shape in the report |
+
+An absent dependency is intentionally not repaired automatically. Treat the abort as a request for an explicit environment-policy decision.
+
+## Querying the model
+
+`loader.py` contains a built-in potential-effect query and report, but the same TriG files can be loaded into RDFLib, Apache Jena, GraphDB, Stardog, RDF4J, or another RDF dataset implementation. Queries that rely on property paths require a SPARQL 1.1 implementation.
 
 Useful SPARQL paths:
 
@@ -246,6 +622,25 @@ SELECT ?narrow ?broader WHERE {
 # All shell-mediated operations.
 SELECT DISTINCT ?operation WHERE {
   ?operation ar:invokedThroughKind/ar:specializesInvocationKind* ar:ShellExecution .
+}
+
+# Potentially affected resources, retaining skill-graph provenance.
+SELECT DISTINCT ?graph ?skill ?operation ?effectType ?resourceKind WHERE {
+  GRAPH ?graph {
+    ?skill a ar:Skill ;
+           ar:declaresOperation ?operation .
+    ?operation ar:hasPotentialEffect ?effect .
+    ?effect ar:effectType ?effectType ;
+            ar:affectsKind ?resourceKind .
+  }
+}
+
+# Potential effects on a resource kind or any of its subtypes.
+SELECT DISTINCT ?operation ?effectType ?resourceKind WHERE {
+  ?operation ar:hasPotentialEffect ?effect .
+  ?effect ar:effectType ?effectType ;
+          ar:affectsKind ?resourceKind .
+  ?resourceKind ar:specializesKind* ar:LocalFile .
 }
 
 # Possible NanoClaw mediation chain from a concrete endpoint.

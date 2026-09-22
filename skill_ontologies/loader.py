@@ -5,8 +5,7 @@ import subprocess
 import sys
 
 from rdflib import Dataset, Graph, Literal, Namespace, URIRef
-from rdflib.namespace import OWL, RDF, RDFS
-from owlrl import DeductiveClosure, OWLRL_Semantics
+from rdflib.namespace import OWL, RDF
 from pyshacl import validate
 
 
@@ -14,52 +13,19 @@ ONTOLOGY_DIR = Path(__file__).resolve().parent
 AR = Namespace("urn:agent-risk:")
 SH = Namespace("http://www.w3.org/ns/shacl#")
 
-# manifest.json intentionally contains only the default skill selection. Files,
-# graph ids, hashes, dependencies, and source pins are owned by RDF metadata or
-# derived from directory conventions.
-manifest = json.loads((ONTOLOGY_DIR / "manifest.json").read_text())
-unexpected_manifest_keys = set(manifest) - {"loadedSkills"}
-if unexpected_manifest_keys:
-    raise SystemExit(
-        "manifest.json may contain only loadedSkills; unexpected keys: "
-        + ", ".join(sorted(unexpected_manifest_keys))
-    )
-default_skills = manifest.get("loadedSkills", [])
-if not isinstance(default_skills, list) or not all(
-    isinstance(name, str) and name for name in default_skills
-):
-    raise SystemExit("manifest.json loadedSkills must be a list of non-empty strings")
-if len(default_skills) != len(set(default_skills)):
-    raise SystemExit("Duplicate skill in manifest.json loadedSkills")
+if len(sys.argv) != 1:
+    raise SystemExit("loader.py takes no arguments; edit manifest.json to select ontologies")
 
-# --universal-only selects all always-loaded graphs without skill graphs.
-# --data FILE adds concrete observations for OWL-RL classification and SHACL.
-# Explicit skill arguments override manifest.json loadedSkills.
-arguments = sys.argv[1:]
-universal_flags = {"--universal-only", "--resources-only", "--baseline-only"}
-universal_only = False
-data_path = None
-skill_arguments = []
-index = 0
-while index < len(arguments):
-    argument = arguments[index]
-    if argument in universal_flags:
-        universal_only = True
-    elif argument == "--data":
-        index += 1
-        if index == len(arguments):
-            raise SystemExit("--data requires an RDF file path")
-        data_path = Path(arguments[index]).expanduser()
-    elif argument.startswith("--"):
-        raise SystemExit("Use --universal-only, --data FILE, or skill directory names.")
-    else:
-        skill_arguments.append(argument)
-    index += 1
-if universal_only and skill_arguments:
-    raise SystemExit("--universal-only cannot be combined with skill directory names.")
-loaded_skills = (
-    set() if universal_only else set(skill_arguments) if skill_arguments else set(default_skills)
-)
+
+# manifest.json is one list of ontology IDs. RDF metadata identifies each
+# graph and owns its file, dependencies, source hash, and source revision.
+configured_ontology_ids = json.loads((ONTOLOGY_DIR / "manifest.json").read_text())
+if not isinstance(configured_ontology_ids, list) or not all(
+    isinstance(ontology_id, str) and ontology_id for ontology_id in configured_ontology_ids
+):
+    raise SystemExit("manifest.json must be a JSON array of non-empty ontology IDs")
+if len(configured_ontology_ids) != len(set(configured_ontology_ids)):
+    raise SystemExit("Duplicate ontology ID in manifest.json")
 
 
 def parse_single_named_graph(path):
@@ -156,21 +122,17 @@ for path in sorted((ONTOLOGY_DIR / "skills").glob("*.trig")):
         ))),
     }
 
-unknown = loaded_skills - modules.keys()
-if unknown:
-    raise SystemExit(f"Unknown skills: {', '.join(sorted(unknown))}")
+ambiguous_ids = ontology_modules.keys() & modules.keys()
+if ambiguous_ids:
+    raise SystemExit("Ontology IDs used by both graphs: " + ", ".join(sorted(ambiguous_ids)))
+known_ids = ontology_modules.keys() | modules.keys()
+unknown_configured = set(configured_ontology_ids) - known_ids
+if unknown_configured:
+    raise SystemExit("Unknown ontologies in manifest.json: " + ", ".join(sorted(unknown_configured)))
 
-load_config_path = ONTOLOGY_DIR / "load-config.json"
-load_config = json.loads(load_config_path.read_text())
-always_loaded_ids = load_config.get("alwaysLoaded", [])
-if len(always_loaded_ids) != len(set(always_loaded_ids)):
-    raise SystemExit("Duplicate module id in load-config.json alwaysLoaded")
-unknown_always_loaded = set(always_loaded_ids) - ontology_modules.keys()
-if unknown_always_loaded:
-    raise SystemExit(
-        "Unknown always-loaded ontology modules: "
-        + ", ".join(sorted(unknown_always_loaded))
-    )
+# The manifest is the complete selection; graph metadata determines validation.
+always_loaded_ids = [ontology_id for ontology_id in configured_ontology_ids if ontology_id in ontology_modules]
+loaded_skills = {ontology_id for ontology_id in configured_ontology_ids if ontology_id in modules}
 
 # Source pins belong to ontology modules. They detect source drift but do not
 # attest to a deployed process or live configuration.
@@ -205,7 +167,7 @@ for module_id in always_loaded_ids:
             )
 
 # Dependency declarations never load graphs. Every requirement must already be
-# listed in load-config.json, and preflight finishes before the active dataset
+# listed in manifest.json, and preflight finishes before the active dataset
 # receives any named graph.
 dependency_requirements = []
 for module_id in always_loaded_ids:
@@ -237,12 +199,12 @@ if unknown_required or missing_dependencies:
     for requester, required_id in missing_dependencies:
         print(
             f"WARNING: {requester} requires ontology dependency {required_id}, but "
-            "load-config.json does not introduce it in alwaysLoaded",
+            "manifest.json does not select it",
             file=sys.stderr,
         )
     raise SystemExit(
         "Dependency preflight failed; no ontology graphs were loaded. "
-        "Add every required module to load-config.json alwaysLoaded."
+        "Add every required ontology ID to manifest.json."
     )
 
 active = Dataset()  # Retains provenance as one named graph per source file.
@@ -287,19 +249,6 @@ for skill_name in sorted(loaded_skills):
     if actual_hash != module["sourceSha256"]:
         raise SystemExit(f"Ontology for {skill_name} is stale: source skill has changed.")
     load_named_graph(module)
-
-observation_subjects = set()
-asserted_observation_types = set()
-if data_path is not None:
-    if not data_path.is_absolute():
-        data_path = (Path.cwd() / data_path).resolve()
-    observations = Graph().parse(str(data_path))
-    observation_subjects = set(observations.subjects())
-    asserted_observation_types = set(observations.triples((None, RDF.type, None)))
-    observation_graph = active.graph(URIRef("urn:agent-risk:g_observations"))
-    for triple in observations:
-        observation_graph.add(triple)
-        combined.add(triple)
 
 typed_kinds = set(combined.subjects(RDF.type, AR.WorldSurfaceKind))
 typed_invocation_kinds = set(combined.subjects(RDF.type, AR.InvocationSurfaceKind))
@@ -356,27 +305,6 @@ if missing_validation_shapes:
 conforms, _, report = validate(combined, shacl_graph=shapes)
 if not conforms:
     raise SystemExit(f"SHACL validation failed:\n{report}")
-
-# OWL supplies positive, open-world inference for necessary-and-sufficient
-# definitions. A second, focus-limited SHACL pass checks inferred observation
-# memberships without applying ontology-meta-shapes to OWL's internal blank nodes.
-reasoned = Graph()
-for triple in combined:
-    reasoned.add(triple)
-for predicate in (AR.specializesKind, AR.specializesInvocationKind):
-    for narrower, broader in combined.subject_objects(predicate):
-        reasoned.add((narrower, RDF.type, OWL.Class))
-        reasoned.add((broader, RDF.type, OWL.Class))
-        reasoned.add((narrower, RDFS.subClassOf, broader))
-DeductiveClosure(OWLRL_Semantics).expand(reasoned)
-if observation_subjects:
-    conforms, _, report = validate(
-        reasoned,
-        shacl_graph=shapes,
-        focus_nodes=list(observation_subjects),
-    )
-    if not conforms:
-        raise SystemExit(f"SHACL validation failed for observation data:\n{report}")
 
 
 def label(value):
@@ -516,19 +444,6 @@ definition_rows = sorted(
         for kind in subtype_kinds
     }
 )
-classification_rows = sorted(
-    {
-        (
-            label(subject),
-            label(kind),
-            "asserted" if (subject, RDF.type, kind) in asserted_observation_types
-            else "inferred",
-        )
-        for subject in observation_subjects
-        for kind in defined_kinds
-        if (subject, RDF.type, kind) in reasoned
-    }
-)
 
 effect_query = """
 PREFIX ar: <urn:agent-risk:>
@@ -571,8 +486,8 @@ def print_table(headers, rows):
         print_row(row)
 
 
-print("Manifest defaults: " + (", ".join(default_skills) or "(none)"))
-print("Load configuration: load-config.json")
+print("Manifest ontologies: " + (", ".join(configured_ontology_ids) or "(none)"))
+print("Load configuration: manifest.json")
 print("Graph/catalog metadata: discovered from RDF and directory conventions")
 print("Always-loaded modules: " + ", ".join(always_loaded_ids))
 print("Dynamic dependency loading: disabled")
@@ -585,7 +500,6 @@ if nanoclaw_adapted_operations:
         f"{len(nanoclaw_adapted_operations)} selected operation(s) are conservative "
         "NanoClaw translations rather than claims made by their source skills."
     )
-print(f"Observation data: {data_path if data_path is not None else '(none)'}")
 print(f"Resource kinds: {len(resource_rows)}")
 print(f"Resource relationships: {len(relationship_rows)}")
 print(f"Invocation subtype links: {len(invocation_rows)}")
@@ -615,12 +529,6 @@ if control_rows:
 if definition_rows:
     print()
     print_table(("Subtype kind", "Definition strength"), definition_rows)
-if data_path is not None:
-    print()
-    if classification_rows:
-        print_table(("Observed resource", "Defined kind", "Classification"), classification_rows)
-    else:
-        print("No necessary-and-sufficient kind classifications were inferred from the observations.")
 if effect_rows:
     print()
     print_table(("Graph", "Operation", "Effect", "Resource kind", "Broader kinds", "Shell-mediated", "Messaging-route", "NanoClaw-mailbox"), effect_rows)
