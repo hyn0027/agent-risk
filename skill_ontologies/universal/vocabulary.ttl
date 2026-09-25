@@ -21,6 +21,11 @@ ar:SecurityControlKind a rdfs:Class ; rdfs:subClassOf ar:WorldSurfaceKind ;
   rdfs:comment "Configuration or enforcement mechanism relevant to reachability or authority. A declared control is not evidence that it is enabled or effective at runtime." .
 ar:Operation a rdfs:Class .
 ar:PotentialEffect a rdfs:Class .
+ar:PotentialInternetCall a rdfs:Class ;
+  rdfs:comment "A possible outbound request to a public-Internet endpoint caused by an operation, possibly after local or host mediation. It is not an observed packet, a guaranteed call, or proof that the endpoint is reachable. Local mailbox, stdio, loopback, and private-network hops do not themselves qualify." .
+ar:PublicInternetEndpointKind a rdfs:Class ; rdfs:subClassOf ar:WorldSurfaceKind ;
+  rdfs:comment "Class of destination kinds known to be publicly Internet-addressable. A service or resource is not automatically an endpoint. Specific endpoint kinds must also specialize ar:PublicInternetEndpoint." .
+ar:InternetCallStage a rdfs:Class .
 ar:EffectType a rdfs:Class .
 ar:Requirement a rdfs:Class .
 ar:EvidenceStatus a rdfs:Class .
@@ -66,6 +71,16 @@ ar:sharesKind a rdf:Property ; rdfs:domain ar:WorldSurfaceKind ; rdfs:range ar:W
 ar:targetsKind a rdf:Property ; rdfs:domain ar:Operation ; rdfs:range ar:WorldSurfaceKind .
 ar:requires a rdf:Property ; rdfs:domain ar:Operation ; rdfs:range ar:Requirement .
 ar:hasPotentialEffect a rdf:Property ; rdfs:domain ar:Operation ; rdfs:range ar:PotentialEffect .
+ar:mayInitiateInternetCall a rdf:Property ; rdfs:domain ar:Operation ; rdfs:range ar:PotentialInternetCall ;
+  rdfs:comment "An explicit, evidence-backed may-relation. It is not inferred merely because an operation uses shell, MCP, a remote resource, or a message tool." .
+ar:callInitiatorKind a rdf:Property ; rdfs:domain ar:PotentialInternetCall ; rdfs:range ar:WorldSurfaceKind .
+ar:callViaKind a rdf:Property ; rdfs:domain ar:PotentialInternetCall ; rdfs:range ar:InvocationSurfaceKind .
+ar:callEndpointKind a rdf:Property ; rdfs:domain ar:PotentialInternetCall ; rdfs:range ar:PublicInternetEndpointKind .
+ar:callEndpointPattern a rdf:Property ; rdfs:domain ar:PotentialInternetCall ; rdfs:range xsd:string ;
+  rdfs:comment "A literal URL or protocol destination template only when supported by source. Variables in braces are placeholders, not resolved runtime destinations; redirects may add hosts." .
+ar:callStage a rdf:Property ; rdfs:domain ar:PotentialInternetCall ; rdfs:range ar:InternetCallStage .
+ar:callConditionalOn a rdf:Property ; rdfs:domain ar:PotentialInternetCall ; rdfs:range ar:Requirement ;
+  rdfs:comment "A condition additional to the initiating operation's ar:requires values." .
 ar:effectType a rdf:Property ; rdfs:domain ar:PotentialEffect ; rdfs:range ar:EffectType .
 ar:affectsKind a rdf:Property ; rdfs:domain ar:PotentialEffect ; rdfs:range ar:WorldSurfaceKind .
 ar:conditionalOn a rdf:Property ; rdfs:domain ar:PotentialEffect ; rdfs:range ar:Requirement .
@@ -111,6 +126,10 @@ ar:Install a ar:EffectType .
 ar:Delegate a ar:EffectType .
 ar:Validate a ar:EffectType .
 ar:Notify a ar:EffectType .
+
+ar:ContainerEgress a ar:InternetCallStage ; rdfs:comment "The agent container initiates the outbound connection; proxy and direct routes are alternatives." .
+ar:HostAdapterEgress a ar:InternetCallStage ; rdfs:comment "A host messaging adapter initiates the outbound connection after local mailbox delivery." .
+ar:DelegatedWorkerEgress a ar:InternetCallStage ; rdfs:comment "A separately launched or delegated worker initiates the request; its actual tool choices remain open-ended." .
 
 # Cross-skill kinds are types, not claims that the harness exposes them.
 ar:SubagentSpawnTool a ar:InvocationSurfaceKind, ar:ToolEndpointKind ;

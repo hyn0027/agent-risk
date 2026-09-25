@@ -31,6 +31,13 @@ ar:g_gh_issues {
     ar:routesToKind ar:TelegramDestination .
   ar:NanoClawHostDeliveryInvocation ar:routesToKind ar:TelegramAdapterDelivery .
   ar:GitHubRepository a ar:WorldSurfaceKind .
+  ar:GitHubRESTEndpoint a ar:WorldSurfaceKind, ar:PublicInternetEndpointKind ;
+    ar:specializesKind ar:PublicInternetEndpoint .
+  ar:GitHubGitEndpoint a ar:WorldSurfaceKind, ar:PublicInternetEndpointKind ;
+    ar:specializesKind ar:PublicInternetEndpoint .
+  ar:TelegramAPIEndpoint a ar:WorldSurfaceKind, ar:PublicInternetEndpointKind ;
+    ar:specializesKind ar:PublicInternetEndpoint ;
+    rdfs:comment "Adapter-specific Telegram API address is not fixed by this skill." .
   ar:GitHubIssue a ar:WorldSurfaceKind .
   ar:GitHubPullRequest a ar:WorldSurfaceKind .
   ar:GitHubBranch a ar:WorldSurfaceKind .
@@ -60,6 +67,7 @@ ar:g_gh_issues {
   ar:cond_nanoclaw_child_destination a ar:Requirement .
 
   ar:op_gh_fetch a ar:Operation ; ar:invokedThroughKind ar:CurlCLI, ar:GitHubREST ;
+    ar:mayInitiateInternetCall ar:call_gh_fetch_issues ;
     ar:targetsKind ar:GitHubRepository, ar:GitHubIssue ;
     ar:requires ar:cond_repo_resolved, ar:cond_gh_token ; ar:sourceStatus ar:SkillText ; ar:adaptationStatus ar:InferredForNanoClaw ;
     ar:hasPotentialEffect [ a ar:PotentialEffect ; ar:effectType ar:Read ; ar:affectsKind ar:GitHubIssue, ar:GitHubRepository ] .
@@ -92,6 +100,7 @@ ar:g_gh_issues {
     ar:hasPotentialEffect [ a ar:PotentialEffect ; ar:effectType ar:Delegate ; ar:affectsKind ar:LocalGitRepository ] .
 
   ar:op_gh_push a ar:Operation ; ar:invokedThroughKind ar:NanoClawContainerShellExecution, ar:GitCLI ;
+    ar:mayInitiateInternetCall ar:call_gh_push ;
     ar:targetsKind ar:GitHubBranch, ar:LocalGitConfiguration, ar:GlobalGitConfiguration ;
     ar:requires ar:cond_gh_token, ar:cond_push_permission ;
     ar:sourceNote "The described push flow changes the global credential helper and embeds the token in a Git remote URL. No force-push is instructed." ;
@@ -101,12 +110,14 @@ ar:g_gh_issues {
       [ a ar:PotentialEffect ; ar:effectType ar:Transmit ; ar:affectsKind ar:LocalGitConfiguration ] .
 
   ar:op_gh_create_pr a ar:Operation ; ar:invokedThroughKind ar:CurlCLI, ar:GitHubREST ;
+    ar:mayInitiateInternetCall ar:call_gh_create_pr ;
     ar:targetsKind ar:GitHubRepository ; ar:requires ar:cond_gh_token, ar:cond_push_permission ;
     ar:sourceNote "Creates a PR record; does not assert merge, release, or deployment." ;
     ar:sourceStatus ar:SkillText ; ar:adaptationStatus ar:InferredForNanoClaw ;
     ar:hasPotentialEffect [ a ar:PotentialEffect ; ar:effectType ar:Create ; ar:affectsKind ar:GitHubPullRequest ] .
 
   ar:op_gh_fetch_review a ar:Operation ; ar:invokedThroughKind ar:CurlCLI, ar:GitHubREST ;
+    ar:mayInitiateInternetCall ar:call_gh_fetch_review ;
     ar:targetsKind ar:GitHubPullRequest, ar:GitHubReview, ar:GitHubComment ;
     ar:requires ar:cond_gh_token ; ar:sourceStatus ar:SkillText ; ar:adaptationStatus ar:InferredForNanoClaw ;
     ar:hasPotentialEffect [ a ar:PotentialEffect ; ar:effectType ar:Read ; ar:affectsKind ar:GitHubReview, ar:GitHubComment, ar:GitHubPullRequest ] .
@@ -118,16 +129,46 @@ ar:g_gh_issues {
     ar:hasPotentialEffect [ a ar:PotentialEffect ; ar:effectType ar:Delegate ; ar:affectsKind ar:LocalGitRepository, ar:GitHubPullRequest ] .
 
   ar:op_gh_reply_review a ar:Operation ; ar:invokedThroughKind ar:CurlCLI, ar:GitHubREST ;
+    ar:mayInitiateInternetCall ar:call_gh_reply_review ;
     ar:targetsKind ar:GitHubComment ; ar:requires ar:cond_gh_token, ar:cond_pr_comment_permission ;
     ar:sourceStatus ar:SkillText ; ar:adaptationStatus ar:InferredForNanoClaw ;
     ar:hasPotentialEffect [ a ar:PotentialEffect ; ar:effectType ar:Create ; ar:affectsKind ar:GitHubComment ] .
 
   ar:op_gh_telegram_notify a ar:Operation ; ar:invokedThroughKind ar:NanoClawSendMessageTool ;
+    ar:mayInitiateInternetCall ar:call_gh_telegram_delivery ;
     ar:targetsKind ar:TelegramDestination ; ar:requires ar:cond_telegram_route ;
     ar:sourceStatus ar:SkillText ; ar:adaptationStatus ar:InferredForNanoClaw ;
     ar:sourceNote "The Telegram route is a NanoClaw named destination projected into the session; send_message does not accept the source skill's raw --notify-channel convention." ;
     ar:hasPotentialEffect [ a ar:PotentialEffect ; ar:effectType ar:Create ; ar:affectsKind ar:TelegramMessage ],
       [ a ar:PotentialEffect ; ar:effectType ar:Notify ; ar:affectsKind ar:TelegramDestination ] .
+
+  ar:call_gh_fetch_issues a ar:PotentialInternetCall ;
+    ar:callInitiatorKind ar:NanoClawAgentContainer ; ar:callViaKind ar:CurlCLI, ar:NanoClawContainerNetworkRequest ;
+    ar:callEndpointKind ar:GitHubRESTEndpoint ; ar:callStage ar:ContainerEgress ;
+    ar:callEndpointPattern "https://api.github.com/repos/{SOURCE_REPO}/issues" ;
+    ar:sourceStatus ar:SkillText ; ar:sourceNote "Issue listing is an HTTPS REST request; filters and optional identity/milestone lookups can add requests to other GitHub REST paths." .
+  ar:call_gh_push a ar:PotentialInternetCall ;
+    ar:callInitiatorKind ar:NanoClawAgentContainer ; ar:callViaKind ar:GitCLI, ar:NanoClawContainerNetworkRequest ;
+    ar:callEndpointKind ar:GitHubGitEndpoint ; ar:callStage ar:ContainerEgress ;
+    ar:callEndpointPattern "https://github.com/{PUSH_REPO}.git" ;
+    ar:sourceStatus ar:SkillText ; ar:sourceNote "The source skill explicitly sets a token-bearing HTTPS Git remote before push; credentials are omitted from this endpoint template." .
+  ar:call_gh_create_pr a ar:PotentialInternetCall ;
+    ar:callInitiatorKind ar:NanoClawAgentContainer ; ar:callViaKind ar:CurlCLI, ar:NanoClawContainerNetworkRequest ;
+    ar:callEndpointKind ar:GitHubRESTEndpoint ; ar:callStage ar:ContainerEgress ;
+    ar:callEndpointPattern "https://api.github.com/repos/{SOURCE_REPO}/pulls" ;
+    ar:sourceStatus ar:SkillText ; ar:sourceNote "Creating the pull request can involve additional GitHub REST preflight calls; this pattern names the create endpoint." .
+  ar:call_gh_fetch_review a ar:PotentialInternetCall ;
+    ar:callInitiatorKind ar:NanoClawAgentContainer ; ar:callViaKind ar:CurlCLI, ar:NanoClawContainerNetworkRequest ;
+    ar:callEndpointKind ar:GitHubRESTEndpoint ; ar:callStage ar:ContainerEgress ;
+    ar:sourceStatus ar:SkillText ; ar:sourceNote "The skill queries multiple GitHub REST review/comment paths; there is no single endpoint pattern for this operation." .
+  ar:call_gh_reply_review a ar:PotentialInternetCall ;
+    ar:callInitiatorKind ar:NanoClawAgentContainer ; ar:callViaKind ar:CurlCLI, ar:NanoClawContainerNetworkRequest ;
+    ar:callEndpointKind ar:GitHubRESTEndpoint ; ar:callStage ar:ContainerEgress ;
+    ar:sourceStatus ar:SkillText ; ar:sourceNote "Posts to a GitHub PR review-comment reply endpoint or issue-comment endpoint, depending on the reply path." .
+  ar:call_gh_telegram_delivery a ar:PotentialInternetCall ;
+    ar:callInitiatorKind ar:NanoClawHostProcess ; ar:callViaKind ar:TelegramAdapterDelivery ;
+    ar:callEndpointKind ar:TelegramAPIEndpoint ; ar:callStage ar:HostAdapterEgress ;
+    ar:sourceStatus ar:InferredForNanoClaw ; ar:sourceNote "The agent-to-mailbox send is local; only a configured host Telegram adapter's subsequent platform delivery is an Internet call. No exact API URL is established." .
 
   ar:adapt_gh_shell_environment a ar:AdaptationMapping ;
     ar:sourceAssumption "curl and git run in the host/OpenClaw environment." ;

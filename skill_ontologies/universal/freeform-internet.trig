@@ -11,6 +11,12 @@ ar:g_freeform_internet {
   ar:InternetHost a ar:WorldSurfaceKind .
   ar:RemoteNetworkEndpoint a ar:WorldSurfaceKind ;
     rdfs:comment "A protocol-level network destination, not necessarily an HTTP URL." .
+  ar:PublicInternetEndpoint a ar:WorldSurfaceKind, ar:PublicInternetEndpointKind ;
+    ar:specializesKind ar:RemoteNetworkEndpoint ;
+    rdfs:comment "A destination publicly addressable over the Internet; this classification does not assert the current IP, successful routing, or authorization." .
+  ar:UnspecifiedPublicInternetEndpoint a ar:WorldSurfaceKind, ar:PublicInternetEndpointKind ;
+    ar:specializesKind ar:PublicInternetEndpoint ;
+    rdfs:comment "Internet destination is plausible but its API host, URL, or protocol endpoint is not established by the skill or inspected adapter." .
   ar:RemoteService a ar:WorldSurfaceKind .
   ar:RemoteWebResource a ar:WorldSurfaceKind ;
     rdfs:comment "A page, file, object, or other remotely addressable web resource." .

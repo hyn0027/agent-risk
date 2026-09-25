@@ -28,6 +28,9 @@ ar:g_taskflow_inbox_triage {
   ar:ManagedFlowState a ar:WorldSurfaceKind ; ar:mayBeStoredAsKind ar:NanoClawTaskRunLog .
   ar:ChildAgentGroup a ar:WorldSurfaceKind ; ar:specializesKind ar:NanoClawAgentGroup .
   ar:SlackWorkspace a ar:WorldSurfaceKind ; ar:specializesKind ar:MessagingPlatform .
+  ar:SlackAPIEndpoint a ar:WorldSurfaceKind, ar:PublicInternetEndpointKind ;
+    ar:specializesKind ar:PublicInternetEndpoint ;
+    rdfs:comment "Public Slack delivery endpoint; exact route and URL depend on the registered adapter." .
   ar:SlackThread a ar:WorldSurfaceKind ; ar:specializesKind ar:MessagingThread .
   ar:SlackMessage a ar:WorldSurfaceKind ; ar:specializesKind ar:MessagingMessage .
   ar:OwnerNotificationDestination a ar:WorldSurfaceKind ; ar:specializesKind ar:NanoClawDestination .
@@ -75,11 +78,17 @@ ar:g_taskflow_inbox_triage {
       [ a ar:PotentialEffect ; ar:effectType ar:Delete ; ar:affectsKind ar:ManagedFlow ] .
 
   ar:op_taskflow_slack_post a ar:Operation ; ar:invokedThroughKind ar:NanoClawSendMessageTool ;
+    ar:mayInitiateInternetCall ar:call_taskflow_slack_delivery ;
     ar:targetsKind ar:SlackThread ; ar:requires ar:cond_slack_destination_projected ;
     ar:sourceStatus ar:ExampleOnly ; ar:adaptationStatus ar:InferredForNanoClaw ;
     ar:sourceNote "Posts to a projected Slack destination. Adapter registration and live destination authority are deployment facts, not ontology guarantees." ;
     ar:hasPotentialEffect [ a ar:PotentialEffect ; ar:effectType ar:Create ; ar:affectsKind ar:SlackMessage ],
       [ a ar:PotentialEffect ; ar:effectType ar:Transmit ; ar:affectsKind ar:SlackThread ] .
+
+  ar:call_taskflow_slack_delivery a ar:PotentialInternetCall ;
+    ar:callInitiatorKind ar:NanoClawHostProcess ; ar:callViaKind ar:SlackAdapterDelivery ;
+    ar:callEndpointKind ar:SlackAPIEndpoint ; ar:callStage ar:HostAdapterEgress ;
+    ar:sourceStatus ar:InferredForNanoClaw ; ar:sourceNote "Slack posting is an example-only skill action adapted to a projected NanoClaw destination. The built-in tool and mailbox hops are local; only adapter delivery is Internet egress." .
 
   ar:op_taskflow_personal_notify a ar:Operation ; ar:invokedThroughKind ar:NanoClawSendMessageTool ;
     ar:targetsKind ar:OwnerNotificationDestination ; ar:requires ar:cond_owner_destination_projected ;

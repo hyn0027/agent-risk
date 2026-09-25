@@ -1,534 +1,295 @@
-from pathlib import Path
+"""Validate selected skill ontologies and report their possible effects and calls."""
+
 import hashlib
 import json
 import subprocess
 import sys
+from pathlib import Path
 
+from pyshacl import validate
 from rdflib import Dataset, Graph, Literal, Namespace, URIRef
 from rdflib.namespace import OWL, RDF
-from pyshacl import validate
+from rdflib.term import Identifier
 
-
-ONTOLOGY_DIR = Path(__file__).resolve().parent
+ROOT = Path(__file__).resolve().parent
 AR = Namespace("urn:agent-risk:")
 SH = Namespace("http://www.w3.org/ns/shacl#")
 
+
+def parse_graph(path: Path) -> Graph:
+    """Read the single populated named graph in a TriG file."""
+    dataset = Dataset().parse(path, format="trig")
+    graphs = [graph for graph in dataset.graphs() if len(graph)]
+    if len(graphs) != 1 or not isinstance(graphs[0].identifier, URIRef):
+        raise SystemExit(f"Expected one named graph in {path.relative_to(ROOT)}")
+    return graphs[0]
+
+
+def required_literal(graph: Graph, node: Identifier, predicate: URIRef) -> str:
+    """Read one nonempty literal, used for required ontology metadata."""
+    values = list(graph.objects(node, predicate))
+    if len(values) != 1 or not isinstance(values[0], Literal) or not str(values[0]):
+        raise SystemExit(f"Expected one literal {predicate} on {node}")
+    return str(values[0])
+
+
+def label(node: Identifier) -> str:
+    """Shorten a local RDF identifier for the text report."""
+    return str(node).rsplit(":", 1)[-1]
+
+
+def print_table(headers: tuple[str, ...], rows: list[tuple[str, ...]]) -> None:
+    """Print a small left-aligned table of string values."""
+    widths = [max(map(len, column)) for column in zip(headers, *rows)]
+    for row in [headers, tuple("-" * width for width in widths), *rows]:
+        print("  ".join(value.ljust(width) for value, width in zip(row, widths)))
+
+
 if len(sys.argv) != 1:
-    raise SystemExit("loader.py takes no arguments; edit manifest.json to select ontologies")
+    raise SystemExit("loader.py takes no arguments; edit manifest.json instead")
 
-
-# manifest.json is one list of ontology IDs. RDF metadata identifies each
-# graph and owns its file, dependencies, source hash, and source revision.
-configured_ontology_ids = json.loads((ONTOLOGY_DIR / "manifest.json").read_text())
-if not isinstance(configured_ontology_ids, list) or not all(
-    isinstance(ontology_id, str) and ontology_id for ontology_id in configured_ontology_ids
+manifest = json.loads((ROOT / "manifest.json").read_text())
+if (
+    not isinstance(manifest, list)
+    or not all(isinstance(item, str) and item for item in manifest)
+    or len(manifest) != len(set(manifest))
 ):
-    raise SystemExit("manifest.json must be a JSON array of non-empty ontology IDs")
-if len(configured_ontology_ids) != len(set(configured_ontology_ids)):
-    raise SystemExit("Duplicate ontology ID in manifest.json")
+    raise SystemExit("manifest.json must be a list of unique ontology IDs")
 
-
-def parse_single_named_graph(path):
-    parsed = Dataset()
-    parsed.parse(str(path), format="trig")
-    populated = [graph for graph in parsed.graphs() if len(graph)]
-    if len(populated) != 1:
-        raise SystemExit(
-            f"{path.relative_to(ONTOLOGY_DIR)} must contain exactly one non-empty "
-            f"named graph; found {len(populated)}."
-        )
-    graph = populated[0]
-    if not isinstance(graph.identifier, URIRef):
-        raise SystemExit(f"Named graph id must be an IRI in {path.relative_to(ONTOLOGY_DIR)}")
-    return graph
-
-
-def literal_values(graph, subject, predicate, description):
-    values = list(graph.objects(subject, predicate))
-    non_literals = [value for value in values if not isinstance(value, Literal)]
-    if non_literals:
-        raise SystemExit(f"{description} must use RDF literals")
-    return [str(value) for value in values]
-
-
-def one_literal(graph, subject, predicate, description):
-    values = literal_values(graph, subject, predicate, description)
-    if len(values) != 1 or not values[0]:
-        raise SystemExit(f"{description} must have exactly one non-empty value")
-    return values[0]
-
-
-# Discover ontology modules by their own RDF metadata. This includes universal
-# files and support modules such as skills/git-resources.trig.
-ontology_modules = {}
-candidate_graph_files = sorted((ONTOLOGY_DIR / "universal").glob("*.trig")) + sorted(
-    (ONTOLOGY_DIR / "skills").glob("*.trig")
+# Discover every graph once. A support graph under skills/ is still a module
+# when its RDF metadata says ar:OntologyModule.
+catalog = {}
+paths = sorted((ROOT / "universal").glob("*.trig")) + sorted(
+    (ROOT / "skills").glob("*.trig")
 )
-for path in candidate_graph_files:
-    graph = parse_single_named_graph(path)
-    module_resources = set(graph.subjects(RDF.type, AR.OntologyModule))
-    if not module_resources:
-        continue
-    if len(module_resources) != 1:
-        raise SystemExit(
-            f"{path.relative_to(ONTOLOGY_DIR)} must contain one ar:OntologyModule"
-        )
-    module_resource = next(iter(module_resources))
-    module_id = one_literal(
-        graph, module_resource, AR.ontologyModuleId,
-        f"ontology module id in {path.relative_to(ONTOLOGY_DIR)}",
-    )
-    if module_id in ontology_modules:
-        raise SystemExit(f"Duplicate ontology module id: {module_id}")
-    dependencies = sorted(set(literal_values(
-        graph, module_resource, AR.requiresOntologyModule,
-        f"dependencies for ontology module {module_id}",
-    )))
-    resources_only_values = list(graph.objects(module_resource, AR.resourcesOnly))
-    resources_only = any(bool(value.toPython()) for value in resources_only_values)
-    ontology_modules[module_id] = {
-        "id": module_id,
-        "file": str(path.relative_to(ONTOLOGY_DIR)),
-        "graph": str(graph.identifier),
-        "dependsOn": dependencies,
-        "resourcesOnly": resources_only,
-        "metadataResource": module_resource,
-        "metadataGraph": graph,
+for path in paths:
+    graph = parse_graph(path)
+    nodes = [(node, False) for node in graph.subjects(RDF.type, AR.OntologyModule)]
+    nodes += [(node, True) for node in graph.subjects(RDF.type, AR.Skill)]
+    if len(nodes) != 1:
+        raise SystemExit(f"Expected one module or skill in {path.relative_to(ROOT)}")
+    node, is_skill = nodes[0]
+    key = AR.skillDirectory if is_skill else AR.ontologyModuleId
+    ontology_id = required_literal(graph, node, key)
+    if ontology_id in catalog:
+        raise SystemExit(f"Duplicate ontology ID: {ontology_id}")
+    catalog[ontology_id] = {
+        "graph": graph,
+        "node": node,
+        "skill": is_skill,
+        "path": path,
     }
 
-# Discover skill graphs and their source-integrity metadata.
-modules = {}
-for path in sorted((ONTOLOGY_DIR / "skills").glob("*.trig")):
-    graph = parse_single_named_graph(path)
-    skill_resources = set(graph.subjects(RDF.type, AR.Skill))
-    if not skill_resources:
-        continue
-    if len(skill_resources) != 1:
-        raise SystemExit(f"{path.name} must contain exactly one ar:Skill resource")
-    skill_resource = next(iter(skill_resources))
-    directory = one_literal(graph, skill_resource, AR.skillDirectory, f"skill directory in {path.name}")
-    if directory in modules:
-        raise SystemExit(f"Duplicate skill directory metadata: {directory}")
-    modules[directory] = {
-        "directory": directory,
-        "file": str(path.relative_to(ONTOLOGY_DIR)),
-        "graph": str(graph.identifier),
-        "skillResource": skill_resource,
-        "sourcePath": one_literal(graph, skill_resource, AR.sourcePath, f"source path in {path.name}"),
-        "sourceSha256": one_literal(graph, skill_resource, AR.sourceSha256, f"source hash in {path.name}"),
-        "dependsOn": sorted(set(literal_values(
-            graph, skill_resource, AR.requiresOntologyModule,
-            f"dependencies for skill {directory}",
-        ))),
-    }
-
-ambiguous_ids = ontology_modules.keys() & modules.keys()
-if ambiguous_ids:
-    raise SystemExit("Ontology IDs used by both graphs: " + ", ".join(sorted(ambiguous_ids)))
-known_ids = ontology_modules.keys() | modules.keys()
-unknown_configured = set(configured_ontology_ids) - known_ids
-if unknown_configured:
-    raise SystemExit("Unknown ontologies in manifest.json: " + ", ".join(sorted(unknown_configured)))
-
-# The manifest is the complete selection; graph metadata determines validation.
-always_loaded_ids = [ontology_id for ontology_id in configured_ontology_ids if ontology_id in ontology_modules]
-loaded_skills = {ontology_id for ontology_id in configured_ontology_ids if ontology_id in modules}
-
-# Source pins belong to ontology modules. They detect source drift but do not
-# attest to a deployed process or live configuration.
-for module_id in always_loaded_ids:
-    entry = ontology_modules[module_id]
-    graph = entry["metadataGraph"]
-    subject = entry["metadataResource"]
-    repository_paths = literal_values(
-        graph, subject, AR.sourceRepositoryPath, f"source repository for {module_id}"
-    )
-    revisions = literal_values(
-        graph, subject, AR.sourceRevision, f"source revision for {module_id}"
-    )
-    if bool(repository_paths) != bool(revisions) or len(repository_paths) > 1 or len(revisions) > 1:
-        raise SystemExit(f"{module_id} must declare one sourceRepositoryPath/sourceRevision pair")
-    if repository_paths:
-        repository_path = Path(repository_paths[0])
-        expected_revision = revisions[0]
-        if not repository_path.exists():
-            raise SystemExit(f"Ontology source checkout not found: {repository_path}")
-        result = subprocess.run(
-            ["git", "-C", str(repository_path), "rev-parse", "HEAD"],
-            check=False, capture_output=True, text=True,
-        )
-        if result.returncode != 0:
-            raise SystemExit(f"Cannot read ontology source revision: {result.stderr.strip()}")
-        actual_revision = result.stdout.strip()
-        if actual_revision != expected_revision:
-            raise SystemExit(
-                f"{module_id} ontology is stale: source checkout is at "
-                f"{actual_revision}, expected {expected_revision}."
-            )
-
-# Dependency declarations never load graphs. Every requirement must already be
-# listed in manifest.json, and preflight finishes before the active dataset
-# receives any named graph.
-dependency_requirements = []
-for module_id in always_loaded_ids:
-    dependency_requirements.extend(
-        (module_id, required_id)
-        for required_id in ontology_modules[module_id]["dependsOn"]
-    )
-for skill_name in sorted(loaded_skills):
-    dependency_requirements.extend(
-        (skill_name, required_id)
-        for required_id in modules[skill_name]["dependsOn"]
-    )
-
-unknown_required = {
-    required_id for _, required_id in dependency_requirements
-    if required_id not in ontology_modules
-}
-missing_dependencies = [
-    (requester, required_id) for requester, required_id in dependency_requirements
-    if required_id in ontology_modules and required_id not in always_loaded_ids
-]
-if unknown_required or missing_dependencies:
-    for required_id in sorted(unknown_required):
-        print(
-            f"WARNING: required ontology dependency {required_id} has no discoverable "
-            "ar:OntologyModule metadata",
-            file=sys.stderr,
-        )
-    for requester, required_id in missing_dependencies:
-        print(
-            f"WARNING: {requester} requires ontology dependency {required_id}, but "
-            "manifest.json does not select it",
-            file=sys.stderr,
-        )
+unknown = set(manifest) - catalog.keys()
+if unknown:
     raise SystemExit(
-        "Dependency preflight failed; no ontology graphs were loaded. "
-        "Add every required ontology ID to manifest.json."
+        "Unknown ontologies in manifest.json: " + ", ".join(sorted(unknown))
     )
 
-active = Dataset()  # Retains provenance as one named graph per source file.
-combined = Graph()  # Union for cross-graph checks, hierarchy, and SHACL.
-vocabulary = Graph().parse(str(ONTOLOGY_DIR / "universal/vocabulary.ttl"), format="turtle")
-for triple in vocabulary:
+# Dependencies are checked before the active dataset is populated. They never
+# trigger automatic loading.
+selected = set(manifest)
+missing = [
+    (ontology_id, str(dependency))
+    for ontology_id in manifest
+    for dependency in catalog[ontology_id]["graph"].objects(
+        catalog[ontology_id]["node"], AR.requiresOntologyModule
+    )
+    if str(dependency) not in selected
+    or str(dependency) not in catalog
+    or catalog[str(dependency)]["skill"]
+]
+if missing:
+    for ontology_id, dependency in missing:
+        print(
+            f"WARNING: {ontology_id} requires unselected module {dependency}",
+            file=sys.stderr,
+        )
+    raise SystemExit("Dependency preflight failed; no ontology graphs were loaded")
+
+active = Dataset()
+combined = Graph()
+for triple in Graph().parse(ROOT / "universal/vocabulary.ttl", format="turtle"):
     combined.add(triple)
 
+for ontology_id in manifest:
+    entry = catalog[ontology_id]
+    graph, node = entry["graph"], entry["node"]
 
-def load_named_graph(entry):
-    source_graph = parse_single_named_graph(ONTOLOGY_DIR / entry["file"])
-    graph_id = URIRef(entry["graph"])
-    if source_graph.identifier != graph_id:
-        raise SystemExit(f"Named graph id changed in {entry['file']}")
-    target_graph = active.graph(graph_id)
-    for triple in source_graph:
-        target_graph.add(triple)
-        combined.add(triple)
-    return target_graph
-
-
-always_loaded_graphs = [ontology_modules[module_id] for module_id in always_loaded_ids]
-for entry in always_loaded_graphs:
-    graph = load_named_graph(entry)
-    if any(graph.subjects(RDF.type, AR.Operation)) or any(
-        graph.subjects(RDF.type, AR.PotentialEffect)
-    ):
-        raise SystemExit(f"Always-loaded graph contains an operation/effect: {entry['file']}")
-    if any(graph.triples((None, AR.declaresOperation, None))) or any(
-        graph.triples((None, AR.hasPotentialEffect, None))
-    ):
-        raise SystemExit(f"Always-loaded graph contains an operation relation: {entry['file']}")
-    if entry["resourcesOnly"] and any(graph.subjects(RDF.type, AR.InvocationSurfaceKind)):
-        raise SystemExit(f"Resource-only graph contains an invocation kind: {entry['file']}")
-
-for skill_name in sorted(loaded_skills):
-    module = modules[skill_name]
-    source = Path(module["sourcePath"])
-    if not source.exists():
-        raise SystemExit(f"Skill source not found: {source}")
-    actual_hash = hashlib.sha256(source.read_bytes()).hexdigest()
-    if actual_hash != module["sourceSha256"]:
-        raise SystemExit(f"Ontology for {skill_name} is stale: source skill has changed.")
-    load_named_graph(module)
-
-typed_kinds = set(combined.subjects(RDF.type, AR.WorldSurfaceKind))
-typed_invocation_kinds = set(combined.subjects(RDF.type, AR.InvocationSurfaceKind))
-relations = (
-    (AR.specializesKind, "is-a"),
-    (AR.containsKind, "contains"),
-    (AR.mayBeStoredAsKind, "may be stored as"),
-    (AR.sharesKind, "shares"),
-)
-for predicate, relation_name in relations:
-    for subject, related in combined.subject_objects(predicate):
-        if subject not in typed_kinds or related not in typed_kinds:
+    if entry["skill"]:
+        source = Path(required_literal(graph, node, AR.sourcePath))
+        expected_hash = required_literal(graph, node, AR.sourceSha256)
+        if hashlib.sha256(source.read_bytes()).hexdigest() != expected_hash:
             raise SystemExit(
-                f"Untyped kind in {relation_name} relation: {subject} -> {related}"
+                f"Ontology for {ontology_id} is stale: source skill changed"
             )
-if combined.query(
-    "ASK { ?kind <urn:agent-risk:specializesKind>+ ?kind }"
-).askAnswer:
-    raise SystemExit("Cycle in is-a hierarchy")
-for narrower, broader in combined.subject_objects(AR.specializesInvocationKind):
-    if narrower not in typed_invocation_kinds or broader not in typed_invocation_kinds:
-        raise SystemExit(f"Untyped invocation kind: {narrower} -> {broader}")
-if combined.query(
-    "ASK { ?kind <urn:agent-risk:specializesInvocationKind>+ ?kind }"
-).askAnswer:
-    raise SystemExit("Cycle in invocation-kind hierarchy")
-for source, destination in combined.subject_objects(AR.routesToKind):
-    if source not in typed_invocation_kinds or destination not in (
-        typed_invocation_kinds | typed_kinds
-    ):
-        raise SystemExit(f"Untyped mediation route: {source} -> {destination}")
+    else:
+        repos = list(graph.objects(node, AR.sourceRepositoryPath))
+        revisions = list(graph.objects(node, AR.sourceRevision))
+        if len(repos) != len(revisions) or len(repos) > 1:
+            raise SystemExit(f"Invalid source pin for {ontology_id}")
+        if repos:
+            actual = subprocess.check_output(
+                ["git", "-C", str(repos[0]), "rev-parse", "HEAD"], text=True
+            ).strip()
+            if actual != str(revisions[0]):
+                raise SystemExit(f"{ontology_id} is stale: source checkout changed")
+
+        if (
+            any(graph.subjects(RDF.type, AR.Operation))
+            or any(graph.subjects(RDF.type, AR.PotentialEffect))
+            or any(graph.triples((None, AR.declaresOperation, None)))
+            or any(graph.triples((None, AR.hasPotentialEffect, None)))
+        ):
+            raise SystemExit(f"Always-loaded graph contains operations: {ontology_id}")
+        if graph.value(node, AR.resourcesOnly) == Literal(True) and any(
+            graph.subjects(RDF.type, AR.InvocationSurfaceKind)
+        ):
+            raise SystemExit(
+                f"Resource-only graph contains invocation kinds: {ontology_id}"
+            )
+
+    for triple in graph:
+        active.graph(graph.identifier).add(triple)
+        combined.add(triple)
+
+world = set(combined.subjects(RDF.type, AR.WorldSurfaceKind))
+invocations = set(combined.subjects(RDF.type, AR.InvocationSurfaceKind))
+for predicate in (
+    AR.specializesKind,
+    AR.containsKind,
+    AR.mayBeStoredAsKind,
+    AR.sharesKind,
+):
+    for subject, target in combined.subject_objects(predicate):
+        if subject not in world or target not in world:
+            raise SystemExit(
+                f"Untyped resource relation: {subject} {predicate} {target}"
+            )
+for subject, target in combined.subject_objects(AR.specializesInvocationKind):
+    if subject not in invocations or target not in invocations:
+        raise SystemExit(f"Untyped invocation relation: {subject} -> {target}")
+for subject, target in combined.subject_objects(AR.routesToKind):
+    if subject not in invocations or target not in world | invocations:
+        raise SystemExit(f"Untyped route: {subject} -> {target}")
 for subject, control in combined.subject_objects(AR.protectedByKind):
-    if subject not in (typed_invocation_kinds | typed_kinds):
-        raise SystemExit(f"Untyped protected surface: {subject} -> {control}")
-    if control not in typed_kinds or (control, RDF.type, AR.SecurityControlKind) not in combined:
-        raise SystemExit(f"Untyped security control: {subject} -> {control}")
+    if (
+        subject not in world | invocations
+        or control not in world
+        or (control, RDF.type, AR.SecurityControlKind) not in combined
+    ):
+        raise SystemExit(f"Untyped control: {subject} -> {control}")
+for predicate in (AR.specializesKind, AR.specializesInvocationKind):
+    if combined.query(f"ASK {{ ?kind <{predicate}>+ ?kind }}").askAnswer:
+        raise SystemExit(f"Cycle in {predicate}")
 
-subtype_kinds = set(combined.subjects(AR.specializesKind, None)) | set(
-    combined.subjects(AR.specializesInvocationKind, None)
-)
-defined_kinds = {
-    kind for kind in combined.subjects(OWL.equivalentClass, None)
-    if kind in typed_kinds or kind in typed_invocation_kinds
-}
 
-shapes = Graph().parse(str(ONTOLOGY_DIR / "universal/shapes.ttl"), format="turtle")
-shape_targets = set(shapes.objects(None, SH.targetClass))
-missing_validation_shapes = defined_kinds - shape_targets
-if missing_validation_shapes:
+def ancestors(kind: Identifier, predicate: URIRef) -> set[Identifier]:
+    """Return all transitive parents of a kind under one relation."""
+    seen = set()
+    pending = list(combined.objects(kind, predicate))
+    while pending:
+        parent = pending.pop()
+        if parent not in seen:
+            seen.add(parent)
+            pending.extend(combined.objects(parent, predicate))
+    return seen
+
+
+for kind in combined.subjects(RDF.type, AR.ToolEndpointKind):
+    if kind not in invocations or (
+        kind != AR.ToolEndpoint
+        and AR.ToolEndpoint not in ancestors(kind, AR.specializesInvocationKind)
+    ):
+        raise SystemExit(f"Tool endpoint lacks the shared parent: {kind}")
+
+public_endpoints = set(combined.subjects(RDF.type, AR.PublicInternetEndpointKind))
+for endpoint in public_endpoints:
+    if endpoint not in world or (
+        endpoint != AR.PublicInternetEndpoint
+        and AR.PublicInternetEndpoint not in ancestors(endpoint, AR.specializesKind)
+    ):
+        raise SystemExit(f"Public endpoint lacks the shared parent: {endpoint}")
+for call, endpoint in combined.subject_objects(AR.callEndpointKind):
+    if endpoint not in public_endpoints:
+        raise SystemExit(
+            f"Internet call has unqualified endpoint: {call} -> {endpoint}"
+        )
+
+shapes = Graph().parse(ROOT / "universal/shapes.ttl", format="turtle")
+defined = set(combined.subjects(OWL.equivalentClass, None)) & (world | invocations)
+unshaped = defined - set(shapes.objects(None, SH.targetClass))
+if unshaped:
     raise SystemExit(
-        "Necessary-and-sufficient kinds missing SHACL validation shapes: "
-        + ", ".join(sorted(str(kind) for kind in missing_validation_shapes))
+        "Equivalent kinds without SHACL shapes: " + ", ".join(map(str, unshaped))
     )
 conforms, _, report = validate(combined, shacl_graph=shapes)
 if not conforms:
     raise SystemExit(f"SHACL validation failed:\n{report}")
 
 
-def label(value):
-    return str(value).rsplit(":", 1)[-1]
-
-
-def ancestors(kind):
-    """All broader kinds, across any active graph; multiple parents are allowed."""
+def route_reaches(source: Identifier, target: Identifier) -> bool:
+    """Check a possible mediation route, not actual runtime reachability."""
     seen = set()
-    frontier = list(combined.objects(kind, AR.specializesKind))
-    while frontier:
-        parent = frontier.pop()
-        if parent not in seen:
-            seen.add(parent)
-            frontier.extend(combined.objects(parent, AR.specializesKind))
-    return sorted(seen, key=str)
-
-
-def invocation_ancestors(kind):
-    seen = set()
-    frontier = list(combined.objects(kind, AR.specializesInvocationKind))
-    while frontier:
-        parent = frontier.pop()
-        if parent not in seen:
-            seen.add(parent)
-            frontier.extend(combined.objects(parent, AR.specializesInvocationKind))
-    return seen
-
-
-declared_tool_endpoint_kinds = set(combined.subjects(RDF.type, AR.ToolEndpointKind))
-for kind in declared_tool_endpoint_kinds:
-    if kind not in typed_invocation_kinds:
-        raise SystemExit(f"Tool endpoint kind is not an invocation kind: {kind}")
-    if kind != AR.ToolEndpoint and AR.ToolEndpoint not in invocation_ancestors(kind):
-        raise SystemExit(f"Tool endpoint kind lacks ToolEndpoint parent: {kind}")
-tool_endpoint_rows = sorted(
-    {(label(kind), "declared" if kind in declared_tool_endpoint_kinds else "inherited")
-     for kind in typed_invocation_kinds
-     if kind == AR.ToolEndpoint or AR.ToolEndpoint in invocation_ancestors(kind)}
-)
-
-
-def shell_mediated(operation):
-    return any(
-        channel == AR.ShellExecution or AR.ShellExecution in invocation_ancestors(channel)
-        for channel in combined.objects(operation, AR.invokedThroughKind)
-    )
-
-
-def messaging_route(operation):
-    return any(
-        channel == AR.MessagingChannelInvocation
-        or AR.MessagingChannelInvocation in invocation_ancestors(channel)
-        for channel in combined.objects(operation, AR.invokedThroughKind)
-    )
-
-
-def route_reaches(source, target):
-    """Follow type-level mediation routes; results are possible paths, not runtime reachability."""
-    seen = set()
-    frontier = list(combined.objects(source, AR.routesToKind))
-    while frontier:
-        item = frontier.pop()
-        if item == target:
+    pending = [source]
+    while pending:
+        current = pending.pop()
+        if current == target:
             return True
-        if item in seen:
-            continue
-        seen.add(item)
-        if item in typed_invocation_kinds:
-            frontier.extend(combined.objects(item, AR.routesToKind))
+        if current not in seen and current in invocations:
+            seen.add(current)
+            pending.extend(combined.objects(current, AR.routesToKind))
     return False
 
 
-def nanoclaw_mailbox_route(operation):
-    mailbox_stages = {
-        AR.NanoClawOutboundMailboxWrite,
-        AR.NanoClawInboundMailboxWrite,
-        AR.NanoClawAgentRunnerMailboxRead,
-    }
-    return any(
-        channel in mailbox_stages
-        or any(route_reaches(channel, stage) for stage in mailbox_stages)
-        for channel in combined.objects(operation, AR.invokedThroughKind)
-    )
+effects = set()
+calls = []
+operations = set()
+skills = [ontology_id for ontology_id in manifest if catalog[ontology_id]["skill"]]
+for skill in skills:
+    graph, node = catalog[skill]["graph"], catalog[skill]["node"]
+    for operation in graph.objects(node, AR.declaresOperation):
+        operations.add(operation)
+        for effect in graph.objects(operation, AR.hasPotentialEffect):
+            effects.update(
+                (skill, label(operation), label(effect_type), label(resource))
+                for effect_type in graph.objects(effect, AR.effectType)
+                for resource in graph.objects(effect, AR.affectsKind)
+            )
+        for call in graph.objects(operation, AR.mayInitiateInternetCall):
+            if (call, RDF.type, AR.PotentialInternetCall) not in graph:
+                raise SystemExit(f"Undeclared Internet call: {call}")
+            invoked = set(graph.objects(operation, AR.invokedThroughKind))
+            vias = set(graph.objects(call, AR.callViaKind))
+            if not any(
+                route_reaches(source, via) for source in invoked for via in vias
+            ):
+                raise SystemExit(f"No operation-to-call route: {operation} -> {call}")
+            calls.append((skill, operation, call, graph))
 
-
-nanoclaw_adapted_operations = sorted(
-    set(combined.subjects(AR.adaptationStatus, AR.InferredForNanoClaw)), key=str
-)
-adaptation_mappings = set(combined.subjects(RDF.type, AR.AdaptationMapping))
-adaptation_disposition_links = set(
-    combined.subject_objects(AR.adaptationDisposition)
-)
-
-
-resource_rows = sorted(
-    {
-        (label(URIRef(entry["graph"])), label(kind))
-        for entry in always_loaded_graphs
-        for kind in active.graph(URIRef(entry["graph"])).subjects(
-            RDF.type, AR.WorldSurfaceKind
-        )
-    }
-)
-relationship_rows = sorted(
-    {
-        (label(subject), relation_name, label(related))
-        for predicate, relation_name in relations
-        for subject, related in combined.subject_objects(predicate)
-    }
-)
-invocation_rows = sorted(
-    {
-        (label(narrower), label(broader))
-        for narrower, broader in combined.subject_objects(AR.specializesInvocationKind)
-    }
-)
-route_rows = sorted(
-    {
-        (label(source), label(destination))
-        for source, destination in combined.subject_objects(AR.routesToKind)
-    }
-)
-control_rows = sorted(
-    {
-        (label(subject), label(control))
-        for subject, control in combined.subject_objects(AR.protectedByKind)
-    }
-)
-definition_rows = sorted(
-    {
-        (
-            label(kind),
-            "necessary+sufficient (OWL + SHACL)"
-            if kind in defined_kinds else "necessary only (primitive)",
-        )
-        for kind in subtype_kinds
-    }
-)
-
-effect_query = """
-PREFIX ar: <urn:agent-risk:>
-
-SELECT DISTINCT ?graph ?operation ?effectType ?resourceKind
-WHERE {
-  GRAPH ?graph {
-    ?skill a ar:Skill ; ar:declaresOperation ?operation .
-    ?operation ar:hasPotentialEffect ?effect .
-    ?effect ar:effectType ?effectType ; ar:affectsKind ?resourceKind .
-  }
-}
-ORDER BY ?graph ?operation ?effectType ?resourceKind
-"""
-effect_rows = [
-    (
-        label(row.graph), label(row.operation), label(row.effectType),
-        label(row.resourceKind),
-        ", ".join(label(parent) for parent in ancestors(row.resourceKind)),
-        "yes" if shell_mediated(row.operation) else "no",
-        "yes" if messaging_route(row.operation) else "no",
-        "yes" if nanoclaw_mailbox_route(row.operation) else "no",
-    )
-    for row in active.query(effect_query)
-]
-
-
-def print_table(headers, rows):
-    widths = [
-        max(len(header), *(len(row[i]) for row in rows))
-        for i, header in enumerate(headers)
-    ]
-
-    def print_row(values):
-        print("  ".join(value.ljust(width) for value, width in zip(values, widths)))
-
-    print_row(headers)
-    print_row(tuple("-" * width for width in widths))
-    for row in rows:
-        print_row(row)
-
-
-print("Manifest ontologies: " + (", ".join(configured_ontology_ids) or "(none)"))
-print("Load configuration: manifest.json")
-print("Graph/catalog metadata: discovered from RDF and directory conventions")
-print("Always-loaded modules: " + ", ".join(always_loaded_ids))
-print("Dynamic dependency loading: disabled")
-print("Skill dependency source: ar:requiresOntologyModule metadata in each skill graph")
-print("Dependency preflight: satisfied")
-print(f"Loaded skills: {', '.join(sorted(loaded_skills)) or '(none)'}")
-if nanoclaw_adapted_operations:
-    print(
-        "Adaptation note: "
-        f"{len(nanoclaw_adapted_operations)} selected operation(s) are conservative "
-        "NanoClaw translations rather than claims made by their source skills."
-    )
-print(f"Resource kinds: {len(resource_rows)}")
-print(f"Resource relationships: {len(relationship_rows)}")
-print(f"Invocation subtype links: {len(invocation_rows)}")
-print(f"Tool endpoint kinds: {len(tool_endpoint_rows)}")
-print(f"Invocation routes: {len(route_rows)}")
-print(f"Security-control links: {len(control_rows)}")
-print(f"Skill adaptation mappings: {len(adaptation_mappings)}")
-print(f"Adaptation disposition links: {len(adaptation_disposition_links)}")
-print(f"Subtype definitions: {len(definition_rows)} ({len(defined_kinds)} necessary+sufficient)")
-print(f"Skill potential-effect rows: {len(effect_rows)}\n")
-print_table(("Graph", "Resource kind"), resource_rows)
-if relationship_rows:
-    print()
-    print_table(("Kind", "Relation", "Related kind"), relationship_rows)
-if invocation_rows:
-    print()
-    print_table(("Invocation kind", "Broader invocation kind"), invocation_rows)
-if tool_endpoint_rows:
-    print()
-    print_table(("Tool endpoint kind", "Classification"), tool_endpoint_rows)
-if route_rows:
-    print()
-    print_table(("Invocation kind", "Routes to kind"), route_rows)
-if control_rows:
-    print()
-    print_table(("Surface kind", "Protected by control"), control_rows)
-if definition_rows:
-    print()
-    print_table(("Subtype kind", "Definition strength"), definition_rows)
+effect_rows = sorted(effects)
+calls.sort(key=lambda row: (row[0], str(row[1]), str(row[2])))
+print(f"Loaded skills: {', '.join(sorted(skills)) or '(none)'}")
+print(f"Operations: {len(operations)}")
+print(f"Potential effect/resource rows: {len(effect_rows)}")
+print(f"Potential Internet calls: {len(calls)}")
 if effect_rows:
-    print()
-    print_table(("Graph", "Operation", "Effect", "Resource kind", "Broader kinds", "Shell-mediated", "Messaging-route", "NanoClaw-mailbox"), effect_rows)
+    print("\nPotential effects:")
+    print_table(("Skill", "Operation", "Effect", "Resource kind"), effect_rows)
+if calls:
+    print("\nPotential Internet calls (possibilities, not observed traffic):")
+    for skill, operation, call, graph in calls:
+        vias = ", ".join(sorted(map(label, graph.objects(call, AR.callViaKind))))
+        conditions = set(graph.objects(operation, AR.requires)) | set(
+            graph.objects(call, AR.callConditionalOn)
+        )
+        stage = label(graph.value(call, AR.callStage))
+        initiator = label(graph.value(call, AR.callInitiatorKind))
+        endpoint = label(graph.value(call, AR.callEndpointKind))
+        pattern = graph.value(call, AR.callEndpointPattern) or "(not established)"
+        print(f"  {skill} / {label(operation)} -> {label(call)}")
+        print(f"    {stage}: {initiator} via {vias}")
+        print(f"    endpoint: {endpoint}  [{pattern}]")
+        print(
+            f"    conditions: {', '.join(sorted(map(label, conditions))) or '(none recorded)'}"
+        )

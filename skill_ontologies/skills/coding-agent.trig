@@ -6,7 +6,7 @@ ar:g_coding_agent {
     ar:skillDirectory "coding-agent" ;
     ar:sourcePath "/Users/yhong3/Documents/Research/agent-risk/top_skills/coding-agent/SKILL.md" ;
     ar:sourceSha256 "67dff2389503d4a47ef757afa637458e00bb9560f898ff072e35a825e065174d" ;
-    ar:requiresOntologyModule "git-resources", "nanoclaw-runtime", "nanoclaw-messaging" ;
+    ar:requiresOntologyModule "git-resources", "nanoclaw-runtime", "nanoclaw-messaging", "nanoclaw-network" ;
     ar:governedByAdaptationPolicy ar:NanoClawSkillAdaptationPolicy ;
     ar:hasAdaptationMapping ar:adapt_coding_worker_launch,
       ar:adapt_coding_repository_visibility, ar:adapt_coding_notification ;
@@ -26,6 +26,15 @@ ar:g_coding_agent {
     rdfs:comment "Provider/runtime process control available inside the NanoClaw container; exact background and PTY support remains provider-dependent." .
 
   ar:RemoteGitRepository a ar:WorldSurfaceKind .
+  ar:CanonicalGitInternetEndpoint a ar:WorldSurfaceKind, ar:PublicInternetEndpointKind ;
+    ar:specializesKind ar:PublicInternetEndpoint ;
+    rdfs:comment "Only when the verified canonical remote resolves to a public-Internet Git server; its URL is repository-specific." .
+  ar:CodingProviderInternetEndpoint a ar:WorldSurfaceKind, ar:PublicInternetEndpointKind ;
+    ar:specializesKind ar:PublicInternetEndpoint ;
+    rdfs:comment "An unspecified cloud-provider API endpoint chosen by the separately installed coding CLI." .
+  ar:PullRequestForgeInternetEndpoint a ar:WorldSurfaceKind, ar:PublicInternetEndpointKind ;
+    ar:specializesKind ar:PublicInternetEndpoint ;
+    rdfs:comment "An unspecified public code-forge endpoint used by a worker for push or PR creation; the source does not fix host or protocol." .
   ar:IsolatedWorktree a ar:WorldSurfaceKind ; ar:specializesKind ar:LocalDirectory .
   ar:CodeFile a ar:WorldSurfaceKind ; ar:specializesKind ar:LocalFile .
   ar:LocalBranch a ar:WorldSurfaceKind .
@@ -45,8 +54,12 @@ ar:g_coding_agent {
   ar:cond_background_process_support a ar:Requirement .
   ar:cond_notification_destination a ar:Requirement .
   ar:cond_remote_push_permission a ar:Requirement .
+  ar:cond_canonical_remote_public a ar:Requirement .
+  ar:cond_worker_uses_cloud_provider a ar:Requirement .
+  ar:cond_worker_uses_public_forge a ar:Requirement .
 
   ar:op_prepare_worktree a ar:Operation ;
+    ar:mayInitiateInternetCall ar:call_prepare_git_fetch ;
     ar:invokedThroughKind ar:NanoClawContainerShellExecution, ar:NanoClawGitCLI ;
     ar:targetsKind ar:LocalGitRepository, ar:IsolatedWorktree ;
     ar:requires ar:cond_trusted_ref, ar:cond_verified_base ; ar:sourceStatus ar:SkillText ; ar:adaptationStatus ar:InferredForNanoClaw ;
@@ -55,6 +68,7 @@ ar:g_coding_agent {
       [ a ar:PotentialEffect ; ar:effectType ar:Create ; ar:affectsKind ar:IsolatedWorktree, ar:LocalBranch ] .
 
   ar:op_launch_coding_worker a ar:Operation ;
+    ar:mayInitiateInternetCall ar:call_coding_provider ;
     ar:invokedThroughKind ar:NanoClawContainerShellExecution, ar:NanoClawCodingWorkerCLI ;
     ar:targetsKind ar:WorkerProcess, ar:IsolatedWorktree ;
     ar:requires ar:cond_isolated_worktree, ar:cond_worker_available_in_container,
@@ -73,6 +87,7 @@ ar:g_coding_agent {
       [ a ar:PotentialEffect ; ar:effectType ar:Delete ; ar:affectsKind ar:WorkerProcess ] .
 
   ar:op_worker_issue_pr a ar:Operation ; ar:invokedThroughKind ar:NanoClawCodingWorkerCLI ;
+    ar:mayInitiateInternetCall ar:call_worker_public_forge ;
     ar:targetsKind ar:GitHubIssue, ar:LocalGitRepository, ar:RemoteGitRepository ;
     ar:requires ar:cond_remote_push_permission ; ar:sourceStatus ar:SkillText ; ar:adaptationStatus ar:InferredForNanoClaw ;
     ar:sourceNote "The issue-to-PR sequence remains an instruction to the nested coding CLI, not a guaranteed atomic endpoint." ;
@@ -84,6 +99,22 @@ ar:g_coding_agent {
     ar:sourceStatus ar:SkillText ; ar:adaptationStatus ar:InferredForNanoClaw ;
     ar:sourceNote "The parent agent sends completion through a projected NanoClaw destination; a nested CLI does not automatically inherit the built-in MCP connection." ;
     ar:hasPotentialEffect [ a ar:PotentialEffect ; ar:effectType ar:Notify ; ar:affectsKind ar:NotificationDestination ] .
+
+  ar:call_prepare_git_fetch a ar:PotentialInternetCall ;
+    ar:callInitiatorKind ar:NanoClawAgentContainer ; ar:callViaKind ar:NanoClawGitCLI ;
+    ar:callEndpointKind ar:CanonicalGitInternetEndpoint ; ar:callStage ar:ContainerEgress ;
+    ar:callConditionalOn ar:cond_canonical_remote_public ;
+    ar:sourceStatus ar:SkillText ; ar:sourceNote "Mandatory git fetch contacts the verified canonical remote. This is an Internet call only if that remote is public-Internet-addressable; a private intranet or local remote is excluded." .
+  ar:call_coding_provider a ar:PotentialInternetCall ;
+    ar:callInitiatorKind ar:WorkerProcess ; ar:callViaKind ar:NanoClawCodingWorkerCLI ;
+    ar:callEndpointKind ar:CodingProviderInternetEndpoint ; ar:callStage ar:DelegatedWorkerEgress ;
+    ar:callConditionalOn ar:cond_worker_uses_cloud_provider ;
+    ar:sourceStatus ar:InferredForNanoClaw ; ar:sourceNote "The launched coding CLI may call a configured cloud model provider; the provider, host, protocol, and number of requests are not fixed by the skill." .
+  ar:call_worker_public_forge a ar:PotentialInternetCall ;
+    ar:callInitiatorKind ar:WorkerProcess ; ar:callViaKind ar:NanoClawCodingWorkerCLI ;
+    ar:callEndpointKind ar:PullRequestForgeInternetEndpoint ; ar:callStage ar:DelegatedWorkerEgress ;
+    ar:callConditionalOn ar:cond_worker_uses_public_forge ;
+    ar:sourceStatus ar:InferredForNanoClaw ; ar:sourceNote "The worker may push and create a PR on a public forge. This is one call category, not a claim that the two requests are a single atomic API call." .
 
   ar:adapt_coding_worker_launch a ar:AdaptationMapping ;
     ar:sourceAssumption "Host shell launches Codex, Claude Code, or OpenCode with background/PTY controls." ;

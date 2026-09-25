@@ -15,6 +15,18 @@ ar:EffectShape a sh:NodeShape ;
   sh:property [ sh:path ar:effectType ; sh:class ar:EffectType ; sh:minCount 1 ; sh:maxCount 1 ] ;
   sh:property [ sh:path ar:affectsKind ; sh:class ar:WorldSurfaceKind ; sh:minCount 1 ] .
 
+ar:PotentialInternetCallShape a sh:NodeShape ;
+  sh:targetClass ar:PotentialInternetCall ;
+  sh:property [ sh:path [ sh:inversePath ar:mayInitiateInternetCall ] ; sh:class ar:Operation ; sh:minCount 1 ; sh:maxCount 1 ] ;
+  sh:property [ sh:path ar:callInitiatorKind ; sh:class ar:WorldSurfaceKind ; sh:minCount 1 ; sh:maxCount 1 ] ;
+  sh:property [ sh:path ar:callViaKind ; sh:class ar:InvocationSurfaceKind ; sh:minCount 1 ] ;
+  sh:property [ sh:path ar:callEndpointKind ; sh:class ar:PublicInternetEndpointKind ; sh:minCount 1 ; sh:maxCount 1 ] ;
+  sh:property [ sh:path ar:callStage ; sh:class ar:InternetCallStage ; sh:minCount 1 ; sh:maxCount 1 ] ;
+  sh:property [ sh:path ar:callConditionalOn ; sh:class ar:Requirement ] ;
+  sh:property [ sh:path ar:callEndpointPattern ; sh:datatype xsd:string ; sh:maxCount 1 ] ;
+  sh:property [ sh:path ar:sourceStatus ; sh:class ar:EvidenceStatus ; sh:minCount 1 ] ;
+  sh:property [ sh:path ar:sourceNote ; sh:datatype xsd:string ; sh:minCount 1 ] .
+
 ar:SkillShape a sh:NodeShape ;
   sh:targetClass ar:Skill ;
   sh:property [ sh:path ar:skillDirectory ; sh:datatype xsd:string ; sh:minCount 1 ; sh:maxCount 1 ] ;

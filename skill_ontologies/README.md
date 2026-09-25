@@ -8,6 +8,7 @@ This project turns natural-language agent skills into a queryable, composable mo
 2. **how actions enter that environment** — shell, MCP tools, messaging tools, provider file/web tools, NanoClaw CLI paths, and other invocation kinds;
 3. **what a skill says can be done** — named operations with prerequisites and provenance; and
 4. **what those operations may affect** — typed potential effects such as read, create, update, delete, transmit, execute, configure, or notify.
+5. **which outbound Internet requests they may eventually cause** — including requests made by a shell command, a delegated worker, or a host channel adapter after a local tool call.
 
 The central analysis path is:
 
@@ -19,6 +20,12 @@ selected skill
   → potential effect
   → affected resource kind
   → broader resource kinds
+
+selected skill → operation → potential Internet call → public endpoint kind
+                                  ├─ call initiator and stage
+                                  ├─ invocation path
+                                  ├─ endpoint URL/template, if established
+                                  └─ conditions and evidence
 ```
 
 For example, the Discord skill does not merely say “send a message.” It records that the operation is invoked through `NanoClawSendMessageTool`, may traverse the outbound mailbox and channel adapter, may create a `DiscordMessage`, may transmit to a `DiscordChannel`, and requires a registered adapter, a projected destination, and platform permission.
@@ -115,6 +122,7 @@ The ontology deliberately keeps several concepts separate because collapsing the
 | Tool endpoint kind | `ar:ToolEndpointKind` | Invocation kind callable by, or on behalf of, an agent | `ar:MCPToolEndpoint`, `ar:NanoClawSendMessageTool` |
 | Operation | `ar:Operation` | Action described by a selected skill | `ar:op_discord_send` |
 | Potential effect | `ar:PotentialEffect` | Possible typed consequence of an operation | create a message; transmit to a channel |
+| Potential Internet call | `ar:PotentialInternetCall` | Possible outbound request, distinguished from the operation and its world effect | a later host Discord API request |
 | Requirement | `ar:Requirement` | Condition needed for the modeled action/effect | destination exists; permission is granted |
 | Security control kind | `ar:SecurityControlKind` | Kind of configuration or enforcement point | destination ACL; mount allowlist |
 | Adaptation mapping | `ar:AdaptationMapping` | Auditable source-skill-to-NanoClaw translation | generic message send → NanoClaw send tool |
@@ -147,6 +155,16 @@ Important interpretation rules:
 - `adaptationStatus` separately marks environment-specific translation.
 - `invokedThroughKind` identifies an entry point; `routesToKind` describes possible mediation after that point.
 - A read effect is still security-relevant even when it does not mutate world state.
+
+### Internet-call qualification
+
+An `ar:PotentialInternetCall` is a **may-call** to an endpoint kind explicitly typed `ar:PublicInternetEndpointKind` and specialized from `ar:PublicInternetEndpoint`. The call names its initiating component (`callInitiatorKind`), invocation path (`callViaKind`), stage (`callStage`), destination kind (`callEndpointKind`), source evidence, and—only when supported—an `callEndpointPattern` URL or protocol template. It inherits the operation's `requires` conditions and can add `callConditionalOn` conditions. SHACL and the loader reject incomplete calls and destination kinds outside this public-endpoint hierarchy.
+
+The boundary is public Internet egress, including a direct request or one mediated by OneCLI. A local shell process, stdio MCP call, Unix socket, mailbox write, container-to-host handoff, and private-network hop do **not** qualify by themselves. Nor does merely targeting a remote-looking resource or using a tool named `web` prove a concrete public endpoint. `routesToKind` is a possible architecture path; `mayInitiateInternetCall` is a separate, explicit operation-level claim.
+
+For example, `op_discord_send` invokes a local MCP tool and writes the outbound mailbox; the modeled Internet call is the *later host adapter delivery* to `DiscordAPIEndpoint`. `op_meme_local_render` may fetch a template image only on a cache miss. `op_sherpa_download` has separate possible runtime-archive and voice-model calls. `op_prepare_worktree`'s `git fetch` qualifies only if the verified canonical remote is public-Internet-addressable. These call objects are categories of possible requests, not a packet count; retries, redirects, pagination, and downstream services may produce more calls.
+
+The absence of a call object is **not proof of no egress**. In particular, arbitrary shell scripts, `op run` child commands, a delegated coding worker, optional browser/MCP servers, and provider web tools can perform additional calls that cannot be enumerated from these skill files. A direct 1Password CLI call is modeled only conditionally for cloud-backed modes; local desktop IPC is not itself Internet egress. Generic destinations such as `NotificationDestination` and `ConfiguredNanoClawChannel` are not automatically classified as public endpoints because they may resolve to local or private routes.
 
 ### Four relationships that must not be conflated
 
@@ -203,7 +221,7 @@ The current skill inventory is:
 | Skill directory | Graph file | Main modeled capability | Declared module dependencies |
 |---|---|---|---|
 | `1password-1.0.0` | `skills/1password.trig` | CLI/browser-oriented credential access and injection | `nanoclaw-runtime`, `nanoclaw-network` |
-| `coding-agent` | `skills/coding-agent.trig` | Worktrees, coding workers, process control, PRs, notification | `git-resources`, `nanoclaw-runtime`, `nanoclaw-messaging` |
+| `coding-agent` | `skills/coding-agent.trig` | Worktrees, coding workers, process control, PRs, notification | `git-resources`, `nanoclaw-runtime`, `nanoclaw-messaging`, `nanoclaw-network` |
 | `configure-channel` | `skills/configure-channel.trig` | Channel inspection/configuration and delivery tests | `nanoclaw-messaging`, `nanoclaw-control` |
 | `diagram-maker-1.0.0` | `skills/diagram-maker.trig` | Read/write/verify diagram artifacts | `nanoclaw-runtime` |
 | `discord` | `skills/discord.trig` | Send text/files, edit, and react through NanoClaw messaging | `nanoclaw-messaging` |
@@ -267,16 +285,12 @@ For an agent modifying this project, the order matters:
 
 1. Read `manifest.json` as a JSON array of unique ontology IDs.
 2. Discover every `*.trig` file under `universal/` and `skills/`. Each must contain exactly one non-empty named graph.
-3. Discover ontology modules by `rdf:type ar:OntologyModule` and index them by `ar:ontologyModuleId`.
-4. Discover skills by `rdf:type ar:Skill` and index them by `ar:skillDirectory`.
-5. Resolve the manifest IDs against discovered graphs and reject unknown or ambiguous IDs.
-6. Verify any `ar:sourceRepositoryPath` / `ar:sourceRevision` pair against the local Git checkout.
-7. Compute all declared dependencies for the selected graphs. If any dependency is unknown or absent from the manifest, print warnings and abort. No active graph has been loaded yet.
-8. Load `universal/vocabulary.ttl`, every selected module, and then the selected skill graphs.
-9. Hash each selected source `SKILL.md` and reject stale skill models.
-10. Check typed relationship endpoints, subtype cycles, endpoint parentage, shared-graph restrictions, and equivalent-class shape coverage.
-11. Run SHACL over the assembled graph.
-12. Print inventories, hierarchy edges, mediation routes, controls, adaptation counts, and potential-effect rows.
+3. In one pass, identify each graph as a module or skill from its RDF metadata and reject duplicate IDs.
+4. Resolve the manifest IDs and check every selected graph's declared dependencies. Missing dependencies warn and abort before any active graph is loaded.
+5. Load the vocabulary and selected graphs in manifest order, checking module source pins and skill-source hashes as they are added.
+6. Check typed relationship endpoints, subtype cycles, endpoint parentage, shared-graph restrictions, and equivalent-class shape coverage.
+7. Run SHACL over the assembled graph.
+8. Print only loaded skill operations, their potential effect/resource rows, and their modeled potential Internet calls.
 
 This sequence prevents a dependency declaration from silently widening the environment model. It also separates asserted named-graph data from the temporary union graph used for validation and reporting.
 
@@ -296,7 +310,7 @@ Resource kinds are RDF individuals typed `ar:WorldSurfaceKind`; invocation kinds
 - `ar:routesToKind`: possible mediation/dataflow step from an invocation kind.
 - `ar:protectedByKind`: a security control relevant to a surface; it does not prove that the control is enabled or effective.
 
-Multiple parents are allowed. The loader traverses specialization edges directly when reporting broader kinds. It rejects hierarchy cycles and validates the type of every relationship endpoint. An external OWL reasoner can project these edges into `rdfs:subClassOf` when class-level reasoning is needed.
+Multiple parents are allowed. The loader validates specialization edges and rejects hierarchy cycles, but keeps the default report focused on operations and effects. An external OWL reasoner can project these edges into `rdfs:subClassOf` when class-level reasoning is needed.
 
 `ar:ToolEndpoint` is the common callable parent. Shell execution, messaging endpoints, MCP tool endpoints, NanoClaw built-in MCP tools, provider file/web tools, and both forms of `ncl` are represented beneath it. A mediation component such as a channel adapter or mailbox write is an invocation surface but is not automatically an agent-facing tool endpoint.
 
@@ -569,23 +583,7 @@ For example, add `coding-agent` to the manifest alongside its declared dependenc
 
 ### Reading the report
 
-The loader prints:
-
-- selected ontologies, active skills, and static dependency status;
-- resource kinds contributed by always-loaded named graphs;
-- resource subtype, containment, storage, and sharing relationships;
-- invocation subtype relationships and callable endpoint classifications;
-- possible mediation routes and associated security controls;
-- primitive versus necessary-and-sufficient subtype definitions; and
-- one row per skill operation/effect/resource combination.
-
-The final effect table adds three derived flags:
-
-- `Shell-mediated`: the operation's endpoint is `ShellExecution` or a subtype;
-- `Messaging-route`: the endpoint belongs to the generic messaging invocation family; and
-- `NanoClaw-mailbox`: following modeled invocation routes can reach a NanoClaw inbound/outbound mailbox stage.
-
-These flags describe the ontology graph, not a trace of a running system.
+The loader prints the loaded skills, an operation count, one compact row per operation/effect/resource combination, and the modeled potential Internet calls with their initiator, endpoint, and conditions. Resource inventories, hierarchies, invocation routes, security controls, and subtype-definition tables are still loaded and validated but are no longer printed. The report describes modeled possibilities, not a trace of a running system.
 
 ### Expected failures and what they mean
 
@@ -593,21 +591,21 @@ These flags describe the ontology graph, not a trace of a running system.
 |---|---|---|
 | `Unknown ontologies in manifest.json` | A listed ID matches no discovered graph | Fix the selection or graph metadata |
 | `loader.py takes no arguments` | A command-line argument was supplied | Edit `manifest.json` and run `python3 loader.py` |
-| `Duplicate ontology module id` | Two graphs claim the same module identity | Give each module a unique ID |
-| `must contain exactly one non-empty named graph` | A TriG file violates the discovery convention | Keep one named graph per file |
-| `ontology is stale` | The pinned NanoClaw checkout moved | Re-review the changed source before updating the revision |
+| `Duplicate ontology ID` | Two graphs claim the same identity | Give each graph a unique ID |
+| `Expected one named graph` | A TriG file violates the discovery convention | Keep one populated named graph per file |
+| `is stale: source checkout changed` | The pinned NanoClaw checkout moved | Re-review the changed source before updating the revision |
 | `source skill has changed` | `SKILL.md` no longer matches `ar:sourceSha256` | Re-review and update the skill graph, then its hash |
 | `Dependency preflight failed` | A declared requirement is unknown or absent from the selected ontologies | Add/review the required ontology and explicitly update `manifest.json` |
-| `Always-loaded graph contains an operation/effect` | Environment and selected-skill responsibilities were mixed | Move operations/effects into a skill graph |
-| `Cycle in ... hierarchy` | A specialization path loops back to itself | Correct the taxonomy; do not use subtype for containment/routes |
-| `Necessary-and-sufficient kinds missing SHACL validation shapes` | An OWL definition lacks its closed-world validator | Add a corresponding target shape |
+| `Always-loaded graph contains operations` | Environment and selected-skill responsibilities were mixed | Move operations/effects into a skill graph |
+| `Cycle in` | A specialization path loops back to itself | Correct the taxonomy; do not use subtype for containment/routes |
+| `Equivalent kinds without SHACL shapes` | An OWL definition lacks its closed-world validator | Add a corresponding target shape |
 | `SHACL validation failed` | Selected ontology graph structure violates a shape | Read the focus node, path, and source shape in the report |
 
 An absent dependency is intentionally not repaired automatically. Treat the abort as a request for an explicit environment-policy decision.
 
 ## Querying the model
 
-`loader.py` contains a built-in potential-effect query and report, but the same TriG files can be loaded into RDFLib, Apache Jena, GraphDB, Stardog, RDF4J, or another RDF dataset implementation. Queries that rely on property paths require a SPARQL 1.1 implementation.
+`loader.py` contains a built-in potential-effect report, but the same TriG files can be loaded into RDFLib, Apache Jena, GraphDB, Stardog, RDF4J, or another RDF dataset implementation. Queries that rely on property paths require a SPARQL 1.1 implementation.
 
 Useful SPARQL paths:
 
@@ -646,6 +644,27 @@ SELECT DISTINCT ?operation ?effectType ?resourceKind WHERE {
 # Possible NanoClaw mediation chain from a concrete endpoint.
 SELECT ?next WHERE {
   ar:NanoClawSendMessageTool ar:routesToKind+ ?next .
+}
+
+# Explicitly modeled Internet-call possibilities in selected skill graphs.
+# Endpoint patterns are optional: an absent pattern means the exact URL is not established.
+SELECT ?graph ?operation ?call ?stage ?initiator ?endpoint ?pattern WHERE {
+  GRAPH ?graph {
+    ?operation ar:mayInitiateInternetCall ?call .
+    ?call a ar:PotentialInternetCall ;
+          ar:callStage ?stage ;
+          ar:callInitiatorKind ?initiator ;
+          ar:callEndpointKind ?endpoint .
+    OPTIONAL { ?call ar:callEndpointPattern ?pattern }
+  }
+}
+
+# Calls to GitHub's Git or REST endpoint kinds, including narrower kinds.
+SELECT DISTINCT ?operation ?call ?endpoint WHERE {
+  ?operation ar:mayInitiateInternetCall ?call .
+  ?call ar:callEndpointKind ?endpoint .
+  VALUES ?githubEndpoint { ar:GitHubGitEndpoint ar:GitHubRESTEndpoint }
+  ?endpoint ar:specializesKind* ?githubEndpoint .
 }
 
 # Auditable source-to-NanoClaw skill adaptations.

@@ -25,6 +25,11 @@ ar:g_meme_maker {
   ar:TemplateCache a ar:WorldSurfaceKind ; ar:specializesKind ar:LocalDirectory .
   ar:LocalMemeFile a ar:WorldSurfaceKind ; ar:specializesKind ar:LocalFile .
   ar:ImgflipService a ar:WorldSurfaceKind .
+  ar:ImgflipAPIEndpoint a ar:WorldSurfaceKind, ar:PublicInternetEndpointKind ;
+    ar:specializesKind ar:PublicInternetEndpoint .
+  ar:ImgflipTemplateImageEndpoint a ar:WorldSurfaceKind, ar:PublicInternetEndpointKind ;
+    ar:specializesKind ar:PublicInternetEndpoint ;
+    rdfs:comment "Remote image URL from the inspected bundled template metadata, which currently uses i.imgflip.com." .
   ar:HostedMeme a ar:WorldSurfaceKind .
   ar:ImgflipCredential a ar:WorldSurfaceKind .
   ar:MemeCaptionText a ar:WorldSurfaceKind .
@@ -35,6 +40,7 @@ ar:g_meme_maker {
 
   ar:cond_node_installed a ar:Requirement .
   ar:cond_template_download a ar:Requirement .
+  ar:cond_template_cache_miss a ar:Requirement .
   ar:cond_sharp_for_png a ar:Requirement .
   ar:cond_imgflip_credentials a ar:Requirement .
   ar:cond_imgflip_network a ar:Requirement .
@@ -46,6 +52,7 @@ ar:g_meme_maker {
     ar:hasPotentialEffect [ a ar:PotentialEffect ; ar:effectType ar:Read ; ar:affectsKind ar:CuratedTemplateRegistry ] .
 
   ar:op_meme_local_render a ar:Operation ; ar:invokedThroughKind ar:MemeScript ;
+    ar:mayInitiateInternetCall ar:call_meme_template_image ;
     ar:targetsKind ar:TemplateImage, ar:TemplateCache, ar:LocalMemeFile ;
     ar:requires ar:cond_node_installed, ar:cond_template_download ;
     ar:sourceNote "Inspected script downloads a template image, caches it, and writes SVG or PNG; PNG additionally needs sharp." ;
@@ -56,6 +63,7 @@ ar:g_meme_maker {
       [ a ar:PotentialEffect ; ar:effectType ar:Update ; ar:affectsKind ar:LocalMemeFile ] .
 
   ar:op_meme_hosted_render a ar:Operation ; ar:invokedThroughKind ar:MemeScript, ar:ImgflipAPI ;
+    ar:mayInitiateInternetCall ar:call_meme_caption ;
     ar:targetsKind ar:ImgflipService, ar:HostedMeme ;
     ar:requires ar:cond_node_installed, ar:cond_imgflip_credentials, ar:cond_imgflip_network ;
     ar:sourceNote "Inspected script posts caption text and credentials to Imgflip caption_image and returns a hosted URL. Public discoverability is not asserted." ;
@@ -64,10 +72,28 @@ ar:g_meme_maker {
       [ a ar:PotentialEffect ; ar:effectType ar:Create ; ar:affectsKind ar:HostedMeme ] .
 
   ar:op_meme_refresh a ar:Operation ; ar:invokedThroughKind ar:MemeScript, ar:ImgflipAPI ;
+    ar:mayInitiateInternetCall ar:call_meme_refresh ;
     ar:targetsKind ar:ImgflipService ; ar:requires ar:cond_node_installed, ar:cond_imgflip_network ;
     ar:sourceNote "Fetches current top-template metadata; the skill says not to overwrite the curated registry automatically." ;
     ar:sourceStatus ar:ScriptInspected ; ar:adaptationStatus ar:InferredForNanoClaw ;
     ar:hasPotentialEffect [ a ar:PotentialEffect ; ar:effectType ar:Read ; ar:affectsKind ar:ImgflipService ] .
+
+  ar:call_meme_template_image a ar:PotentialInternetCall ;
+    ar:callInitiatorKind ar:NanoClawAgentContainer ; ar:callViaKind ar:MemeScript, ar:NanoClawContainerNetworkRequest ;
+    ar:callEndpointKind ar:ImgflipTemplateImageEndpoint ; ar:callStage ar:ContainerEgress ;
+    ar:callConditionalOn ar:cond_template_cache_miss ;
+    ar:callEndpointPattern "https://i.imgflip.com/{template-image}" ;
+    ar:sourceStatus ar:ScriptInspected ; ar:sourceNote "The script fetches template.imageUrl only on a cache miss. Inspected bundled metadata currently uses i.imgflip.com; the concrete image path varies by template." .
+  ar:call_meme_caption a ar:PotentialInternetCall ;
+    ar:callInitiatorKind ar:NanoClawAgentContainer ; ar:callViaKind ar:MemeScript, ar:NanoClawContainerNetworkRequest ;
+    ar:callEndpointKind ar:ImgflipAPIEndpoint ; ar:callStage ar:ContainerEgress ;
+    ar:callEndpointPattern "https://api.imgflip.com/caption_image" ;
+    ar:sourceStatus ar:ScriptInspected ; ar:sourceNote "The bundled script POSTs caption text and Imgflip credentials to this URL." .
+  ar:call_meme_refresh a ar:PotentialInternetCall ;
+    ar:callInitiatorKind ar:NanoClawAgentContainer ; ar:callViaKind ar:MemeScript, ar:NanoClawContainerNetworkRequest ;
+    ar:callEndpointKind ar:ImgflipAPIEndpoint ; ar:callStage ar:ContainerEgress ;
+    ar:callEndpointPattern "https://api.imgflip.com/get_memes" ;
+    ar:sourceStatus ar:ScriptInspected ; ar:sourceNote "The bundled script fetches template metadata from this URL." .
 
   ar:adapt_meme_local_runtime a ar:AdaptationMapping ;
     ar:sourceAssumption "Node script reads bundled templates and writes cache/output locally." ;
