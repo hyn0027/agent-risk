@@ -233,7 +233,7 @@ The current skill inventory is:
 
 ## Static loading policy
 
-The manifest currently lists ten shared ontologies and two skill ontologies. Five shared ontologies describe NanoClaw itself: core, messaging/mailboxes, management controls, container/filesystem runtime, and network/OneCLI paths. Generic tool, filesystem, internet, and shell graphs are also selected. Git resource definitions live under `skills/` even though they are selected on every run; folder placement and load policy are separate concerns.
+The manifest currently lists ten shared ontologies and four skill ontologies. Five shared ontologies describe NanoClaw itself: core, messaging/mailboxes, management controls, container/filesystem runtime, and network/OneCLI paths. Generic tool, filesystem, internet, and shell graphs are also selected. Git resource definitions live under `skills/` even though they are selected on every run; folder placement and load policy are separate concerns.
 
 Dependencies never load dynamically. Every ontology module owns its metadata in RDF:
 
@@ -258,7 +258,7 @@ The loader discovers module graphs in `universal/*.trig` and `skills/*.trig`, an
 
 During dependency preflight, the loader parses graph metadata, checks that selected ontology IDs exist, verifies the NanoClaw source revision, and requires every dependency to already be selected in `manifest.json`. It does not create the active dataset until this dependency preflight succeeds. Before loading each selected skill graph, it separately verifies that skill's source hash. A missing or unknown dependency produces a warning and aborts; dependencies are never introduced automatically.
 
-`manifest.json` is the only configuration file and is a literal JSON array. The loader resolves each ID against RDF metadata; no type label is needed in the list. To change the loaded ontologies, edit this list and run `python loader.py`. The loader accepts no command-line arguments.
+`manifest.json` is the only ontology-selection configuration file and is a literal JSON array. The loader resolves each ID against RDF metadata; no type label is needed in the list. To change the loaded ontologies, edit this list and run `python loader.py`. The loader accepts no command-line arguments. Optional API credentials and analysis settings may be supplied by environment variables or a local `.env` file.
 
 ```json
 [
@@ -290,7 +290,8 @@ For an agent modifying this project, the order matters:
 5. Load the vocabulary and selected graphs in manifest order, checking module source pins and skill-source hashes as they are added.
 6. Check typed relationship endpoints, subtype cycles, endpoint parentage, shared-graph restrictions, and equivalent-class shape coverage.
 7. Run SHACL over the assembled graph.
-8. Print only loaded skill operations, their potential effect/resource rows, and their modeled potential Internet calls.
+8. Print loaded skill operations, potential effect/resource rows, and modeled potential Internet calls.
+9. Form every unordered pair of distinct affected resource kinds across all loaded operations. Optionally ask an OpenAI model about joint consequences, after consent.
 
 This sequence prevents a dependency declaration from silently widening the environment model. It also separates asserted named-graph data from the temporary union graph used for validation and reporting.
 
@@ -567,10 +568,10 @@ An external OWL-RL reasoner can infer positive membership for concrete observati
 
 ## Run and validate
 
-The prototype has no packaging wrapper. Run it from this directory with Python 3 and install `rdflib` and `pyshacl` in your environment:
+The prototype has no packaging wrapper. Run it from this directory with Python 3 and install its dependencies:
 
 ```bash
-python3 -m pip install rdflib pyshacl
+python3 -m pip install -r requirements.txt
 ```
 
 The loader takes no arguments. Edit `manifest.json` to select the ontologies, then run:
@@ -583,7 +584,17 @@ For example, add `coding-agent` to the manifest alongside its declared dependenc
 
 ### Reading the report
 
-The loader prints the loaded skills, an operation count, one compact row per operation/effect/resource combination, and the modeled potential Internet calls with their initiator, endpoint, and conditions. Resource inventories, hierarchies, invocation routes, security controls, and subtype-definition tables are still loaded and validated but are no longer printed. The report describes modeled possibilities, not a trace of a running system.
+The loader prints the loaded skills, an operation count, one compact row per operation/effect/resource combination, and the modeled potential Internet calls with their initiator, endpoint, and conditions. It then counts **all unordered pairs of distinct resource kinds** appearing in potential effects across the selected skills. Pairs can come from different operations or skills. Repeated touches to one kind are consolidated, but all their operation and effect-type provenance is sent with that kind. Resource inventories, hierarchies, invocation routes, security controls, and subtype-definition tables are still loaded and validated but are no longer printed. The report describes modeled possibilities, not a trace of a running system.
+
+### Optional joint-consequence analysis
+
+Put `OPENAI_API_KEY=...` in this directory's `.env` file or your process environment. `.env` is git-ignored; do not commit or print it. The default model is `gpt-5-mini`; set `OPENAI_MODEL` to override it. When run in a terminal, the loader shows the total pair and batch count and asks before making paid API requests. It skips the analysis by default in a non-interactive run. To opt in non-interactively, set `ONTOLOGY_ANALYZE=1` in the environment (or `.env`):
+
+```bash
+ONTOLOGY_ANALYZE=1 python3 loader.py
+```
+
+The loader sends batches of 20 pairs through the OpenAI Responses API. Each pair includes the RDF kind identifiers plus the skills, operations, and effect types that may touch them. The model is asked to flag only a credible bad consequence that depends on **both** resources being touched in one hypothetical agent session; `Read` means access, not mutation. It prints flagged consequences, a reason both resources matter, and explicit assumptions. The model's answer is a brainstorming aid, **not a sound inference or proof of an exploitable path**. The ontology is a may-effect model; it does not establish action order, argument values, concrete instances, permissions, runtime reachability, or that two effects actually occur in one session. Cost scales with the number of resource-kind pairs, approximately quadratically in the number of distinct affected kinds. No pairs are silently sampled or dropped.
 
 ### Expected failures and what they mean
 
