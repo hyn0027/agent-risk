@@ -12,7 +12,7 @@ ar:g_nanoclaw_core {
     rdfs:comment "The NanoClaw installation described by checkout 64064244396ecbfee72fcd2c069290fb21d9c6ee (branch customized: upstream 7902716b plus local commits). Types in this graph are architectural possibilities, not observations about a running instance or its configuration." ;
     rdfs:seeAlso <https://github.com/hyn0027/nanoclaw/tree/64064244396ecbfee72fcd2c069290fb21d9c6ee> .
   ar:NanoClawHostProcess a ar:WorldSurfaceKind, ar:SystemComponentKind ;
-    rdfs:comment "Trusted host-side orchestrator for routing, authorization, persistence, container lifecycle, and delivery." .
+    rdfs:comment "Trusted host-side orchestrator for routing, authorization, persistence, container lifecycle, and delivery. Agents cannot run commands here; host-side effects of agent actions happen only through its fixed code paths." .
   ar:NanoClawCentralDatabase a ar:WorldSurfaceKind, ar:SystemComponentKind ;
     ar:mayBeStoredAsKind ar:LocalFile ;
     rdfs:comment "Host-owned central state for agent groups, users, roles, wirings, sessions, and configuration; the default checkout uses data/v2.db." .

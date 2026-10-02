@@ -155,6 +155,40 @@ ar:g_nanoclaw_messaging {
     ar:nativeRequires ar:cond_container_shell_available ;
     ar:sourceNote "The runner opens inbound.db read-only, but the file is on the read-write session mount; a container process can alter pending messages, projected destinations, or scheduled-task rows in its own session. Projected destinations are not authorization, so this cannot add a delivery grant." .
 
+  # ── Where each step runs ──
+  # Platforms are remote in general; local channels (the CLI socket, Emacs bridge)
+  # deliver on the host instead, which a runtime snapshot resolves per channel.
+  ar:MessagingPlatform ar:locatedOn ar:ExternalNetwork .
+  ar:MessagingGroup ar:locatedOn ar:ExternalNetwork .
+  ar:MessagingThread ar:locatedOn ar:ExternalNetwork .
+  ar:MessagingMessage ar:locatedOn ar:ExternalNetwork .
+  ar:NanoClawChannelAdapterInvocation ar:executesOn ar:NanoClawHostProcess .
+  ar:NanoClawHostRouterInvocation ar:executesOn ar:NanoClawHostProcess .
+  ar:NanoClawInboundMailboxWrite ar:executesOn ar:NanoClawHostProcess .
+  ar:NanoClawHostDeliveryInvocation ar:executesOn ar:NanoClawHostProcess .
+  ar:NanoClawAgentRouteInvocation ar:executesOn ar:NanoClawHostProcess .
+  ar:NanoClawAgentRunnerMailboxRead ar:executesOn ar:NanoClawAgentContainer .
+  ar:NanoClawProviderInvocation ar:executesOn ar:NanoClawAgentContainer .
+  ar:NanoClawOutboundMailboxWrite ar:executesOn ar:NanoClawAgentContainer .
+  ar:NanoClawBuiltInMCPTool ar:executesOn ar:NanoClawAgentContainer .
+  ar:NanoClawInboxArtifact ar:locatedOn ar:NanoClawAgentContainer .
+  ar:NanoClawOutboxArtifact ar:locatedOn ar:NanoClawAgentContainer .
+
+  ar:NanoClawHostAttachmentStaging a ar:InvocationSurfaceKind ;
+    ar:executesOn ar:NanoClawHostProcess ;
+    ar:routesToKind ar:NanoClawInboxArtifact ;
+    rdfs:comment "Host copies an inbound attachment (or an agent-to-agent file) into the target session's inbox directory on the host, with symlink and containment checks; the container then sees it under /workspace/inbox." .
+  ar:NanoClawHostRouterInvocation ar:routesToKind ar:NanoClawHostAttachmentStaging .
+
+  # Direct consequence routes (the outbound-mailbox and host-delivery hop is implied).
+  ar:NanoClawSendMessageTool ar:routesToKind ar:NanoClawChannelAdapterDelivery, ar:NanoClawAgentRouteInvocation .
+  ar:NanoClawSendFileTool ar:routesToKind ar:NanoClawChannelAdapterDelivery, ar:NanoClawAgentRouteInvocation .
+  ar:NanoClawEditMessageTool ar:routesToKind ar:NanoClawChannelAdapterDelivery .
+  ar:NanoClawAddReactionTool ar:routesToKind ar:NanoClawChannelAdapterDelivery .
+  ar:NanoClawAskUserQuestionTool ar:routesToKind ar:NanoClawChannelAdapterDelivery .
+  ar:NanoClawSendCardTool ar:routesToKind ar:NanoClawChannelAdapterDelivery .
+  ar:NanoClawAgentRouteInvocation ar:routesToKind ar:NanoClawHostAttachmentStaging .
+
   ar:NanoClawMessagingModule a ar:OntologyModule ;
     ar:ontologyModuleId "nanoclaw-messaging" ;
     ar:requiresOntologyModule "tool-endpoints", "local-filesystem",

@@ -28,6 +28,16 @@ ar:g_freeform_internet {
     rdfs:comment "Remote service's own account, token, role, or endpoint authorization. Local egress or gateway approval does not imply remote authorization." .
   ar:RemoteWebsiteAccount ar:protectedByKind ar:RemoteServiceAuthorizationControl .
 
+  ar:ExternalNetwork a ar:WorldSurfaceKind, ar:SystemComponentKind ;
+    rdfs:comment "Everything beyond the local machine: public Internet hosts and services, messaging platforms, and remote MCP services. Neither the agent container nor the local host; effects located here happen at a remote party." .
+  ar:Internet ar:locatedOn ar:ExternalNetwork .
+  ar:InternetHost ar:locatedOn ar:ExternalNetwork .
+  ar:RemoteNetworkEndpoint ar:locatedOn ar:ExternalNetwork .
+  ar:RemoteService ar:locatedOn ar:ExternalNetwork .
+  ar:RemoteWebResource ar:locatedOn ar:ExternalNetwork .
+  ar:RemoteServerLog ar:locatedOn ar:ExternalNetwork .
+  ar:RemoteWebsiteAccount ar:locatedOn ar:ExternalNetwork .
+
   ar:Internet ar:containsKind ar:InternetHost .
   ar:InternetHost ar:containsKind ar:RemoteNetworkEndpoint, ar:RemoteService,
     ar:RemoteWebResource, ar:RemoteServerLog, ar:RemoteWebsiteAccount .

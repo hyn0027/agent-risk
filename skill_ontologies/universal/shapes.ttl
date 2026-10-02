@@ -54,6 +54,8 @@ ar:NanoClawMountPermissionShape a sh:NodeShape ;
   sh:property [ sh:path ar:mountExposesKind ; sh:class ar:WorldSurfaceKind ; sh:minCount 1 ] ;
   sh:property [ sh:path ar:mountAccessMode ; sh:class ar:MountAccessMode ; sh:minCount 1 ; sh:maxCount 1 ] ;
   sh:property [ sh:path ar:mountConditionalOn ; sh:class ar:Requirement ] ;
+  sh:property [ sh:path ar:bindsFromKind ; sh:class ar:WorldSurfaceKind ; sh:minCount 1 ; sh:maxCount 1 ] ;
+  sh:property [ sh:path ar:containerPath ; sh:datatype xsd:string ; sh:minCount 1 ; sh:maxCount 1 ] ;
   sh:sparql [
     sh:message "A read-only mount kind must have read-only mode; a read-write mount kind must have read-write mode." ;
     sh:select """PREFIX ar: <urn:agent-risk:>
@@ -122,3 +124,13 @@ ar:ConventionalGitWorkingTreeShape a sh:NodeShape ;
     sh:minCount 1 ;
     sh:maxCount 1
   ] .
+
+ar:SideShape a sh:NodeShape ;
+  sh:targetSubjectsOf ar:locatedOn, ar:executesOn ;
+  sh:property [ sh:path ar:locatedOn ; sh:class ar:SystemComponentKind ; sh:maxCount 1 ] ;
+  sh:property [ sh:path ar:executesOn ; sh:class ar:SystemComponentKind ; sh:maxCount 1 ] .
+
+ar:HostBindSourceShape a sh:NodeShape ;
+  sh:targetObjectsOf ar:bindsFromKind ;
+  sh:property [ sh:path ar:locatedOn ; sh:hasValue ar:NanoClawHostProcess ; sh:minCount 1 ] ;
+  sh:property [ sh:path ar:hostPathPattern ; sh:datatype xsd:string ; sh:minCount 1 ; sh:maxCount 1 ] .

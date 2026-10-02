@@ -284,6 +284,16 @@ def main() -> None:
             or resource not in world
         ):
             raise SystemExit(f"Untyped mount exposure: {mount} -> {resource}")
+    components = set(combined.subjects(RDF.type, AR.SystemComponentKind))
+    for subject, side in combined.subject_objects(AR.locatedOn):
+        if subject not in world or side not in components:
+            raise SystemExit(f"Untyped location side: {subject} -> {side}")
+    for subject, side in combined.subject_objects(AR.executesOn):
+        if subject not in invocations or side not in components:
+            raise SystemExit(f"Untyped execution side: {subject} -> {side}")
+    for mount, source in combined.subject_objects(AR.bindsFromKind):
+        if (mount, AR.mountExposesKind, None) not in combined or source not in world:
+            raise SystemExit(f"Untyped bind source: {mount} -> {source}")
     for predicate in (AR.specializesKind, AR.specializesInvocationKind):
         if combined.query(f"ASK {{ ?kind <{predicate}>+ ?kind }}").askAnswer:
             raise SystemExit(f"Cycle in {predicate}")
@@ -463,14 +473,18 @@ def main() -> None:
             rows.extend(
                 [
                     (key, "Mode", names(set(combined.objects(mount, AR.mountAccessMode)))),
+                    (key, "Container path", names(set(combined.objects(mount, AR.containerPath)))),
                     (key, "Exposes", names(set(combined.objects(mount, AR.mountExposesKind)))),
                 ]
             )
+            for source in sorted(combined.objects(mount, AR.bindsFromKind), key=str):
+                pattern = names(set(combined.objects(source, AR.hostPathPattern)))
+                rows.append((key, "Host source", f"{label(source)} ({pattern})"))
             conditions = set(combined.objects(mount, AR.mountConditionalOn))
             if conditions:
                 rows.append((key, "Requires", names(conditions)))
         print_table(
-            "Container mount exposures (alternatives; not effective file permissions)",
+            "Container mount exposures and host sources (alternatives; not effective file permissions)",
             ("Mount", "Field", "Details"),
             rows,
             (36, 14, 72),

@@ -61,7 +61,6 @@ ar:g_nanoclaw_control {
     ar:routesToKind ar:NanoClawOutboundMailboxWrite, ar:NanoClawCentralDatabase,
       ar:NanoClawMessagingRouteConfiguration, ar:NanoClawRoleMembershipState ;
     rdfs:comment "Container ncl commands available only under cli_scope=global: messaging groups (including send), wirings, users, roles, agent message policies, and approvals. Every write HOLDs for approval." .
-  ar:NanoClawHostDeliveryInvocation ar:routesToKind ar:NanoClawHostCommandDispatch .
   ar:NanoClawHostNclCLI a ar:InvocationSurfaceKind, ar:ToolEndpointKind ;
     ar:specializesInvocationKind ar:ShellCommandExecution ;
     ar:routesToKind ar:NanoClawUnixSocketTransport ;
@@ -111,6 +110,39 @@ ar:g_nanoclaw_control {
     ar:nativeScopeKind ar:NanoClawAgentGroupWorkspace ;
     ar:nativeRequires ar:cond_container_shell_available ;
     ar:sourceNote "Task run logs live in the read-write agent-group directory, so a container process in any of the group's sessions can rewrite them directly instead of through the host-timestamped append path." .
+
+  # ── Where each step runs, and host-side work agents can trigger ──
+  ar:NanoClawContainerNclCLI ar:executesOn ar:NanoClawAgentContainer .
+  ar:NanoClawHostNclCLI ar:executesOn ar:NanoClawHostProcess .
+  ar:NanoClawUnixSocketTransport ar:executesOn ar:NanoClawHostProcess .
+  ar:NanoClawHostCommandDispatch ar:executesOn ar:NanoClawHostProcess .
+  ar:NanoClawHostGuardInvocation ar:executesOn ar:NanoClawHostProcess .
+
+  ar:NanoClawHostTaskLogAppend a ar:InvocationSurfaceKind ;
+    ar:executesOn ar:NanoClawHostProcess ;
+    ar:routesToKind ar:NanoClawTaskRunLog ;
+    rdfs:comment "Host appends a timestamped line to a task run log (from a task_log outbound row or ncl tasks append-log)." .
+  ar:NanoClawHostImageBuild a ar:InvocationSurfaceKind ;
+    ar:executesOn ar:NanoClawHostProcess ;
+    ar:routesToKind ar:NanoClawAgentImage ;
+    ar:protectedByKind ar:NanoClawHumanApprovalControl ;
+    rdfs:comment "Host rebuilds the agent group's image with approved packages and restarts its containers. Package downloads happen in the image build, outside the agent container." .
+  ar:NanoClawHostConfigMaterialization a ar:InvocationSurfaceKind ;
+    ar:executesOn ar:NanoClawHostProcess ;
+    ar:routesToKind ar:NanoClawHostContainerConfigFile, ar:NanoClawHostComposedInstructionsFile ;
+    rdfs:comment "At every spawn the host rewrites container.json from the central configuration and recomposes CLAUDE.md, so approved configuration changes reach the container only through the host." .
+  ar:NanoClawHostCommandDispatch ar:routesToKind ar:NanoClawHostTaskLogAppend, ar:NanoClawHostConfigMaterialization .
+
+  # Direct consequence routes from container entry points to the host-side step
+  # they cause. The outbound-mailbox write and host-delivery hop in between is
+  # implied: host delivery is a hub every outbound row passes through.
+  ar:NanoClawContainerNclCLI ar:routesToKind ar:NanoClawHostCommandDispatch .
+  ar:NanoClawContainerTasksCLI ar:routesToKind ar:NanoClawHostTaskLogAppend .
+  ar:NanoClawCreateAgentTool ar:routesToKind ar:NanoClawHostGuardInvocation .
+  ar:NanoClawInstallPackagesTool ar:routesToKind ar:NanoClawHostGuardInvocation,
+    ar:NanoClawHostImageBuild, ar:NanoClawHostConfigMaterialization .
+  ar:NanoClawAddMCPServerTool ar:routesToKind ar:NanoClawHostGuardInvocation,
+    ar:NanoClawHostConfigMaterialization .
 
   ar:NanoClawControlModule a ar:OntologyModule ;
     ar:ontologyModuleId "nanoclaw-control" ;

@@ -19,6 +19,8 @@ ar:g_nanoclaw_network {
     ar:mountExposesKind ar:OneCLICredentialStub, ar:OneCLICACertificate ;
     ar:mountAccessMode ar:ReadOnlyMountMode ;
     ar:mountConditionalOn ar:cond_onecli_files_contributed ;
+    ar:containerPath "/tmp/onecli-*" ;
+    ar:bindsFromKind ar:OneCLIHostStagedFile ;
     rdfs:comment "OneCLI-contributed read-only mounts: the CA always when the gateway is active, the combined bundle and credential stubs conditionally. A credential stub is not the underlying secret; real credentials are injected into requests at the gateway, and the spawn admission check rejects credential-looking values in contributed environment variables." .
   ar:cond_onecli_files_contributed a ar:Requirement ;
     rdfs:comment "The configured OneCLI gateway contributes CA and/or credential-stub files for this session." .
@@ -32,7 +34,7 @@ ar:g_nanoclaw_network {
   ar:NanoClawInternalEgressNetwork a ar:WorldSurfaceKind, ar:SystemComponentKind ;
     rdfs:comment "Docker --internal network used when egress lockdown is enabled." .
   ar:LocalMCPServerProcess a ar:WorldSurfaceKind ;
-    ar:specializesKind ar:ShellProcess .
+    ar:specializesKind ar:NanoClawContainerProcess .
   ar:RemoteMCPService a ar:WorldSurfaceKind ;
     ar:specializesKind ar:RemoteService ;
     rdfs:comment "Remote MCP service. Its own downstream API calls occur outside the local NanoClaw container and local lockdown boundary." .
@@ -72,7 +74,7 @@ ar:g_nanoclaw_network {
     rdfs:comment "Provider URL-fetch tool (Claude: WebFetch). The page is fetched from inside the container, so the gateway or direct route applies; the agent receives a model-generated summary of the page rather than its raw content." .
   ar:NanoClawProviderWebSearchTool a ar:InvocationSurfaceKind, ar:ToolEndpointKind ;
     ar:specializesInvocationKind ar:NanoClawProviderWebTool ;
-    rdfs:comment "Provider search tool (Claude: WebSearch) executed by the model provider's own service, not from the container; container egress controls and lockdown do not govern the search requests themselves." .
+    rdfs:comment "Provider search tool (Claude: WebSearch) executed by the model provider's own service. The query leaves the container inside the model-provider request (which does pass the gateway), but the search and any site contacts happen at the provider, so local egress controls cannot see or restrict which searches run or which sites are reached. Removing the tool from the provider's allowlist is the local control." .
 
   ar:cond_provider_web_tool_available a ar:Requirement ;
     rdfs:comment "The selected provider exposes a web search/fetch tool to this session." .
@@ -120,6 +122,25 @@ ar:g_nanoclaw_network {
   ar:RemoteHTTPMCPTransport ar:routesToKind ar:NanoClawProxyAwareHTTPRequest,
     ar:NanoClawDirectNetworkRequest, ar:RemoteMCPService ;
     rdfs:comment "The client-to-MCP leg may use the gateway or direct egress. The remote MCP service's later calls are outside local OneCLI and lockdown control." .
+
+  # ── Where each step runs ──
+  ar:OneCLIHostStagedFile a ar:WorldSurfaceKind ;
+    ar:specializesKind ar:LocalFile ;
+    ar:locatedOn ar:NanoClawHostProcess ;
+    ar:hostPathPattern "data/onecli/{kind}-{sha256}.pem" ;
+    rdfs:comment "Content-addressed host copy of a gateway-contributed CA or credential stub, bind-mounted read-only into containers." .
+  ar:NanoClawHostFileSystem ar:containsKind ar:OneCLIHostStagedFile .
+  ar:OneCLICACertificate ar:locatedOn ar:NanoClawAgentContainer .
+  ar:OneCLICredentialStub ar:locatedOn ar:NanoClawAgentContainer .
+  ar:NanoClawContainerNetworkRequest ar:executesOn ar:NanoClawAgentContainer .
+  ar:NanoClawProviderWebFetchTool ar:executesOn ar:NanoClawAgentContainer .
+  ar:NanoClawLocalStdioMCPTool ar:executesOn ar:NanoClawAgentContainer .
+  ar:NanoClawLocalMCPServerInvocation ar:executesOn ar:NanoClawAgentContainer .
+  ar:NanoClawRemoteHTTPMCPTool ar:executesOn ar:NanoClawAgentContainer .
+  ar:OneCLIProxyInvocation ar:executesOn ar:OneCLIGateway .
+  ar:NanoClawHostReachableService ar:locatedOn ar:NanoClawHostProcess .
+  ar:NanoClawProviderWebSearchTool ar:executesOn ar:ExternalNetwork .
+  ar:OneCLIGatewayInvocation ar:executesOn ar:OneCLIGateway .
 
   ar:NanoClawNetworkModule a ar:OntologyModule ;
     ar:ontologyModuleId "nanoclaw-network" ;

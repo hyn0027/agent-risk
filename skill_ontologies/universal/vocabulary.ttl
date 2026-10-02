@@ -88,6 +88,16 @@ ar:mountPrincipalKind a rdf:Property ; rdfs:range ar:WorldSurfaceKind ;
   rdfs:comment "Architectural principal whose container namespace receives the mount, not a concrete authenticated identity." .
 ar:mountConditionalOn a rdf:Property ; rdfs:range ar:Requirement ;
   rdfs:comment "Condition required for a conditional mount or mode; the graph does not assert that it holds in a running session." .
+ar:locatedOn a rdf:Property ; rdfs:domain ar:WorldSurfaceKind ; rdfs:range ar:SystemComponentKind ;
+  rdfs:comment "The component whose namespace holds instances of this resource kind (the agent container, the NanoClaw host, the OneCLI gateway, or the external network beyond the local machine). Inherited along specializesKind unless a narrower kind states its own. A container-side kind is a view as seen inside the container; its host-side backing, if any, is a separate kind reached through a mount's bindsFromKind." .
+ar:executesOn a rdf:Property ; rdfs:domain ar:InvocationSurfaceKind ; rdfs:range ar:SystemComponentKind ;
+  rdfs:comment "The component on which this invocation kind runs. Inherited along specializesInvocationKind unless a narrower kind states its own." .
+ar:bindsFromKind a rdf:Property ; rdfs:range ar:WorldSurfaceKind ;
+  rdfs:comment "Host-side location a mount kind makes visible inside the container. A write through the container view changes this host location; the host side may also have writers the container does not see." .
+ar:containerPath a rdf:Property ; rdfs:range xsd:string ;
+  rdfs:comment "Absolute path at which a mount kind appears inside the container; a trailing * marks a prefix (e.g. /workspace/extra/*)." .
+ar:hostPathPattern a rdf:Property ; rdfs:range xsd:string ;
+  rdfs:comment "Path template of a host-side location relative to the NanoClaw checkout ({agentGroupId}, {sessionId}, {folder} are placeholders). Absolute patterns are outside the checkout." .
 ar:mayResideInKind a rdf:Property ; rdfs:domain ar:WorldSurfaceKind ; rdfs:range ar:WorldSurfaceKind ;
   rdfs:comment "Plausible location of instances of a file/resource kind; does not assert that every instance exists there or inherits its container's permission." .
 ar:sharesKind a rdf:Property ; rdfs:domain ar:WorldSurfaceKind ; rdfs:range ar:WorldSurfaceKind ;

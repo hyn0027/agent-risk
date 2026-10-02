@@ -56,6 +56,8 @@ universal/shapes.ttl                 SHACL integrity constraints
 manifest.json                        one list of selected ontology IDs
 loader.py                            assembly, validation, and reports
 llm_annotation.py                    optional LLM joint-risk annotation
+materialize.py                       instantiate the model for one live NanoClaw session
+observations/                        session snapshots written by materialize.py (git-ignored)
 examples/*.ttl                       standalone concrete observation fixtures
 ```
 
@@ -77,6 +79,8 @@ skill_ontologies/
   manifest.json          one list of selected ontology IDs
   loader.py              dependency checks, validation, reports
   llm_annotation.py      resource pairing, prompts, and OpenAI calls
+  materialize.py         live-session instantiation and per-session report
+  observations/          snapshot graphs (git-ignored; contain real identifiers)
   examples/              sample observation graphs for external RDF tools
   universal/
     vocabulary.ttl
@@ -406,6 +410,19 @@ The modeled controls include user/group admission, inbound command gate, CLI sco
 
 A write to a container path backed by a read-write host mount may change the underlying host directory. Additional mounts are modeled as protected by the host-side allowlist, but the actual path, realpath result, blocked patterns, and mode must be supplied by runtime observation.
 
+### Container side and host side
+
+Every NanoClaw location and step is assigned to the component it belongs to:
+
+- `ar:locatedOn` on resource kinds and `ar:executesOn` on invocation kinds name `ar:NanoClawAgentContainer`, `ar:NanoClawHostProcess`, `ar:OneCLIGateway`, or `ar:ExternalNetwork` (everything beyond the local machine). Both are inherited along the specialization hierarchy unless a narrower kind states its own.
+- Remote kinds (`Internet`, `RemoteNetworkEndpoint`, `RemoteWebResource`, `RemoteService` and so `RemoteMCPService`, `MessagingPlatform` and its groups, threads, and messages) are on `ar:ExternalNetwork`. Exceptions: `NanoClawHostReachableService` is on the host, and local channels (CLI, Emacs) deliver on the host; a snapshot resolves that per channel. Provider web search executes on `ar:ExternalNetwork` (at the model provider), while web fetch, shell requests, and MCP clients start in the container and cross the gateway.
+- Container-side location kinds (`NanoClawSessionWorkspace`, `NanoClawAgentGroupWorkspace`, `NanoClawProviderStateDirectory`, ...) are **views at container paths**. The host directory behind each is a separate host-side kind (`NanoClawHostSessionDirectory`, `NanoClawHostGroupDirectory`, `NanoClawHostProviderStateDirectory`, ...) with an `ar:hostPathPattern` relative to the checkout.
+- Each mount kind states its `ar:containerPath` (a trailing `*` marks a prefix) and its host source with `ar:bindsFromKind`. A write through the container view changes that host location; the host side can also have writers the container never sees (inbound rows, attachments, task-log appends, files recomposed at spawn).
+- The container's writable layer and its processes (`NanoClawContainerProcess`, which includes local MCP servers) have no host counterpart. There is no agent-reachable host shell: host-side effects happen only through fixed host steps such as `NanoClawHostDeliveryInvocation`, `NanoClawHostCommandDispatch`, `NanoClawHostTaskLogAppend`, `NanoClawHostImageBuild`, `NanoClawHostConfigMaterialization`, and `NanoClawHostAttachmentStaging`.
+- Container entry points route directly to the host step they cause (for example `NanoClawInstallPackagesTool → NanoClawHostImageBuild`). Host delivery is a hub every outbound row passes through, so tools are not routed to the whole fan-out behind it.
+
+The loader checks that sides name a system component, that `bindsFromKind` appears only on mounts, and (via SHACL) that every mount has one container path and one host source on the host side.
+
 ### Permission and mount mapping
 
 The ontology names individual mount kinds and their **mount-layer** access modes:
@@ -452,7 +469,7 @@ With egress lockdown disabled—the default—the direct path may exist. Effecti
 
 OneCLI gateway processing is modeled separately from the credential vault, per-agent identity, credential stubs, and CA material. The gateway identity is per agent group, so gateway credentials and policy cannot distinguish a group's sessions or subagents.
 
-Provider web tools are split by where they run: `NanoClawProviderWebFetchTool` fetches from inside the container (gateway or direct route), while `NanoClawProviderWebSearchTool` runs on the model provider's side and is not governed by container egress controls. With lockdown off, the direct route can also reach services on the Docker host (`NanoClawHostReachableService`). For intercepted HTTPS, the gateway can access decrypted HTTP contents. This does not establish which contents are logged or how long they are retained.
+Provider web tools are split by where they run: `NanoClawProviderWebFetchTool` fetches from inside the container (gateway or direct route), while `NanoClawProviderWebSearchTool` runs on the model provider's side: the query leaves inside the model request (through the gateway), but the searches and site contacts happen at the provider, so local egress controls cannot restrict them. With lockdown off, the direct route can also reach services on the Docker host (`NanoClawHostReachableService`). For intercepted HTTPS, the gateway can access decrypted HTTP contents. This does not establish which contents are logged or how long they are retained.
 
 Third-party MCP has two important paths:
 
@@ -679,6 +696,80 @@ The instructions, output schema, and catalog are identical across assessments. O
 | `SHACL validation failed` | Selected ontology graph structure violates a shape | Read the focus node, path, and source shape in the report |
 
 An absent dependency is intentionally not repaired automatically. Treat the abort as a request for an explicit environment-policy decision.
+
+## Instantiating the model for a live session
+
+The universal graphs describe what *any* NanoClaw session might do. `materialize.py` turns them into a snapshot of *one* running session: it observes that session's actual configuration, records it as typed instances of the ontology's kinds, settles the model's requirements for it, and reports what that session can still reach or change.
+
+```bash
+python3 materialize.py                      # most recently active session with a running container
+python3 materialize.py --session <id>       # a specific session (its container must be running)
+python3 materialize.py --no-write           # print the report without saving a snapshot
+python3 materialize.py --nanoclaw <path>    # checkout to inspect (default: nanoclaw-core's sourceRepositoryPath)
+python3 materialize.py --out <dir>          # snapshot directory (default: observations/)
+```
+
+It needs a running NanoClaw service, Docker, and the `onecli` CLI. `ncl`, `onecli`, `docker`, and `git` are found on `PATH` or in `~/.local/bin`, where NanoClaw setup installs them. It changes nothing in NanoClaw: every read goes through read-only interfaces.
+
+### How it works
+
+1. **Load the model.** `vocabulary.ttl` plus every `universal/*.trig` graph. If the checkout's `HEAD` differs from `nanoclaw-core`'s pinned `sourceRevision`, it warns that the results may be stale. Skill graphs are only consulted to match installed skills by `skillDirectory`.
+2. **Collect facts** (`collect()`), names and settings only, never secret values, tokens, or environment values:
+
+   | Source | Facts |
+   |---|---|
+   | host `ncl ... --json` | session, agent group, group config (`cli_scope`, provider, MCP servers, packages, extra mounts), other sessions in the group, messaging groups, wirings, destination grants, roles, members |
+   | session `inbound.db` (opened read-only) | projected destinations |
+   | `docker inspect` / `docker network inspect` | mounts with RO/RW mode, image, user, hardening flags, resource limits, networks and whether they are internal |
+   | `docker exec ... command -v curl` | whether a network client exists in the container |
+   | `onecli agents/secrets/rules list` | gateway identity and secret mode (never the access token), secret names and host patterns, rule count in scope |
+   | the checkout | installed `container/skills`, whether the agent-to-agent module is present, `HEAD` |
+
+3. **Instantiate** (`Snapshot.build()`). Mounts are matched to mount kinds by the model's `ar:containerPath` (most specific match). Each mount yields a container-side location instance (`obs:onSide ar:NanoClawAgentContainer`) and a separate host-side instance of its `ar:bindsFromKind` kind (`obs:onSide ar:NanoClawHostProcess`, host path relative to the checkout), linked by `obs:bindsFrom` / `obs:backedBy`. Each fact becomes an instance typed with an existing kind (`a ar:NanoClawSession`, `a ar:NanoClawSessionWorkspaceMount`, `a ar:NanoClawDestinationGrant`, `a ar:NanoClawEgressLockdownControl`, ...) and linked with `obs:` properties (`obs:inAgentGroup`, `obs:mountedIn`, `obs:exposes`, `obs:accessMode`, ...). Every instance carries `obs:evidenceKind`: `obs:Observed` (read from the running container or gateway) or `obs:FromConfiguration` (read from configuration). Observed mounts are classified by container path, and each mount's location is typed with the kinds the model says it exposes. Mismatches are reported as model/runtime differences: a mount whose mode contradicts its kind, an unknown mount path, or a projected destination with no central grant.
+4. **Resolve requirements** (`resolve_conditions()`). Each `ar:Requirement` in the universal graphs gets an `obs:ConditionEvaluation` with status `obs:Satisfied`, `obs:Unsatisfied`, or `obs:Unknown` and a reason, e.g. `cond_additional_mount_admitted` is unsatisfied when no `/workspace/extra` mount exists, and `cond_default_claude_provider` is satisfied when the provider is Claude and `/home/node/.claude` is mounted. Requirements that depend on a concrete path or a per-request decision (`cond_container_file_readable`, `cond_container_file_writable`, `cond_network_route_permitted`) stay **unknown**, never assumed satisfied; any requirement without an evaluator is also unknown.
+5. **Assess** (`capabilities()`, `routes()`, `modifications()`):
+   - every `ar:NativeCapability` becomes `obs:Available` (all requirements satisfied), `obs:Conditional` (some unknown), or `obs:Unavailable` (some unsatisfied), with the concrete instances it can reach. File-writing capabilities reach only read-write mounts and the writable container layer; reads reach every mount.
+   - routes and management paths are assessed from observed facts: lockdown on (the container is on an internal network) blocks the direct route and host services; `cli_scope` decides which container `ncl` paths exist and whether `create_agent` needs approval.
+   - what the session can change is reported in two tables. **Inside the container**: each writable location with the modeled resources residing there (minus those shadowed by a read-only mount), capabilities aimed at specific resources (mailboxes, task logs, provider settings, network, processes, subagents), and the read-only mounts as unmodifiable, each with the host path it writes through to, or "container only". **Outside the container**: host-side steps found by walking `routesToKind` from container-side tool endpoints (stopping at the delivery hub), with the entry points that trigger each, plus host-mediated management actions with their approval gates. **Outside this machine**: capabilities whose resource is on `ar:ExternalNetwork` (web fetch, shell network requests, provider web search), configured remote MCP servers, and messages delivered through a remote channel adapter to each channel destination grant. Model-provider API traffic is out of scope.
+6. **Check and write.** Every `rdf:type` in the snapshot must be a kind declared in the model (or an `obs:` assessment class), otherwise it aborts. The snapshot is written as one named graph, `urn:agent-risk:snapshot:<session>:<timestamp>`, to `observations/<session>-<timestamp>.trig`.
+
+### Reading the report
+
+| Section | Meaning |
+|---|---|
+| Session snapshot | session, agent group, container, provider, `cli_scope`, lockdown, destination grants, MCP servers, gateway identity, rule count |
+| Observed mounts (container view ← host source) | each mount's container path, mode, container-side kind, host path (relative to the checkout), and host-side kind |
+| Requirements for this session | each requirement's status and reason |
+| Native capabilities in this session | each capability's status, effects, resource kind, concrete reach, and the requirements blocking or pending it |
+| Routes and management paths | network routes and container `ncl` / `create_agent` paths for this session |
+| Modifiable inside the container | resource, container path, host backing (or "container only"), effects, via (shell, file tools, `send_message`, ...), status, and scope (e.g. "agent group (all its sessions)") |
+| Changed outside the container, on the host | resource, host location, effects, the host step and container entry points that trigger it, status, and gate (e.g. "held for approval"); includes deliveries to local channels |
+| Outside this machine (remote): reached or changed | remote resource, where, effects (reads included: the remote party sees the request), the path off the machine (container ▸ OneCLI gateway ▸ Internet, host delivery ▸ channel adapter, or provider-side search), status, and gate |
+| Skills | installed container skills and whether a skill graph models them; with none, only native capabilities apply |
+| Model/runtime differences | observations the model does not account for |
+
+`Available` means nothing observed rules the effect out; it is still a may-effect, not evidence that it happened or would succeed. `Conditional` means it depends on a concrete path or a per-request gateway or remote decision.
+
+### Limits of a snapshot
+
+- **Live sessions only.** Mounts and network attachment are read from the running container; a session without one is rejected rather than reconstructed from configuration.
+- **Point in time.** A later change (a new grant, MCP server, or mount) needs a new snapshot.
+- **Display tables in the script.** Subpaths of resources inside a mount (`inbound.db`, `memory/`, `tasks/`, ...) and the effect and concrete location of each host step are listed in `materialize.py`, not the ontology.
+- **Hard-coded management mapping.** The `ncl`, `create_agent`, `install_packages`, and `add_mcp_server` rows in `routes()` and `modifications()` encode NanoClaw's guard rules in the script, because the ontology states them only in comments. Update the script when those guards change.
+- **Claude provider only.** Tool availability is resolved from the Claude provider's tool allowlist; other providers leave the tool requirements unknown.
+- **Undeclared observation vocabulary.** `obs:` classes and properties are not yet declared in `vocabulary.ttl` or validated by SHACL; only instance types are checked.
+- **Sensitive output.** Snapshots contain real session, group, and messaging identifiers, handles, and host paths. `observations/` is git-ignored; do not commit or share snapshots.
+
+Example query over a snapshot (read-write mounts and what they expose):
+
+```sparql
+PREFIX ar:  <urn:agent-risk:>
+PREFIX obs: <urn:agent-risk:observation:>
+SELECT ?path ?kind WHERE {
+  ?mount obs:containerPath ?path ; obs:accessMode ar:ReadWriteMountMode ; obs:exposes ?location .
+  ?location a ?kind .
+}
+```
 
 ## Querying the model
 
