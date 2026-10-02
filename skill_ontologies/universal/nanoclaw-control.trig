@@ -7,30 +7,33 @@ ar:g_nanoclaw_control {
   ar:NanoClawApprovalRequest a ar:WorldSurfaceKind .
   ar:NanoClawRoleMembershipState a ar:WorldSurfaceKind .
   ar:NanoClawScheduledTask a ar:WorldSurfaceKind ;
-    rdfs:comment "One-shot or recurring task series managed by the ncl tasks resource and stored in a task session mailbox." .
+    rdfs:comment "One-shot or recurring task series managed by the ncl tasks resource. Stored as kind=task rows in the inbound mailbox of a dedicated per-series task session, not the creating session; recurrence is capped at four fires per day unless explicitly overridden." .
   ar:NanoClawTaskRunLog a ar:WorldSurfaceKind ;
     ar:specializesKind ar:LocalFile ;
-    rdfs:comment "Host-timestamped task-series log under the agent-group tasks directory; it is state, not a delivery channel." .
+    rdfs:comment "Task-series log at tasks/<series>.md in the agent-group directory, appended with host timestamps via ncl tasks append-log or a task_log outbound row. It is state, not a delivery channel. Because it lies inside the read-write /workspace/agent mount, container processes can also edit it directly, bypassing the host-timestamped path." .
   ar:NanoClawTaskRunLog ar:mayResideInKind ar:NanoClawAgentGroupWorkspace .
   ar:NanoClawMessagingRouteConfiguration a ar:WorldSurfaceKind ;
     rdfs:comment "The combined messaging-group, wiring, destination, membership, and policy records managed by ncl." .
 
   ar:NanoClawInboundMailbox ar:containsKind ar:NanoClawScheduledTask .
+  ar:NanoClawTaskSession ar:containsKind ar:NanoClawScheduledTask .
   ar:NanoClawAgentGroupWorkspace ar:containsKind ar:NanoClawTaskRunLog .
   ar:NanoClawCentralDatabase ar:containsKind ar:NanoClawMessagingRouteConfiguration .
 
   ar:NanoClawUserAccessControl a ar:WorldSurfaceKind, ar:SecurityControlKind ;
-    rdfs:comment "Host checks user roles, group membership, and unknown-sender policy; messages remain untrusted input after admission." .
+    rdfs:comment "Host admission of inbound senders: owner, global admin, scoped admin, or member pass; others follow the messaging group's unknown_sender_policy (strict denies, request_approval holds for an admin, decline_notify denies and notifies, public skips the check). A per-wiring sender_scope (all or known) applies even to public groups. Messages remain untrusted input after admission." .
   ar:NanoClawCommandGateControl a ar:WorldSurfaceKind, ar:SecurityControlKind ;
-    rdfs:comment "Host gate for filtered and administrator-only inbound slash commands." .
+    rdfs:comment "Host gate for inbound slash commands: provider-declared filtered commands are dropped; administrator-only commands (e.g. /clear, /compact, /cost) need an admin sender, otherwise the host writes a denial reply directly. Other slash commands pass through to the agent." .
   ar:NanoClawCLIScopeControl a ar:WorldSurfaceKind, ar:SecurityControlKind ;
-    rdfs:comment "Per-agent cli_scope: disabled, group, or global. Scope limits eligibility to request an action; it does not waive action-specific guards." .
+    rdfs:comment "Per-agent-group cli_scope: disabled, group (the default), or global. Group scope limits container ncl to its own group's groups, sessions, destinations, members, and tasks resources (plus engage settings of its own chat's wiring) and forbids changing cli_scope; global scope reaches every resource except host-only commands such as mount changes. Scope limits eligibility to request an action; approval-gated commands still HOLD under either scope. Global scope also auto-allows create_agent." .
+  ar:NanoClawAgentMessageGuard a ar:WorldSurfaceKind, ar:SecurityControlKind ;
+    rdfs:comment "Host guard on agent-to-agent sends: denied without a destination grant or an existing target; held for a named approver when an agent message policy covers the pair; otherwise allowed." .
   ar:NanoClawHostActionGuard a ar:WorldSurfaceKind, ar:SecurityControlKind ;
     rdfs:comment "Host-side ALLOW, HOLD, or DENY decision for registered management actions." .
   ar:NanoClawHumanApprovalControl a ar:WorldSurfaceKind, ar:SecurityControlKind ;
-    rdfs:comment "Approval path for HOLD decisions; approval identity and the action guard are checked again before execution." .
+    rdfs:comment "Approval path for HOLD decisions: the host picks an approver (scoped admins, then global admins, then owners) and sends an approval card to a reachable DM. The approver identity, the action guard, and (for create_agent, CLI commands, and agent messages) the approved request are checked again before execution. With no reachable approver the request is not executed. Credentialed requests held by the gateway are routed through the same approver path." .
   ar:NanoClawDestinationACL a ar:WorldSurfaceKind, ar:SecurityControlKind ;
-    rdfs:comment "Named destination and agent-to-agent authorization checked by host delivery." .
+    rdfs:comment "Host delivery check of an outbound channel or agent send against central destination grants. The session's origin chat is always permitted; without the agent-to-agent module installed, other channel sends are not restricted." .
   ar:NanoClawHostSocketAccessControl a ar:WorldSurfaceKind, ar:SecurityControlKind ;
     rdfs:comment "Host-side Unix socket access is the operator boundary for host ncl commands. The inspected CLI guard treats a host caller as trusted; container cli_scope and action guards must not be projected onto this path." .
 
@@ -46,8 +49,19 @@ ar:g_nanoclaw_control {
   ar:NanoClawContainerNclCLI a ar:InvocationSurfaceKind, ar:ToolEndpointKind ;
     ar:specializesInvocationKind ar:ShellCommandExecution ;
     ar:routesToKind ar:NanoClawOutboundMailboxWrite ;
-    ar:protectedByKind ar:NanoClawCLIScopeControl, ar:NanoClawHostActionGuard ;
-    rdfs:comment "Container edition of ncl: writes a cli_request system message to the outbound mailbox and polls the inbound mailbox for cli_response." .
+    ar:protectedByKind ar:NanoClawCLIScopeControl, ar:NanoClawHostActionGuard,
+      ar:NanoClawHumanApprovalControl ;
+    rdfs:comment "Container edition of ncl: writes a cli_request system message to the outbound mailbox and polls the inbound mailbox for cli_response. The host dispatches each command through cli_scope and the per-command guard; read verbs are generally open, while writes to groups, destinations, members, and every global-scope resource HOLD for approval." .
+  ar:NanoClawContainerGroupAdminCLI a ar:InvocationSurfaceKind, ar:ToolEndpointKind ;
+    ar:specializesInvocationKind ar:NanoClawContainerNclCLI ;
+    ar:routesToKind ar:NanoClawOutboundMailboxWrite, ar:NanoClawCentralDatabase ;
+    rdfs:comment "Container ncl commands on its own agent group's groups (config, restart, packages, MCP servers), sessions, destinations, and members. Reads are open; writes are approval-gated; mount changes are host-only." .
+  ar:NanoClawContainerGlobalAdminCLI a ar:InvocationSurfaceKind, ar:ToolEndpointKind ;
+    ar:specializesInvocationKind ar:NanoClawContainerNclCLI ;
+    ar:routesToKind ar:NanoClawOutboundMailboxWrite, ar:NanoClawCentralDatabase,
+      ar:NanoClawMessagingRouteConfiguration, ar:NanoClawRoleMembershipState ;
+    rdfs:comment "Container ncl commands available only under cli_scope=global: messaging groups (including send), wirings, users, roles, agent message policies, and approvals. Every write HOLDs for approval." .
+  ar:NanoClawHostDeliveryInvocation ar:routesToKind ar:NanoClawHostCommandDispatch .
   ar:NanoClawHostNclCLI a ar:InvocationSurfaceKind, ar:ToolEndpointKind ;
     ar:specializesInvocationKind ar:ShellCommandExecution ;
     ar:routesToKind ar:NanoClawUnixSocketTransport ;
@@ -60,35 +74,49 @@ ar:g_nanoclaw_control {
   ar:NanoClawHostMessagingGroupSendCLI a ar:InvocationSurfaceKind, ar:ToolEndpointKind ;
     ar:specializesInvocationKind ar:NanoClawHostNclCLI ;
     ar:routesToKind ar:NanoClawUnixSocketTransport, ar:NanoClawHostRouterInvocation ;
-    rdfs:comment "Host ncl messaging-groups send command, which injects an event into the ordinary inbound routing path." .
+    rdfs:comment "Host ncl messaging-groups send command, which injects a synthetic event for an existing messaging group into the ordinary inbound routing path (access and command gates still run). Agents can request it only under global scope, with approval." .
   ar:NanoClawContainerTasksCLI a ar:InvocationSurfaceKind, ar:ToolEndpointKind ;
     ar:specializesInvocationKind ar:NanoClawContainerNclCLI ;
     ar:routesToKind ar:NanoClawOutboundMailboxWrite, ar:NanoClawScheduledTask,
       ar:NanoClawTaskRunLog ;
-    rdfs:comment "Container ncl tasks resource commands, mediated by cli_request/cli_response mailbox messages and host guards." .
+    rdfs:comment "Container ncl tasks resource commands (list, get, create, update, cancel, run, pause, resume, delete, append-log), mediated by cli_request/cli_response mailbox messages. All task verbs are open under group scope, pinned to the caller's own agent group, and need no approval." .
 
   ar:NanoClawCreateAgentTool a ar:InvocationSurfaceKind, ar:ToolEndpointKind ;
     ar:specializesInvocationKind ar:NanoClawBuiltInMCPTool ;
-    ar:routesToKind ar:NanoClawOutboundMailboxWrite .
+    ar:routesToKind ar:NanoClawOutboundMailboxWrite ;
+    ar:protectedByKind ar:NanoClawHostActionGuard, ar:NanoClawHumanApprovalControl,
+      ar:NanoClawCLIScopeControl ;
+    rdfs:comment "Requests a new long-lived agent group (central record, folder, scaffold) plus a two-way destination grant pair. Held for admin approval unless the requester's cli_scope is global, which allows it; the approval is bound to the approved name." .
   ar:NanoClawInstallPackagesTool a ar:InvocationSurfaceKind, ar:ToolEndpointKind ;
     ar:specializesInvocationKind ar:NanoClawBuiltInMCPTool ;
     ar:routesToKind ar:NanoClawOutboundMailboxWrite ;
-    ar:protectedByKind ar:NanoClawHostActionGuard, ar:NanoClawHumanApprovalControl .
+    ar:protectedByKind ar:NanoClawHostActionGuard, ar:NanoClawHumanApprovalControl ;
+    rdfs:comment "Requests apt/npm packages for the agent group. Always held for admin approval (denied outright if the session driver cannot build images); on approval the group's image is rebuilt with the packages and its containers restart on it." .
   ar:NanoClawAddMCPServerTool a ar:InvocationSurfaceKind, ar:ToolEndpointKind ;
     ar:specializesInvocationKind ar:NanoClawBuiltInMCPTool ;
     ar:routesToKind ar:NanoClawOutboundMailboxWrite ;
     ar:protectedByKind ar:NanoClawHostActionGuard, ar:NanoClawHumanApprovalControl ;
-    rdfs:comment "Approval to configure a third-party MCP server is distinct from policy on each later MCP tool call." .
+    rdfs:comment "Requests a stdio (command) or streamable-HTTP (URL) MCP server for the agent group; always held for admin approval, then written to the group's container configuration and the container restarts. Approval to configure a server is distinct from policy on each later MCP tool call." .
 
   ar:NanoClawHostDeliveryInvocation ar:protectedByKind ar:NanoClawDestinationACL .
+  ar:NanoClawAgentRouteInvocation ar:protectedByKind ar:NanoClawDestinationACL,
+    ar:NanoClawAgentMessageGuard, ar:NanoClawHumanApprovalControl .
   ar:NanoClawHostRouterInvocation ar:protectedByKind ar:NanoClawUserAccessControl,
     ar:NanoClawCommandGateControl .
+
+  ar:NativeShellTaskRunLogMutation a ar:NativeCapability ;
+    ar:nativeEndpointKind ar:NanoClawContainerShellExecution ;
+    ar:nativeResourceKind ar:NanoClawTaskRunLog ;
+    ar:nativeEffectType ar:Create, ar:Update, ar:Delete ;
+    ar:nativeScopeKind ar:NanoClawAgentGroupWorkspace ;
+    ar:nativeRequires ar:cond_container_shell_available ;
+    ar:sourceNote "Task run logs live in the read-write agent-group directory, so a container process in any of the group's sessions can rewrite them directly instead of through the host-timestamped append path." .
 
   ar:NanoClawControlModule a ar:OntologyModule ;
     ar:ontologyModuleId "nanoclaw-control" ;
     ar:requiresOntologyModule "shell-execution", "nanoclaw-messaging", "nanoclaw-runtime" ;
     rdfs:seeAlso
-      <https://github.com/hyn0027/nanoclaw/blob/7902716b5b930215dbee4f56b8fb5b938d40468d/container/agent-runner/src/cli/ncl.ts>,
-      <https://github.com/hyn0027/nanoclaw/blob/7902716b5b930215dbee4f56b8fb5b938d40468d/src/cli/guard.ts>,
-      <https://github.com/hyn0027/nanoclaw/blob/7902716b5b930215dbee4f56b8fb5b938d40468d/src/guard/guard.ts> .
+      <https://github.com/hyn0027/nanoclaw/blob/64064244396ecbfee72fcd2c069290fb21d9c6ee/container/agent-runner/src/cli/ncl.ts>,
+      <https://github.com/hyn0027/nanoclaw/blob/64064244396ecbfee72fcd2c069290fb21d9c6ee/src/cli/guard.ts>,
+      <https://github.com/hyn0027/nanoclaw/blob/64064244396ecbfee72fcd2c069290fb21d9c6ee/src/guard/guard.ts> .
 }

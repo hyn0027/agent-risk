@@ -39,7 +39,7 @@ ar:g_taskflow_inbox_triage {
     rdfs:comment "Public Slack delivery endpoint; exact route and URL depend on the registered adapter." .
   ar:SlackThread a ar:WorldSurfaceKind ; ar:specializesKind ar:MessagingThread .
   ar:SlackMessage a ar:WorldSurfaceKind ; ar:specializesKind ar:MessagingMessage .
-  ar:OwnerNotificationDestination a ar:WorldSurfaceKind ; ar:specializesKind ar:NanoClawDestination .
+  ar:OwnerNotificationDestination a ar:WorldSurfaceKind ; ar:specializesKind ar:NanoClawDestinationGrant .
   ar:OwnerNotification a ar:WorldSurfaceKind ; ar:specializesKind ar:MessagingMessage .
   ar:EndOfDaySummary a ar:WorldSurfaceKind .
   ar:InboxBatch ar:containsKind ar:InboxItem .

@@ -68,7 +68,7 @@ This directory combines two kinds of source-derived model:
 - `universal/` describes the generic resource vocabulary and the NanoClaw harness architecture that is present independently of a selected skill.
 - `skills/` describes interfaces and potential effects asserted by individual `top_skills/*/SKILL.md` files, plus support graphs shared only by those skills.
 
-The NanoClaw model was checked against local checkout commit `7902716b5b930215dbee4f56b8fb5b938d40468d`. Repository code is treated as the primary source; the [shared architecture discussion](https://chatgpt.com/s/cx_6ab168a066788191a0767199e971bbd4) was useful orientation but is not the authority when it differs from code. The model is not a statement about the live configuration of any NanoClaw installation.
+The NanoClaw model was checked against local checkout commit `64064244396ecbfee72fcd2c069290fb21d9c6ee` (branch `customized`: upstream `7902716b` plus local commits). It models architecture abstractly: installed channel adapters appear only as the generic adapter kinds, and per-install settings (such as whether egress lockdown is enabled) are conditions, not facts. Host-only behavior that an agent cannot trigger is out of scope, as is model-provider API traffic. Repository code is treated as the primary source; the [shared architecture discussion](https://chatgpt.com/s/cx_6ab168a066788191a0767199e971bbd4) was useful orientation but is not the authority when it differs from code. The model is not a statement about the live configuration of any NanoClaw installation.
 
 All graphs use `ar: <urn:agent-risk:>`. These are local identifiers, not dereferenceable Web URLs. A published ontology should use an owned persistent HTTPS namespace.
 
@@ -295,7 +295,7 @@ For an agent modifying this project, the order matters:
 6. Check typed relationship endpoints, subtype cycles, endpoint parentage, shared-graph restrictions, and equivalent-class shape coverage.
 7. Run SHACL over the assembled graph.
 8. Print loaded skill operations, potential effect/resource rows, and modeled potential Internet calls.
-9. Form unordered pairs of distinct affected resource kinds across all loaded operations, apply `max_pairs`, and ask an OpenAI model about joint consequences. `max_pairs=0` skips annotation.
+9. Combine skill-declared effects with native endpoint capability effects, form unordered pairs of distinct affected resource kinds, apply `max_pairs`, and ask an OpenAI model about joint consequences. `max_pairs=0` skips annotation.
 
 This sequence prevents a dependency declaration from silently widening the environment model. It also separates asserted named-graph data from the temporary union graph used for validation and reporting.
 
@@ -342,7 +342,9 @@ Session
   └─ per-session container lifecycle
 ```
 
-Several sessions in the same agent group can share group working files and memory. Session separation therefore does not by itself establish confidentiality.
+Several sessions in the same agent group can share group working files and memory. Session separation therefore does not by itself establish confidentiality. A scheduled task runs in its own per-series task session, not in the session that created it.
+
+A provider subagent (for example Claude's Task tool) is not a NanoClaw agent group: it runs in the same container with the same files, tools, network route, and gateway identity, so it adds no isolation. A separately isolated agent requires `create_agent`.
 
 ## Messaging and mailbox routes
 
@@ -365,11 +367,13 @@ Built-in send/edit/reaction tool
 
 `NanoClawSessionMailbox` is storage-neutral. The inspected checkout registers SQLite and uses the familiar `inbound.db` / `outbound.db` split, but the ontology does not define the abstraction as SQLite-only.
 
-The split records single-writer authority:
+The split records the intended write ownership, which is a convention rather than a mount-level boundary:
 
-- host writes the inbound side and the container reads it;
-- container writes the outbound side and the host reads it;
+- host writes the inbound side and the container reads it. The runner opens it read-only, but the file sits on the read-write `/workspace` mount, so any container process can alter it (`NativeShellInboundMailboxMutation`);
+- container writes the outbound side and the host reads it. Any container process can insert rows, not only the built-in tools (`NativeShellOutboundMailboxWrite`), and the host also writes there in two cases: a direct reply when the command gate denies a command, and cleanup of orphaned processing claims;
 - host delivery records and container processing acknowledgements remain on their owning sides.
+
+Destinations are split in two. `NanoClawDestinationGrant` is the central record that host delivery authorizes non-origin sends against. `NanoClawProjectedDestination` is the session's copy, used only to resolve a name; editing it grants nothing. The session's origin chat is always permitted.
 
 `send_message`, `send_file`, `edit_message`, `add_reaction`, `ask_user_question`, and `send_card` are separate endpoint kinds. NanoClaw does not expose one universal message action with read, search, delete, poll, pin, presence, and channel-management operations.
 
@@ -382,9 +386,11 @@ Container: ncl → shell → outbound cli_request → host guard → action
 Host:      ncl → shell → Unix socket → host dispatch → action
 ```
 
-The container path is subject to `cli_scope` and action-specific guards. The host socket path is treated as trusted operator access by the current implementation. The ontology distinguishes scope eligibility from action decisions: `global` scope does not mean that every action bypasses approval.
+The container path is subject to `cli_scope` and action-specific guards. The host socket path is treated as trusted operator access by the current implementation. The ontology distinguishes scope eligibility from action decisions: `global` scope does not mean that every action bypasses approval. Under the default `group` scope, container `ncl` reaches its own group's `groups`, `sessions`, `destinations`, `members`, and `tasks`; task commands need no approval, while writes to the others are held for approval (`NanoClawContainerTasksCLI`, `NanoClawContainerGroupAdminCLI`). `global` scope adds the remaining resources, with every write held (`NanoClawContainerGlobalAdminCLI`).
 
-Built-in `create_agent`, `install_packages`, and `add_mcp_server` tools emit structured host actions through the outbound mailbox. Adding an MCP server and later calling its tools are different events. Approval of installation is not a general runtime policy for each third-party MCP call.
+Built-in `create_agent`, `install_packages`, and `add_mcp_server` tools emit structured host actions through the outbound mailbox. `install_packages` and `add_mcp_server` are always held for admin approval; `create_agent` is held unless the requesting group has `cli_scope=global`. Adding an MCP server and later calling its tools are different events. Approval of installation is not a general runtime policy for each third-party MCP call.
+
+Inside the container, the Claude provider runs with `bypassPermissions`: every allowed tool call is auto-approved (`NanoClawProviderToolPolicyControl`). Per-call approval does not exist; privileged effects are gated host-side instead.
 
 The modeled controls include user/group admission, inbound command gate, CLI scope, host ALLOW/HOLD/DENY guard, human approval, destination ACLs, mount allowlisting, container isolation, optional resource limits, gateway policy, and optional egress lockdown. Host `ncl` access is separately associated with the operator's Unix-socket boundary; the inspected CLI guard treats host callers as trusted rather than applying the container `cli_scope` rule. A `protectedByKind` edge is a candidate enforcement relationship, not runtime evidence.
 
@@ -406,11 +412,12 @@ The ontology names individual mount kinds and their **mount-layer** access modes
 
 | NanoClaw location | Mount mode | Meaning |
 |---|---|---|
-| `/workspace` | RW | Session files, mailboxes, and outbox; backed by session state |
-| `/workspace/agent` | RW | Group working files and persistent memory, shared by the group's sessions |
+| `/workspace` | RW | Session directory: both mailbox files, heartbeat, `outbox/`, and `inbox/` attachments |
+| `/app/.nanoclaw-session.json` | RO | Host-written session identity file |
+| `/workspace/agent` | RW | Group working files, persistent memory, conversation archives, task run logs, and `plugin-data/`, shared by the group's sessions |
 | `/workspace/agent/container.json`, `CLAUDE.md`, and `plugins/` | RO | Nested mounts that override the writable parent at those paths; some depend on materialization/provider choice |
 | `/app/src` and `/app/skills` | RO | Shared runner and installed skill content; the skills mount requires the directory to exist |
-| `/home/node/.claude` | RW in the default Claude configuration | Group-scoped provider state; other providers may contribute different mounts |
+| `/home/node/.claude` | RW in the default Claude configuration | Group-scoped provider state, including settings loaded by later sessions of the group; other providers may contribute different mounts |
 | `/workspace/extra/<name>` | RO or RW, conditional | Operator-selected host directory; no allowlist means no additional mount. RW requires both `readonly: false` in group config and `allowReadWrite: true` on the matched root |
 | OneCLI CA and credential-stub paths | RO, conditional | Gateway-contributed files; credential stubs are not the underlying secrets |
 
@@ -443,7 +450,9 @@ Direct request      ────────────────────
 
 With egress lockdown disabled—the default—the direct path may exist. Effective lockdown places the agent on a Docker internal network and blocks the direct path; it does not transparently convert arbitrary sockets into proxy requests. Gateway policy applies only to requests reaching the gateway.
 
-OneCLI gateway processing is modeled separately from the credential vault, per-agent identity, credential stubs, and CA material. For intercepted HTTPS, the gateway can access decrypted HTTP contents. This does not establish which contents are logged or how long they are retained.
+OneCLI gateway processing is modeled separately from the credential vault, per-agent identity, credential stubs, and CA material. The gateway identity is per agent group, so gateway credentials and policy cannot distinguish a group's sessions or subagents.
+
+Provider web tools are split by where they run: `NanoClawProviderWebFetchTool` fetches from inside the container (gateway or direct route), while `NanoClawProviderWebSearchTool` runs on the model provider's side and is not governed by container egress controls. With lockdown off, the direct route can also reach services on the Docker host (`NanoClawHostReachableService`). For intercepted HTTPS, the gateway can access decrypted HTTP contents. This does not establish which contents are logged or how long they are retained.
 
 Third-party MCP has two important paths:
 
@@ -625,9 +634,9 @@ For example, add `coding-agent` to the manifest alongside its declared dependenc
 
 ### Reading the report
 
-The loader prints aligned, wrapping tables for its summary, skill control context, operations, native capabilities, mount exposures, affected resources, and Internet calls. Each selected skill operation shows its invocation endpoint(s), targets, requirements, source/adaptation evidence, available source note, and typed resource effects. Native endpoint capabilities from loaded universal graphs (currently file-tool read/write, shell execution and file/network access, provider web fetch, and built-in message/file-send paths) are **conditional possibilities**, not extra skill operations, confirmed tool exposure, or permission grants. Resource rows include definitions when recorded, subtype and direct containment context, plausible file locations/mounts, and relevant controls. Internet calls show initiator, endpoint, and conditions. No runtime mount inventory, effective ACL decision, or observed action is inferred.
+The loader prints aligned, wrapping tables for its summary, skill control context, operations, native capabilities, mount exposures, affected resources, and Internet calls. Each selected skill operation shows its invocation endpoint(s), targets, requirements, source/adaptation evidence, available source note, and typed resource effects. Native endpoint capabilities from loaded universal graphs (currently file-tool read/write, shell execution and file/network access, direct shell writes to mailbox, task-log, and provider-settings state, provider web fetch and search, subagent start, and built-in message/file-send paths) are **conditional possibilities**, not extra skill operations, confirmed tool exposure, or permission grants. Resource rows include definitions when recorded, subtype and direct containment context, plausible file locations/mounts, and relevant controls. Internet calls show initiator, endpoint, and conditions. No runtime mount inventory, effective ACL decision, or observed action is inferred.
 
-Only **skill-declared effects** are passed to the LLM pair annotator; native capabilities appear in the local report and resource details but do not silently increase the number or cost of pair assessments. The annotator also prints its pair selection, per-pair assessments, effect types, and summary in tables; the saved JSONL format is unchanged. It counts unordered pairs of distinct resource kinds from selected skill effects, including pairs across different operations or skills. Repeated touches to one kind are consolidated into a set of effect types. Skill and operation provenance remains in the local report but is excluded from the annotation input.
+Both **skill-declared effects and native endpoint capability effects** are passed to the LLM pair annotator. This permits cross-surface assessments such as native file reading combined with a skill's message creation, and it can increase the number and cost of pair assessments. The annotator prints its pair selection, per-pair assessments, effect types, and summary in tables; the saved JSONL format is unchanged. It counts unordered pairs of distinct resource kinds across both sources. Repeated touches to one kind are consolidated into a single set of effect types. Skill, operation, and native-capability provenance remains in the local report but is excluded from the annotation input.
 
 ### Optional joint-consequence analysis
 
@@ -643,7 +652,7 @@ Put `OPENAI_API_KEY=...` in this directory's `.env` file or your process environ
 python3 loader.py --model gpt-6-luna --max-pairs 50
 ```
 
-The loader makes one sequential OpenAI Responses API call per resource pair, returning one assessment object per call. A shared resource catalog contains definitions, subtype/containment context, and effect types; each call adds only the two resource kind identifiers to that shared prefix. The simplified prompt asks for a consequence requiring **both** resources in one hypothetical agent session, grounded only in the catalog. `Read` means access, not mutation; skill identity and actual execution are not assumed. Each flagged result prints both resources' possible effect types, the consequence, why both matter, and necessary assumptions. The printed effects are the supplied possibilities, not observed actions or a claim that every effect occurs. Removing operation provenance deliberately loses which effects belong to the same action and their prerequisites. The model's answer is a brainstorming aid, **not a sound inference or proof of an exploitable path**. The ontology is a may-effect model; it does not establish action order, argument values, concrete instances, permissions, runtime reachability, or that two effects actually occur in one session. Without a limit, cost scales approximately quadratically in the number of distinct affected kinds. A supplied `max_pairs` caps the pairs sent for annotation; omitted pairs are not assessed. For example, `--max-pairs 50` makes up to 50 assessment calls, depending on the available pairs.
+The loader makes one sequential OpenAI Responses API call per resource pair, returning one assessment object per call. A shared resource catalog contains definitions, subtype/containment context, and effect types from skill operations and native endpoint capabilities; each call adds only the two resource kind identifiers to that shared prefix. The simplified prompt asks for a consequence requiring **both** resources in one hypothetical agent session, grounded only in the catalog. `Read` means access, not mutation; skill identity, capability identity, and actual execution are not assumed. Each flagged result prints both resources' possible effect types, the consequence, why both matter, and necessary assumptions. The printed effects are the supplied possibilities, not observed actions or a claim that every effect occurs. Removing operation and capability provenance deliberately loses which effects belong to the same action, their prerequisites, and whether a native endpoint is actually exposed. The model's answer is a brainstorming aid, **not a sound inference or proof of an exploitable path**. The ontology is a may-effect model; it does not establish action order, argument values, concrete instances, permissions, runtime reachability, or that two effects actually occur in one session. Without a limit, cost scales approximately quadratically in the number of distinct affected kinds. A supplied `max_pairs` caps the pairs sent for annotation; omitted pairs are not assessed. For example, `--max-pairs 50` makes up to 50 assessment calls, depending on the available pairs.
 
 ### Saved assessments
 

@@ -26,7 +26,7 @@ ar:g_configure_channel {
   ar:RemoteChatMessage a ar:WorldSurfaceKind ; ar:specializesKind ar:MessagingMessage .
   ar:ConfiguredNanoClawChannel ar:containsKind ar:RemoteChatMessage .
   ar:NanoClawMessagingRouteConfiguration ar:containsKind ar:ConfiguredNanoClawChannel,
-    ar:NanoClawWiring, ar:NanoClawDestination .
+    ar:NanoClawWiring, ar:NanoClawDestinationGrant .
 
   ar:cond_adapter_registered a ar:Requirement .
   ar:cond_operator_authority a ar:Requirement .
@@ -45,7 +45,7 @@ ar:g_configure_channel {
     ar:requires ar:cond_adapter_registered, ar:cond_operator_authority, ar:cond_channel_credentials_out_of_band ;
     ar:sourceStatus ar:SkillText ; ar:adaptationStatus ar:InferredForNanoClaw ;
     ar:sourceNote "Creates or updates messaging-group and wiring records and any needed destination/access records. Adapter credentials remain adapter-specific operator setup, not a generic ncl SecretRef write." ;
-    ar:hasPotentialEffect [ a ar:PotentialEffect ; ar:effectType ar:Configure ; ar:affectsKind ar:NanoClawMessagingRouteConfiguration, ar:ConfiguredNanoClawChannel, ar:NanoClawWiring, ar:NanoClawDestination ] .
+    ar:hasPotentialEffect [ a ar:PotentialEffect ; ar:effectType ar:Configure ; ar:affectsKind ar:NanoClawMessagingRouteConfiguration, ar:ConfiguredNanoClawChannel, ar:NanoClawWiring, ar:NanoClawDestinationGrant ] .
 
   ar:op_channel_prove_inbound a ar:Operation ; ar:invokedThroughKind ar:NanoClawHostMessagingGroupSendCLI ;
     ar:targetsKind ar:ConfiguredNanoClawChannel, ar:NanoClawInboundMailbox ;

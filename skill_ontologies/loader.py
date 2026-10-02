@@ -363,11 +363,12 @@ def main() -> None:
     operation_rows.sort(key=lambda row: (row[0], str(row[1])))
     calls.sort(key=lambda row: (row[0], str(row[1]), str(row[2])))
     native = sorted(set(combined.subjects(RDF.type, AR.NativeCapability)), key=str)
-    native_resources = {
-        resource
-        for capability in native
-        for resource in combined.objects(capability, AR.nativeResourceKind)
-    }
+    native_touches = defaultdict(set)
+    for capability in native:
+        for resource in combined.objects(capability, AR.nativeResourceKind):
+            native_touches[resource].update(
+                combined.objects(capability, AR.nativeEffectType)
+            )
     print_table(
         "Ontology report",
         ("Metric", "Value"),
@@ -474,7 +475,7 @@ def main() -> None:
             rows,
             (36, 14, 72),
         )
-    affected = set(touches) | native_resources
+    affected = set(touches) | set(native_touches)
     if affected:
         rows = []
         for resource in sorted(affected, key=str):
@@ -542,9 +543,13 @@ def main() -> None:
             (38, 18, 68),
         )
 
+    analysis_touches = defaultdict(set)
+    for source in (touches, native_touches):
+        for kind, effect_types in source.items():
+            analysis_touches[kind].update(effect_types)
     resources = [
         resource_context(combined, kind, effect_types)
-        for kind, effect_types in touches.items()
+        for kind, effect_types in analysis_touches.items()
     ]
     analyze_pairs(resources, max_pairs=args.max_pairs, model=args.model)
 

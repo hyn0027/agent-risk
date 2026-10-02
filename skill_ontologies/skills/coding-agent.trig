@@ -59,7 +59,7 @@ ar:g_coding_agent {
   ar:WorkerProcess a ar:WorldSurfaceKind ; ar:specializesKind ar:ShellProcess .
   ar:GitHubIssue a ar:WorldSurfaceKind .
   ar:GitHubPullRequest a ar:WorldSurfaceKind .
-  ar:NotificationDestination a ar:WorldSurfaceKind ; ar:specializesKind ar:NanoClawDestination .
+  ar:NotificationDestination a ar:WorldSurfaceKind ; ar:specializesKind ar:NanoClawDestinationGrant .
   ar:LocalGitRepository ar:containsKind ar:IsolatedWorktree, ar:LocalBranch, ar:CodeFile .
   ar:IsolatedWorktree ar:containsKind ar:CodeFile .
   ar:RemoteGitRepository ar:containsKind ar:GitHubIssue, ar:GitHubPullRequest .

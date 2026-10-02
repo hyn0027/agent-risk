@@ -7,9 +7,5 @@
   "nanoclaw-messaging",
   "nanoclaw-control",
   "nanoclaw-runtime",
-  "nanoclaw-network",
-  "git-resources",
-  "discord",
-  "gh-issues",
-  "meme-maker-1.0.0"
+  "nanoclaw-network"
 ]
