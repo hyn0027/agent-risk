@@ -123,10 +123,12 @@ The ontology deliberately keeps several concepts separate because collapsing the
 | Invocation surface kind | `ar:InvocationSurfaceKind` | Kind of path through which behavior is invoked or mediated | `ar:ShellExecution`, `ar:NanoClawOutboundMailboxWrite` |
 | Tool endpoint kind | `ar:ToolEndpointKind` | Invocation kind callable by, or on behalf of, an agent | `ar:MCPToolEndpoint`, `ar:NanoClawSendMessageTool` |
 | Operation | `ar:Operation` | Action described by a selected skill | `ar:op_discord_send` |
+| Native capability | `ar:NativeCapability` | Potential action of a loaded harness endpoint, independent of skill text | container file read; shell file write |
 | Potential effect | `ar:PotentialEffect` | Possible typed consequence of an operation | create a message; transmit to a channel |
 | Potential Internet call | `ar:PotentialInternetCall` | Possible outbound request, distinguished from the operation and its world effect | a later host Discord API request |
 | Requirement | `ar:Requirement` | Condition needed for the modeled action/effect | destination exists; permission is granted |
 | Security control kind | `ar:SecurityControlKind` | Kind of configuration or enforcement point | destination ACL; mount allowlist |
+| Mount access mode | `ar:MountAccessMode` | Read-only or read-write at one mount boundary, not effective OS permission | `ar:ReadOnlyMountMode` |
 | Adaptation mapping | `ar:AdaptationMapping` | Auditable source-skill-to-NanoClaw translation | generic message send → NanoClaw send tool |
 
 ### Operations and effects
@@ -279,7 +281,7 @@ During dependency preflight, the loader parses graph metadata, checks that selec
 ]
 ```
 
-Every always-loaded graph is checked to contain no `ar:Operation`, `ar:PotentialEffect`, `ar:declaresOperation`, or `ar:hasPotentialEffect`. `local-filesystem.trig` and `freeform-internet.trig` are additionally marked `resourcesOnly` and cannot declare invocation kinds.
+Every always-loaded graph is checked to contain no `ar:Operation`, `ar:PotentialEffect`, `ar:declaresOperation`, or `ar:hasPotentialEffect`. The NanoClaw runtime, network, and messaging graphs may declare `ar:NativeCapability` facts instead; these describe conditional endpoint affordances, not skill actions or observed calls. `local-filesystem.trig` and `freeform-internet.trig` are additionally marked `resourcesOnly` and cannot declare invocation kinds.
 
 ### Loader sequence
 
@@ -312,6 +314,9 @@ Resource kinds are RDF individuals typed `ar:WorldSurfaceKind`; invocation kinds
 - `ar:sharesKind`: possible shared state scope, not containment or universal visibility.
 - `ar:routesToKind`: possible mediation/dataflow step from an invocation kind.
 - `ar:protectedByKind`: a security control relevant to a surface; it does not prove that the control is enabled or effective.
+- `ar:subjectToControlKind`: controls relevant to some paths of a skill, not a conjunctive permission check on every operation.
+- `ar:mayResideInKind`: possible location of a file/resource kind, not a claim about every concrete file.
+- `ar:mountExposesKind`, `ar:mountAccessMode`, and `ar:mountConditionalOn`: what one mount can expose, its mode, and any unresolved condition.
 
 Multiple parents are allowed. The loader validates specialization edges and rejects hierarchy cycles, but keeps the default report focused on operations and effects. An external OWL reasoner can project these edges into `rdfs:subClassOf` when class-level reasoning is needed.
 
@@ -381,7 +386,7 @@ The container path is subject to `cli_scope` and action-specific guards. The hos
 
 Built-in `create_agent`, `install_packages`, and `add_mcp_server` tools emit structured host actions through the outbound mailbox. Adding an MCP server and later calling its tools are different events. Approval of installation is not a general runtime policy for each third-party MCP call.
 
-The modeled controls include user/group admission, inbound command gate, CLI scope, host ALLOW/HOLD/DENY guard, human approval, destination ACLs, mount allowlisting, container isolation, optional resource limits, gateway policy, and optional egress lockdown. A `protectedByKind` edge is a candidate enforcement relationship, not runtime evidence.
+The modeled controls include user/group admission, inbound command gate, CLI scope, host ALLOW/HOLD/DENY guard, human approval, destination ACLs, mount allowlisting, container isolation, optional resource limits, gateway policy, and optional egress lockdown. Host `ncl` access is separately associated with the operator's Unix-socket boundary; the inspected CLI guard treats host callers as trusted rather than applying the container `cli_scope` rule. A `protectedByKind` edge is a candidate enforcement relationship, not runtime evidence.
 
 ## Filesystem and shell boundaries
 
@@ -394,6 +399,38 @@ The modeled controls include user/group admission, inbound command gate, CLI sco
 - operator-configured additional mounts under `/workspace/extra`.
 
 A write to a container path backed by a read-write host mount may change the underlying host directory. Additional mounts are modeled as protected by the host-side allowlist, but the actual path, realpath result, blocked patterns, and mode must be supplied by runtime observation.
+
+### Permission and mount mapping
+
+The ontology names individual mount kinds and their **mount-layer** access modes:
+
+| NanoClaw location | Mount mode | Meaning |
+|---|---|---|
+| `/workspace` | RW | Session files, mailboxes, and outbox; backed by session state |
+| `/workspace/agent` | RW | Group working files and persistent memory, shared by the group's sessions |
+| `/workspace/agent/container.json`, `CLAUDE.md`, and `plugins/` | RO | Nested mounts that override the writable parent at those paths; some depend on materialization/provider choice |
+| `/app/src` and `/app/skills` | RO | Shared runner and installed skill content; the skills mount requires the directory to exist |
+| `/home/node/.claude` | RW in the default Claude configuration | Group-scoped provider state; other providers may contribute different mounts |
+| `/workspace/extra/<name>` | RO or RW, conditional | Operator-selected host directory; no allowlist means no additional mount. RW requires both `readonly: false` in group config and `allowReadWrite: true` on the matched root |
+| OneCLI CA and credential-stub paths | RO, conditional | Gateway-contributed files; credential stubs are not the underlying secrets |
+
+The container's private writable layer is a possible local-file location but **not** a host bind mount. `ar:mayResideInKind` links file kinds in each skill to plausible locations; `ar:mountExposesKind` then links locations to mount kinds. For example, a coding worktree may be in the group workspace, an extra host mount, or a container-private layer. This is a set of alternatives, not one simultaneous permission or a claim that an arbitrary host repository is visible. A diagram template may be in read-only shared skills, while an output artifact needs a writable target. File-writing operations now explicitly require `ar:cond_container_file_writable`; file-reading operations that depend on a concrete path require `ar:cond_container_file_readable`.
+
+Host-mediated operations are different: a container `ncl` request for a scheduled task is checked by CLI scope and host action guards, then the host may write a task log. The container's mount mode is not the host's write authorization for that action.
+
+An admitted extra mount is read-only unless both RW conditions hold. The allowlist checks the **mount root** realpath against roots and blocked patterns; it does not inspect every descendant. Host OS file modes/ACLs, container identity, symlinks, nested mounts, provider tool policy, and the concrete path can restrict access further. The host project root is not automatically mounted. Loaded skill instructions do not themselves confer file, network, messaging, or service permissions. Each skill has `ar:subjectToControlKind` edges for relevant control families; those edges do not mean every control is on every route or that authorization succeeded.
+
+For a type-level *candidate* mount-mode query after loading the selected graphs:
+
+```sparql
+PREFIX ar: <urn:agent-risk:>
+SELECT ?location ?mount ?mode WHERE {
+  ar:LocalGitRepository ar:mayResideInKind+ ?location .
+  ?mount ar:mountExposesKind ?location ; ar:mountAccessMode ?mode .
+}
+```
+
+The query does not return container-private locations (which are not mounts), decide which alternative was configured, account for nested path overrides, or compute effective access. That requires a runtime inventory of mount specs, canonical paths, process identity, OS permissions, tool policy, and remote-service authorization. SHACL validates the declarations' structure and RO/RW consistency; it does not evaluate those runtime facts.
 
 ## Network, OneCLI, and MCP
 
@@ -469,7 +506,7 @@ ar:g_example_resources {
 }
 ```
 
-Do not put skill operations or effects in an always-loaded module. Always-loaded graphs describe the environment available for composition; selected skill graphs introduce claims about actions.
+Do not put skill operations or `ar:PotentialEffect` nodes in an always-loaded module. Always-loaded graphs describe the environment available for composition; selected skill graphs introduce claims about actions. Native endpoint affordances may be declared as `ar:NativeCapability` with endpoint, effect type, resource kind, scope, requirements, and source note, without pretending that a skill invoked them.
 
 ### Add a new skill ontology
 
@@ -588,7 +625,9 @@ For example, add `coding-agent` to the manifest alongside its declared dependenc
 
 ### Reading the report
 
-The loader prints the loaded skills, an operation count, one compact row per operation/effect/resource combination, and the modeled potential Internet calls with their initiator, endpoint, and conditions. It then counts **all unordered pairs of distinct resource kinds** appearing in potential effects across the selected skills. Pairs can come from different operations or skills. Repeated touches to one kind are consolidated into a set of effect types. Skill and operation provenance remains in the local report but is excluded from the annotation input. Resource inventories, hierarchies, invocation routes, security controls, and subtype-definition tables are still loaded and validated but are no longer printed. The report describes modeled possibilities, not a trace of a running system.
+The loader prints aligned, wrapping tables for its summary, skill control context, operations, native capabilities, mount exposures, affected resources, and Internet calls. Each selected skill operation shows its invocation endpoint(s), targets, requirements, source/adaptation evidence, available source note, and typed resource effects. Native endpoint capabilities from loaded universal graphs (currently file-tool read/write, shell execution and file/network access, provider web fetch, and built-in message/file-send paths) are **conditional possibilities**, not extra skill operations, confirmed tool exposure, or permission grants. Resource rows include definitions when recorded, subtype and direct containment context, plausible file locations/mounts, and relevant controls. Internet calls show initiator, endpoint, and conditions. No runtime mount inventory, effective ACL decision, or observed action is inferred.
+
+Only **skill-declared effects** are passed to the LLM pair annotator; native capabilities appear in the local report and resource details but do not silently increase the number or cost of pair assessments. The annotator also prints its pair selection, per-pair assessments, effect types, and summary in tables; the saved JSONL format is unchanged. It counts unordered pairs of distinct resource kinds from selected skill effects, including pairs across different operations or skills. Repeated touches to one kind are consolidated into a set of effect types. Skill and operation provenance remains in the local report but is excluded from the annotation input.
 
 ### Optional joint-consequence analysis
 

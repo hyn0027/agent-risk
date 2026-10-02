@@ -6,7 +6,11 @@ ar:g_configure_channel {
     ar:skillDirectory "configure-channel" ;
     ar:sourcePath "/Users/yhong3/Documents/Research/agent-risk/top_skills/configure-channel/SKILL.md" ;
     ar:sourceSha256 "56f12cec97442410de68a5fc119dc5b198bedaadff9749188b48704d354b94fd" ;
-    ar:requiresOntologyModule "nanoclaw-messaging", "nanoclaw-control" ;
+    ar:requiresOntologyModule "nanoclaw-messaging", "nanoclaw-control",
+      "freeform-internet" ;
+    ar:subjectToControlKind ar:NanoClawHostSocketAccessControl,
+      ar:NanoClawUserAccessControl,
+      ar:NanoClawDestinationACL, ar:RemoteServiceAuthorizationControl ;
     ar:governedByAdaptationPolicy ar:NanoClawSkillAdaptationPolicy ;
     ar:hasAdaptationMapping ar:adapt_channel_configuration,
       ar:adapt_channel_dry_run, ar:adapt_channel_outbound_test,

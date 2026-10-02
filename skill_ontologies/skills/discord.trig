@@ -6,7 +6,11 @@ ar:g_discord {
     ar:skillDirectory "discord" ;
     ar:sourcePath "/Users/yhong3/Documents/Research/agent-risk/top_skills/discord/SKILL.md" ;
     ar:sourceSha256 "29897610e192ee367f0117dd992147dd7fe417820b79ad01329838f537019508" ;
-    ar:requiresOntologyModule "nanoclaw-messaging" ;
+    ar:requiresOntologyModule "nanoclaw-messaging", "nanoclaw-control",
+      "nanoclaw-runtime", "freeform-internet" ;
+    ar:subjectToControlKind ar:NanoClawDestinationACL,
+      ar:RemoteServiceAuthorizationControl, ar:NanoClawContainerIsolationControl,
+      ar:NanoClawMountModeControl, ar:NanoClawMountAllowlistControl ;
     ar:governedByAdaptationPolicy ar:NanoClawSkillAdaptationPolicy ;
     ar:hasAdaptationMapping ar:adapt_discord_send, ar:adapt_discord_media,
       ar:adapt_discord_edit, ar:adapt_discord_react,
@@ -30,6 +34,8 @@ ar:g_discord {
   ar:DiscordGuild a ar:WorldSurfaceKind ; ar:specializesKind ar:MessagingGroup .
   ar:DiscordChannel a ar:WorldSurfaceKind ; ar:specializesKind ar:MessagingGroup .
   ar:DiscordDirectMessage a ar:WorldSurfaceKind ; ar:specializesKind ar:MessagingGroup .
+  ar:DiscordChannel ar:protectedByKind ar:RemoteServiceAuthorizationControl .
+  ar:DiscordDirectMessage ar:protectedByKind ar:RemoteServiceAuthorizationControl .
   ar:DiscordUser a ar:WorldSurfaceKind .
   ar:DiscordMessage a ar:WorldSurfaceKind ; ar:specializesKind ar:MessagingMessage .
   ar:DiscordMedia a ar:WorldSurfaceKind .
@@ -55,6 +61,7 @@ ar:g_discord {
       [ a ar:PotentialEffect ; ar:effectType ar:Transmit ; ar:affectsKind ar:DiscordChannel, ar:DiscordDirectMessage ] .
 
   ar:op_discord_send_media a ar:Operation ; ar:invokedThroughKind ar:NanoClawSendFileTool ;
+    ar:requires ar:cond_container_file_readable ;
     ar:mayInitiateInternetCall ar:call_discord_media ;
     ar:targetsKind ar:LocalFile, ar:NanoClawOutboxArtifact, ar:DiscordChannel ;
     ar:requires ar:cond_discord_adapter_registered, ar:cond_discord_destination_projected,

@@ -6,7 +6,11 @@ ar:g_taskflow_inbox_triage {
     ar:skillDirectory "taskflow-inbox-triage" ;
     ar:sourcePath "/Users/yhong3/Documents/Research/agent-risk/top_skills/taskflow-inbox-triage/SKILL.md" ;
     ar:sourceSha256 "0fb413b107f9b0f5625136869cd5a979ecd65e1a756216705bee2ae0b8d1112c" ;
-    ar:requiresOntologyModule "nanoclaw-core", "nanoclaw-messaging", "nanoclaw-control" ;
+    ar:requiresOntologyModule "nanoclaw-core", "nanoclaw-messaging",
+      "nanoclaw-control", "nanoclaw-runtime", "freeform-internet" ;
+    ar:subjectToControlKind ar:NanoClawCLIScopeControl,
+      ar:NanoClawHostActionGuard, ar:NanoClawDestinationACL,
+      ar:RemoteServiceAuthorizationControl ;
     ar:governedByAdaptationPolicy ar:NanoClawSkillAdaptationPolicy ;
     ar:hasAdaptationMapping ar:adapt_taskflow_creation,
       ar:adapt_taskflow_children, ar:adapt_taskflow_wait,
@@ -26,8 +30,10 @@ ar:g_taskflow_inbox_triage {
   ar:InboxItem a ar:WorldSurfaceKind .
   ar:ManagedFlow a ar:WorldSurfaceKind ; ar:specializesKind ar:NanoClawScheduledTask .
   ar:ManagedFlowState a ar:WorldSurfaceKind ; ar:mayBeStoredAsKind ar:NanoClawTaskRunLog .
+  ar:ManagedFlowState ar:mayResideInKind ar:NanoClawAgentGroupWorkspace .
   ar:ChildAgentGroup a ar:WorldSurfaceKind ; ar:specializesKind ar:NanoClawAgentGroup .
   ar:SlackWorkspace a ar:WorldSurfaceKind ; ar:specializesKind ar:MessagingPlatform .
+  ar:SlackWorkspace ar:protectedByKind ar:RemoteServiceAuthorizationControl .
   ar:SlackAPIEndpoint a ar:WorldSurfaceKind, ar:PublicInternetEndpointKind ;
     ar:specializesKind ar:PublicInternetEndpoint ;
     rdfs:comment "Public Slack delivery endpoint; exact route and URL depend on the registered adapter." .

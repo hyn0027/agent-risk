@@ -15,6 +15,7 @@ from rdflib.namespace import OWL, RDF, RDFS, SKOS
 from rdflib.term import Identifier
 
 from llm_annotation import analyze_pairs
+from table_output import print_table
 
 ROOT = Path(__file__).resolve().parent
 AR = Namespace("urn:agent-risk:")
@@ -43,11 +44,14 @@ def label(node: Identifier) -> str:
     return str(node).rsplit(":", 1)[-1]
 
 
-def print_table(headers: tuple[str, ...], rows: list[tuple[str, ...]]) -> None:
-    """Print a small left-aligned table of string values."""
-    widths = [max(map(len, column)) for column in zip(headers, *rows)]
-    for row in [headers, tuple("-" * width for width in widths), *rows]:
-        print("  ".join(value.ljust(width) for value, width in zip(row, widths)))
+def names(nodes: set[Identifier]) -> str:
+    """Render a set of RDF identifiers in stable, compact form."""
+    return ", ".join(sorted(map(label, nodes))) or "(none recorded)"
+
+
+def notes(graph: Graph, node: Identifier, predicate: URIRef = RDFS.comment) -> str:
+    """Render any recorded prose for a node without inventing a description."""
+    return " ".join(sorted(map(str, set(graph.objects(node, predicate)))))
 
 
 def ancestors(graph: Graph, kind: Identifier, predicate: URIRef) -> set[Identifier]:
@@ -246,6 +250,7 @@ def main() -> None:
         AR.containsKind,
         AR.mayBeStoredAsKind,
         AR.sharesKind,
+        AR.mayResideInKind,
     ):
         for subject, target in combined.subject_objects(predicate):
             if subject not in world or target not in world:
@@ -265,6 +270,20 @@ def main() -> None:
             or (control, RDF.type, AR.SecurityControlKind) not in combined
         ):
             raise SystemExit(f"Untyped control: {subject} -> {control}")
+    for skill, control in combined.subject_objects(AR.subjectToControlKind):
+        if (
+            (skill, RDF.type, AR.Skill) not in combined
+            or (control, RDF.type, AR.SecurityControlKind) not in combined
+        ):
+            raise SystemExit(f"Untyped skill control: {skill} -> {control}")
+    for mount, resource in combined.subject_objects(AR.mountExposesKind):
+        if (
+            mount not in world
+            or AR.NanoClawMount
+            not in ancestors(combined, mount, AR.specializesKind)
+            or resource not in world
+        ):
+            raise SystemExit(f"Untyped mount exposure: {mount} -> {resource}")
     for predicate in (AR.specializesKind, AR.specializesInvocationKind):
         if combined.query(f"ASK {{ ?kind <{predicate}>+ ?kind }}").askAnswer:
             raise SystemExit(f"Cycle in {predicate}")
@@ -306,11 +325,13 @@ def main() -> None:
     touches = defaultdict(set)
     calls = []
     operations = set()
+    operation_rows = []
     skills = [ontology_id for ontology_id in manifest if catalog[ontology_id]["skill"]]
     for skill in skills:
         graph, node = catalog[skill]["graph"], catalog[skill]["node"]
         for operation in graph.objects(node, AR.declaresOperation):
             operations.add(operation)
+            operation_rows.append((skill, operation, graph))
             for effect in graph.objects(operation, AR.hasPotentialEffect):
                 for effect_type in graph.objects(effect, AR.effectType):
                     for resource in graph.objects(effect, AR.affectsKind):
@@ -339,18 +360,164 @@ def main() -> None:
                 calls.append((skill, operation, call, graph))
 
     effect_rows = sorted(effects)
+    operation_rows.sort(key=lambda row: (row[0], str(row[1])))
     calls.sort(key=lambda row: (row[0], str(row[1]), str(row[2])))
-    print(f"Loaded skills: {', '.join(sorted(skills)) or '(none)'}")
-    print(f"Operations: {len(operations)}")
-    print(f"Potential effect/resource rows: {len(effect_rows)}")
-    print(f"Potential Internet calls: {len(calls)}")
-    if effect_rows:
-        print("\nPotential effects:")
-        print_table(("Skill", "Operation", "Effect", "Resource kind"), effect_rows)
+    native = sorted(set(combined.subjects(RDF.type, AR.NativeCapability)), key=str)
+    native_resources = {
+        resource
+        for capability in native
+        for resource in combined.objects(capability, AR.nativeResourceKind)
+    }
+    print_table(
+        "Ontology report",
+        ("Metric", "Value"),
+        [
+            ("Loaded skills", ", ".join(sorted(skills)) or "(none)"),
+            ("Operations", str(len(operations))),
+            ("Potential effect/resource rows", str(len(effect_rows))),
+            ("Native endpoint capabilities", str(len(native))),
+            ("Potential Internet calls", str(len(calls))),
+        ],
+        (32, 88),
+    )
+    if skills:
+        print_table(
+            "Skill control context (candidate gates, not blanket grants)",
+            ("Skill", "Relevant controls"),
+            [
+                (
+                    skill,
+                    names(
+                        set(
+                            catalog[skill]["graph"].objects(
+                                catalog[skill]["node"], AR.subjectToControlKind
+                            )
+                        )
+                    ),
+                )
+                for skill in sorted(skills)
+            ],
+            (28, 92),
+        )
+    if operation_rows:
+        rows = []
+        for skill, operation, graph in operation_rows:
+            key = f"{skill} / {label(operation)}"
+            rows.extend(
+                [
+                    (key, "Via", names(set(graph.objects(operation, AR.invokedThroughKind)))),
+                    (key, "Targets", names(set(graph.objects(operation, AR.targetsKind)))),
+                    (key, "Requires", names(set(graph.objects(operation, AR.requires)))),
+                    (key, "Evidence", names(set(graph.objects(operation, AR.sourceStatus)))),
+                    (key, "Adaptation", names(set(graph.objects(operation, AR.adaptationStatus)))),
+                ]
+            )
+            if note := notes(graph, operation, AR.sourceNote):
+                rows.append((key, "Note", note))
+            for effect_type, resource in sorted(
+                {
+                    (effect_type, resource)
+                    for effect in graph.objects(operation, AR.hasPotentialEffect)
+                    for effect_type in graph.objects(effect, AR.effectType)
+                    for resource in graph.objects(effect, AR.affectsKind)
+                },
+                key=lambda row: (str(row[0]), str(row[1])),
+            ):
+                rows.append((key, "Effect", f"{label(effect_type)} → {label(resource)}"))
+        print_table(
+            "Skill operations (possible effects, not observed actions)",
+            ("Skill / operation", "Field", "Details"),
+            rows,
+            (38, 14, 70),
+        )
+    if native:
+        rows = []
+        for capability in native:
+            key = label(capability)
+            endpoint = combined.value(capability, AR.nativeEndpointKind)
+            resource = combined.value(capability, AR.nativeResourceKind)
+            effect_types_text = names(
+                set(combined.objects(capability, AR.nativeEffectType))
+            )
+            rows.extend(
+                [
+                    (key, "Endpoint", label(endpoint)),
+                    (key, "Effects", f"{effect_types_text} → {label(resource)}"),
+                    (key, "Scope", names(set(combined.objects(capability, AR.nativeScopeKind)))),
+                    (key, "Requires", names(set(combined.objects(capability, AR.nativeRequires)))),
+                    (key, "Note", notes(combined, capability, AR.sourceNote)),
+                ]
+            )
+        print_table(
+            "Native endpoint capabilities (independent of skills; conditional)",
+            ("Capability", "Field", "Details"),
+            rows,
+            (36, 14, 72),
+        )
+    mounts = sorted(set(combined.subjects(AR.mountExposesKind, None)), key=str)
+    if mounts:
+        rows = []
+        for mount in mounts:
+            key = label(mount)
+            rows.extend(
+                [
+                    (key, "Mode", names(set(combined.objects(mount, AR.mountAccessMode)))),
+                    (key, "Exposes", names(set(combined.objects(mount, AR.mountExposesKind)))),
+                ]
+            )
+            conditions = set(combined.objects(mount, AR.mountConditionalOn))
+            if conditions:
+                rows.append((key, "Requires", names(conditions)))
+        print_table(
+            "Container mount exposures (alternatives; not effective file permissions)",
+            ("Mount", "Field", "Details"),
+            rows,
+            (36, 14, 72),
+        )
+    affected = set(touches) | native_resources
+    if affected:
+        rows = []
+        for resource in sorted(affected, key=str):
+            key = label(resource)
+            start = len(rows)
+            if definition := notes(combined, resource):
+                rows.append((key, "Definition", definition))
+            parents = ancestors(combined, resource, AR.specializesKind)
+            if parents:
+                rows.append((key, "Subtypes of", names(parents)))
+            containers = set(combined.subjects(AR.containsKind, resource))
+            if containers:
+                rows.append((key, "Contained in", names(containers)))
+            locations = set(combined.transitive_objects(resource, AR.mayResideInKind)) - {
+                resource
+            }
+            if locations:
+                rows.append((key, "May reside in", names(locations)))
+            mounts_for_resource = {
+                mount
+                for location in locations | {resource}
+                for mount in combined.subjects(AR.mountExposesKind, location)
+            }
+            if mounts_for_resource:
+                rows.append((key, "Possible mounts", names(mounts_for_resource)))
+            controls = set(combined.objects(resource, AR.protectedByKind))
+            for parent in parents:
+                controls.update(combined.objects(parent, AR.protectedByKind))
+            if controls:
+                rows.append((key, "Controls", names(controls)))
+            if len(rows) == start:
+                rows.append((key, "Context", "(no further description recorded)"))
+        print_table(
+            "Affected resource kinds (type-level context)",
+            ("Resource kind", "Field", "Details"),
+            rows,
+            (36, 18, 68),
+        )
     if calls:
-        print("\nPotential Internet calls (possibilities, not observed traffic):")
+        rows = []
         for skill, operation, call, graph in calls:
-            vias = ", ".join(sorted(map(label, graph.objects(call, AR.callViaKind))))
+            key = f"{skill} / {label(operation)}"
+            vias = names(set(graph.objects(call, AR.callViaKind)))
             conditions = set(graph.objects(operation, AR.requires)) | set(
                 graph.objects(call, AR.callConditionalOn)
             )
@@ -358,12 +525,22 @@ def main() -> None:
             initiator = label(graph.value(call, AR.callInitiatorKind))
             endpoint = label(graph.value(call, AR.callEndpointKind))
             pattern = graph.value(call, AR.callEndpointPattern) or "(not established)"
-            print(f"  {skill} / {label(operation)} -> {label(call)}")
-            print(f"    {stage}: {initiator} via {vias}")
-            print(f"    endpoint: {endpoint}  [{pattern}]")
-            print(
-                f"    conditions: {', '.join(sorted(map(label, conditions))) or '(none recorded)'}"
+            rows.extend(
+                [
+                    (key, "Call", label(call)),
+                    (key, "Stage / initiator", f"{stage} / {initiator}"),
+                    (key, "Via", vias),
+                    (key, "Endpoint", endpoint),
+                    (key, "Pattern", str(pattern)),
+                    (key, "Conditions", names(conditions)),
+                ]
             )
+        print_table(
+            "Potential Internet calls (possibilities, not observed traffic)",
+            ("Skill / operation", "Field", "Details"),
+            rows,
+            (38, 18, 68),
+        )
 
     resources = [
         resource_context(combined, kind, effect_types)

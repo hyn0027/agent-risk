@@ -8,6 +8,9 @@ ar:g_sherpa_onnx_tts {
     ar:sourceSha256 "afd52f85a94d8e46114fcd7e9bebcdf4c7dcf0de34fdebf178c38cab60246d7e" ;
     ar:requiresOntologyModule "nanoclaw-core", "nanoclaw-runtime",
       "nanoclaw-network", "nanoclaw-control" ;
+    ar:subjectToControlKind ar:NanoClawContainerIsolationControl,
+      ar:NanoClawMountModeControl, ar:NanoClawMountAllowlistControl,
+      ar:NanoClawEgressLockdownControl, ar:OneCLIGatewayPolicy ;
     ar:governedByAdaptationPolicy ar:NanoClawSkillAdaptationPolicy ;
     ar:hasAdaptationMapping ar:adapt_sherpa_download,
       ar:adapt_sherpa_configuration, ar:adapt_sherpa_synthesis ;
@@ -33,6 +36,14 @@ ar:g_sherpa_onnx_tts {
   ar:VoiceInputText a ar:WorldSurfaceKind .
   ar:LocalAudioFile a ar:WorldSurfaceKind ; ar:specializesKind ar:LocalFile .
   ar:SkillEnvironmentConfig a ar:WorldSurfaceKind ; ar:specializesKind ar:LocalFile .
+  ar:InstalledRuntime ar:mayResideInKind ar:NanoClawAgentGroupWorkspace .
+  ar:InstalledVoiceModel ar:mayResideInKind ar:NanoClawAgentGroupWorkspace .
+  ar:SkillEnvironmentConfig ar:mayResideInKind ar:NanoClawAgentGroupWorkspace .
+  ar:LocalAudioFile ar:mayResideInKind ar:NanoClawAgentGroupWorkspace,
+    ar:NanoClawSessionWorkspace, ar:NanoClawAdditionalHostDirectory .
+  ar:op_sherpa_download ar:requires ar:cond_container_file_writable .
+  ar:op_sherpa_configure ar:requires ar:cond_container_file_writable .
+  ar:op_sherpa_synthesize ar:requires ar:cond_container_file_writable .
   ar:LocalFileSystem ar:containsKind ar:InstalledRuntime, ar:InstalledVoiceModel, ar:LocalAudioFile .
   ar:NanoClawAgentGroupWorkspace ar:containsKind ar:InstalledRuntime,
     ar:InstalledVoiceModel, ar:LocalAudioFile, ar:SkillEnvironmentConfig .

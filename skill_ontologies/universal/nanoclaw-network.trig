@@ -13,6 +13,15 @@ ar:g_nanoclaw_network {
   ar:OneCLICACertificate a ar:WorldSurfaceKind ;
     ar:specializesKind ar:LocalFile ;
     rdfs:comment "CA material mounted read-only so compatible clients can trust the gateway's HTTPS interception." .
+  ar:OneCLIFileMount a ar:WorldSurfaceKind ;
+    ar:specializesKind ar:NanoClawReadOnlyMount ;
+    ar:mountPrincipalKind ar:NanoClawAgentContainer ;
+    ar:mountExposesKind ar:OneCLICredentialStub, ar:OneCLICACertificate ;
+    ar:mountAccessMode ar:ReadOnlyMountMode ;
+    ar:mountConditionalOn ar:cond_onecli_files_contributed ;
+    rdfs:comment "Conditional OneCLI-contributed read-only mounts; a credential stub is not the underlying secret." .
+  ar:cond_onecli_files_contributed a ar:Requirement ;
+    rdfs:comment "The configured OneCLI gateway contributes CA and/or credential-stub files for this session." .
   ar:OneCLIGatewayPolicy a ar:WorldSurfaceKind, ar:SecurityControlKind ;
     rdfs:comment "Gateway-side authorization, credential grant, approval, or rate-limit policy. Available semantics depend on the installed OneCLI version." .
   ar:NanoClawEgressLockdownControl a ar:WorldSurfaceKind, ar:SecurityControlKind ;
@@ -29,6 +38,8 @@ ar:g_nanoclaw_network {
     ar:OneCLIAgentIdentity, ar:OneCLIGatewayPolicy .
   ar:NanoClawAgentContainer ar:containsKind ar:OneCLICredentialStub,
     ar:OneCLICACertificate .
+  ar:OneCLICredentialStub ar:protectedByKind ar:NanoClawMountModeControl .
+  ar:OneCLICACertificate ar:protectedByKind ar:NanoClawMountModeControl .
 
   ar:NanoClawContainerNetworkRequest a ar:InvocationSurfaceKind ;
     rdfs:comment "Network connection initiated by code in the agent container." .
@@ -51,6 +62,28 @@ ar:g_nanoclaw_network {
     ar:specializesInvocationKind ar:ToolEndpoint ;
     ar:routesToKind ar:NanoClawProxyAwareHTTPRequest, ar:NanoClawDirectNetworkRequest ;
     rdfs:comment "Provider web-search/fetch surface. The two routes are alternatives determined by client proxy behavior and effective network configuration." .
+
+  ar:cond_provider_web_tool_available a ar:Requirement ;
+    rdfs:comment "The selected provider exposes a web search/fetch tool to this session." .
+  ar:cond_network_route_permitted a ar:Requirement ;
+    rdfs:comment "A concrete outbound route, destination, and applicable gateway or direct-egress policy permit the request; remote authorization is separate." .
+  ar:cond_network_client_available a ar:Requirement ;
+    rdfs:comment "A chosen shell command or installed client can issue the intended network request." .
+  ar:NativeProviderWebFetch a ar:NativeCapability ;
+    ar:nativeEndpointKind ar:NanoClawProviderWebTool ;
+    ar:nativeResourceKind ar:RemoteWebResource ; ar:nativeEffectType ar:Read ;
+    ar:nativeScopeKind ar:Internet ;
+    ar:nativeRequires ar:cond_provider_web_tool_available,
+      ar:cond_network_route_permitted ;
+    ar:sourceNote "A provider web tool may fetch or search a remote resource through OneCLI or direct egress; neither route nor authorization is established here." .
+  ar:NativeShellNetworkRequest a ar:NativeCapability ;
+    ar:nativeEndpointKind ar:NanoClawContainerShellExecution ;
+    ar:nativeResourceKind ar:RemoteNetworkEndpoint ;
+    ar:nativeEffectType ar:Transmit ;
+    ar:nativeScopeKind ar:Internet ;
+    ar:nativeRequires ar:cond_container_shell_available,
+      ar:cond_network_client_available, ar:cond_network_route_permitted ;
+    ar:sourceNote "A chosen container shell command can issue an outbound request if a suitable client and route exist; this does not assert a particular endpoint or remote mutation." .
 
   ar:NanoClawLocalStdioMCPTool a ar:InvocationSurfaceKind, ar:ToolEndpointKind ;
     ar:specializesInvocationKind ar:MCPToolEndpoint ;

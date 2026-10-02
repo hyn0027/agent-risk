@@ -10,6 +10,15 @@ ar:OperationShape a sh:NodeShape ;
   sh:property [ sh:path ar:sourceStatus ; sh:class ar:EvidenceStatus ; sh:minCount 1 ] ;
   sh:property [ sh:path ar:adaptationStatus ; sh:class ar:EvidenceStatus ] .
 
+ar:NativeCapabilityShape a sh:NodeShape ;
+  sh:targetClass ar:NativeCapability ;
+  sh:property [ sh:path ar:nativeEndpointKind ; sh:class ar:InvocationSurfaceKind ; sh:minCount 1 ; sh:maxCount 1 ] ;
+  sh:property [ sh:path ar:nativeResourceKind ; sh:class ar:WorldSurfaceKind ; sh:minCount 1 ; sh:maxCount 1 ] ;
+  sh:property [ sh:path ar:nativeEffectType ; sh:class ar:EffectType ; sh:minCount 1 ] ;
+  sh:property [ sh:path ar:nativeScopeKind ; sh:class ar:WorldSurfaceKind ; sh:minCount 1 ] ;
+  sh:property [ sh:path ar:nativeRequires ; sh:class ar:Requirement ] ;
+  sh:property [ sh:path ar:sourceNote ; sh:datatype xsd:string ; sh:minCount 1 ] .
+
 ar:EffectShape a sh:NodeShape ;
   sh:targetClass ar:PotentialEffect ;
   sh:property [ sh:path ar:effectType ; sh:class ar:EffectType ; sh:minCount 1 ; sh:maxCount 1 ] ;
@@ -29,6 +38,7 @@ ar:PotentialInternetCallShape a sh:NodeShape ;
 
 ar:SkillShape a sh:NodeShape ;
   sh:targetClass ar:Skill ;
+  sh:property [ sh:path ar:subjectToControlKind ; sh:class ar:SecurityControlKind ; sh:minCount 1 ] ;
   sh:property [ sh:path ar:skillDirectory ; sh:datatype xsd:string ; sh:minCount 1 ; sh:maxCount 1 ] ;
   sh:property [ sh:path ar:sourcePath ; sh:datatype xsd:string ; sh:minCount 1 ; sh:maxCount 1 ] ;
   sh:property [ sh:path ar:sourceSha256 ; sh:datatype xsd:string ; sh:minCount 1 ; sh:maxCount 1 ] ;
@@ -36,6 +46,26 @@ ar:SkillShape a sh:NodeShape ;
   sh:property [ sh:path ar:hasAdaptationMapping ; sh:class ar:AdaptationMapping ; sh:minCount 1 ] ;
   sh:property [ sh:path ar:governedByAdaptationPolicy ; sh:class ar:AdaptationPolicy ; sh:minCount 1 ; sh:maxCount 1 ] ;
   sh:property [ sh:path ar:declaresOperation ; sh:class ar:Operation ; sh:minCount 1 ] .
+
+ar:NanoClawMountPermissionShape a sh:NodeShape ;
+  sh:targetSubjectsOf ar:mountExposesKind ;
+  sh:class ar:WorldSurfaceKind ;
+  sh:property [ sh:path ar:mountPrincipalKind ; sh:class ar:WorldSurfaceKind ; sh:minCount 1 ; sh:maxCount 1 ] ;
+  sh:property [ sh:path ar:mountExposesKind ; sh:class ar:WorldSurfaceKind ; sh:minCount 1 ] ;
+  sh:property [ sh:path ar:mountAccessMode ; sh:class ar:MountAccessMode ; sh:minCount 1 ; sh:maxCount 1 ] ;
+  sh:property [ sh:path ar:mountConditionalOn ; sh:class ar:Requirement ] ;
+  sh:sparql [
+    sh:message "A read-only mount kind must have read-only mode; a read-write mount kind must have read-write mode." ;
+    sh:select """PREFIX ar: <urn:agent-risk:>
+      SELECT $this WHERE {
+        { $this ar:specializesKind+ ar:NanoClawReadOnlyMount .
+          FILTER NOT EXISTS { $this ar:mountAccessMode ar:ReadOnlyMountMode } }
+        UNION
+        { $this ar:specializesKind+ ar:NanoClawReadWriteMount .
+          FILTER NOT EXISTS { $this ar:mountAccessMode ar:ReadWriteMountMode } }
+      }"""
+  ] .
+
 
 ar:OntologyModuleShape a sh:NodeShape ;
   sh:targetClass ar:OntologyModule ;

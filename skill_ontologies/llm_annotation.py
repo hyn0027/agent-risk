@@ -8,6 +8,7 @@ from random import shuffle
 
 from dotenv import load_dotenv
 from openai import OpenAI
+from table_output import print_table
 
 ROOT = Path(__file__).resolve().parent
 
@@ -23,10 +24,15 @@ def analyze_pairs(
     total_pairs = len(resources) * (len(resources) - 1) // 2
     pairs = list(islice(combinations(resources, 2), max_pairs))
 
-    print(f"\nAffected resource kinds: {len(resources)}")
-    print(
-        f"Cross-operation resource pairs: {len(pairs)} of {total_pairs} "
-        f"({len(pairs)} assessment calls)"
+    print_table(
+        "Pair selection",
+        ("Metric", "Value"),
+        [
+            ("Affected resource kinds", str(len(resources))),
+            ("Selected pairs", f"{len(pairs)} of {total_pairs}"),
+            ("Assessment calls", str(len(pairs))),
+        ],
+        (30, 88),
     )
     if not pairs:
         return
@@ -68,7 +74,12 @@ def analyze_pairs(
     timestamp = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%S%fZ")
     results_path = results_dir / f"assessments-{timestamp}.jsonl"
     results_path.touch(exist_ok=False)
-    print(f"\nSaving assessments to: {results_path}")
+    print_table(
+        "Assessment output",
+        ("Field", "Value"),
+        [("JSONL results file", str(results_path))],
+        (30, 88),
+    )
 
     joint_risks = 0
     for index, (first, second) in enumerate(pairs, 1):
@@ -121,20 +132,34 @@ def analyze_pairs(
                 )
                 + "\n"
             )
-        print(f"\nAssessment {index}/{len(pairs)}:")
+        rows = [
+            ("Pair", f"{first['label']} + {second['label']}"),
+            ("First resource effects", ", ".join(first["effects"])),
+            ("Second resource effects", ", ".join(second["effects"])),
+            ("Joint risk", "yes" if assessment["joint_risk"] else "no"),
+            ("Consequence", assessment["consequence"] or "(none)"),
+            ("Why both", assessment["why_both"] or "(none)"),
+            ("Assumptions", assessment["assumptions"] or "(none)"),
+        ]
         if response.usage:
-            print(
-                f"  Cached input tokens: {response.usage.input_tokens_details.cached_tokens}"
+            rows.append(
+                (
+                    "Cached input tokens",
+                    str(response.usage.input_tokens_details.cached_tokens),
+                )
             )
-        if not assessment["joint_risk"]:
-            continue
-        joint_risks += 1
-        print(f"  {first['label']} + {second['label']}: {assessment['consequence']}")
-        print(
-            f"    Potential effects: {first['label']}=[{', '.join(first['effects'])}]; "
-            f"{second['label']}=[{', '.join(second['effects'])}]"
+        print_table(
+            f"Assessment {index}/{len(pairs)}",
+            ("Field", "Value"),
+            rows,
+            (30, 88),
         )
-        print(f"    Why both: {assessment['why_both']}")
-        print(f"    Assumptions: {assessment['assumptions']}")
+        if assessment["joint_risk"]:
+            joint_risks += 1
 
-    print(f"\nModel-flagged joint risks: {joint_risks}/{len(pairs)} pairs")
+    print_table(
+        "Annotation summary",
+        ("Metric", "Value"),
+        [("Model-flagged joint risks", f"{joint_risks}/{len(pairs)} pairs")],
+        (30, 88),
+    )

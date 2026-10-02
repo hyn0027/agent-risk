@@ -6,7 +6,12 @@ ar:g_coding_agent {
     ar:skillDirectory "coding-agent" ;
     ar:sourcePath "/Users/yhong3/Documents/Research/agent-risk/top_skills/coding-agent/SKILL.md" ;
     ar:sourceSha256 "67dff2389503d4a47ef757afa637458e00bb9560f898ff072e35a825e065174d" ;
-    ar:requiresOntologyModule "git-resources", "nanoclaw-runtime", "nanoclaw-messaging", "nanoclaw-network" ;
+    ar:requiresOntologyModule "git-resources", "nanoclaw-runtime",
+      "nanoclaw-messaging", "nanoclaw-network", "nanoclaw-control" ;
+    ar:subjectToControlKind ar:NanoClawContainerIsolationControl,
+      ar:NanoClawMountModeControl, ar:NanoClawMountAllowlistControl,
+      ar:NanoClawEgressLockdownControl, ar:OneCLIGatewayPolicy,
+      ar:RemoteServiceAuthorizationControl, ar:NanoClawDestinationACL ;
     ar:governedByAdaptationPolicy ar:NanoClawSkillAdaptationPolicy ;
     ar:hasAdaptationMapping ar:adapt_coding_worker_launch,
       ar:adapt_coding_repository_visibility, ar:adapt_coding_notification ;
@@ -37,6 +42,19 @@ ar:g_coding_agent {
     rdfs:comment "An unspecified public code-forge endpoint used by a worker for push or PR creation; the source does not fix host or protocol." .
   ar:IsolatedWorktree a ar:WorldSurfaceKind ; ar:specializesKind ar:LocalDirectory .
   ar:CodeFile a ar:WorldSurfaceKind ; ar:specializesKind ar:LocalFile .
+  ar:IsolatedWorktree ar:mayResideInKind ar:NanoClawContainerLayer,
+    ar:NanoClawAgentGroupWorkspace, ar:NanoClawAdditionalHostDirectory .
+  ar:LocalGitRepository ar:mayResideInKind ar:NanoClawContainerLayer,
+    ar:NanoClawAgentGroupWorkspace, ar:NanoClawAdditionalHostDirectory .
+  ar:ConventionalGitWorkingTreeCandidate ar:mayResideInKind
+    ar:NanoClawContainerLayer, ar:NanoClawAgentGroupWorkspace,
+    ar:NanoClawAdditionalHostDirectory .
+  ar:ConventionalGitWorkingTree ar:mayResideInKind ar:NanoClawContainerLayer,
+    ar:NanoClawAgentGroupWorkspace, ar:NanoClawAdditionalHostDirectory .
+  ar:CodeFile ar:mayResideInKind ar:IsolatedWorktree .
+  ar:op_prepare_worktree ar:requires ar:cond_container_file_writable .
+  ar:op_launch_coding_worker ar:requires ar:cond_container_file_writable .
+  ar:op_worker_issue_pr ar:requires ar:cond_container_file_writable .
   ar:LocalBranch a ar:WorldSurfaceKind .
   ar:WorkerProcess a ar:WorldSurfaceKind ; ar:specializesKind ar:ShellProcess .
   ar:GitHubIssue a ar:WorldSurfaceKind .
@@ -45,6 +63,7 @@ ar:g_coding_agent {
   ar:LocalGitRepository ar:containsKind ar:IsolatedWorktree, ar:LocalBranch, ar:CodeFile .
   ar:IsolatedWorktree ar:containsKind ar:CodeFile .
   ar:RemoteGitRepository ar:containsKind ar:GitHubIssue, ar:GitHubPullRequest .
+  ar:RemoteGitRepository ar:protectedByKind ar:RemoteServiceAuthorizationControl .
 
   ar:cond_trusted_ref a ar:Requirement .
   ar:cond_verified_base a ar:Requirement .

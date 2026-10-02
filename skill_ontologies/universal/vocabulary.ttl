@@ -19,7 +19,13 @@ ar:SystemComponentKind a rdfs:Class ; rdfs:subClassOf ar:WorldSurfaceKind ;
   rdfs:comment "Architectural component kinds that may hold state, execute logic, or mediate access. Being a component kind does not assert that an instance is running." .
 ar:SecurityControlKind a rdfs:Class ; rdfs:subClassOf ar:WorldSurfaceKind ;
   rdfs:comment "Configuration or enforcement mechanism relevant to reachability or authority. A declared control is not evidence that it is enabled or effective at runtime." .
+ar:MountAccessMode a rdfs:Class ;
+  rdfs:comment "Mode enforced by one mount, not an effective file permission or a skill grant." .
+ar:ReadOnlyMountMode a ar:MountAccessMode ; rdfs:label "read-only mount" .
+ar:ReadWriteMountMode a ar:MountAccessMode ; rdfs:label "read-write mount" .
 ar:Operation a rdfs:Class .
+ar:NativeCapability a rdfs:Class ;
+  rdfs:comment "Potential action of a loaded harness/tool endpoint independent of any skill. A capability is not an executed operation, runtime tool inventory, or authorization grant." .
 ar:PotentialEffect a rdfs:Class .
 ar:PotentialInternetCall a rdfs:Class ;
   rdfs:comment "A possible outbound request to a public-Internet endpoint caused by an operation, possibly after local or host mediation. It is not an observed packet, a guaranteed call, or proof that the endpoint is reachable. Local mailbox, stdio, loopback, and private-network hops do not themselves qualify." .
@@ -63,9 +69,27 @@ ar:adaptationStatus a rdf:Property ; rdfs:domain ar:Operation ; rdfs:range ar:Ev
   rdfs:comment "Evidence status for an environment-specific translation, kept separate from the source evidence for the operation." .
 ar:sourceNote a rdf:Property ; rdfs:range xsd:string .
 ar:invokedThroughKind a rdf:Property ; rdfs:domain ar:Operation ; rdfs:range ar:InvocationSurfaceKind .
+ar:nativeEndpointKind a rdf:Property ; rdfs:domain ar:NativeCapability ; rdfs:range ar:InvocationSurfaceKind .
+ar:nativeResourceKind a rdf:Property ; rdfs:domain ar:NativeCapability ; rdfs:range ar:WorldSurfaceKind .
+ar:nativeEffectType a rdf:Property ; rdfs:domain ar:NativeCapability ; rdfs:range ar:EffectType .
+ar:nativeScopeKind a rdf:Property ; rdfs:domain ar:NativeCapability ; rdfs:range ar:WorldSurfaceKind ;
+  rdfs:comment "Potential scope for the capability, not a claim that a concrete resource in that scope is accessible." .
+ar:nativeRequires a rdf:Property ; rdfs:domain ar:NativeCapability ; rdfs:range ar:Requirement .
 ar:routesToKind a rdf:Property ; rdfs:range ar:SurfaceKind .
 ar:protectedByKind a rdf:Property ; rdfs:domain ar:SurfaceKind ; rdfs:range ar:SecurityControlKind ;
   rdfs:comment "A type-level protection or policy relationship. Runtime configuration and enforcement must be observed separately." .
+ar:subjectToControlKind a rdf:Property ; rdfs:range ar:SecurityControlKind ;
+  rdfs:comment "A candidate control relevant to some paths described by a skill. Controls listed on one skill are not all conjunctive, do not apply to every operation, and do not assert approval." .
+ar:mountExposesKind a rdf:Property ; rdfs:range ar:WorldSurfaceKind ;
+  rdfs:comment "A mount kind exposes a resource kind in the container namespace. A type-level claim is not evidence of a live mount or individual file access." .
+ar:mountAccessMode a rdf:Property ; rdfs:range ar:MountAccessMode ;
+  rdfs:comment "Mount-layer access mode. Nested mounts override parent mount modes at their target paths; OS permissions and provider policy may restrict access further." .
+ar:mountPrincipalKind a rdf:Property ; rdfs:range ar:WorldSurfaceKind ;
+  rdfs:comment "Architectural principal whose container namespace receives the mount, not a concrete authenticated identity." .
+ar:mountConditionalOn a rdf:Property ; rdfs:range ar:Requirement ;
+  rdfs:comment "Condition required for a conditional mount or mode; the graph does not assert that it holds in a running session." .
+ar:mayResideInKind a rdf:Property ; rdfs:domain ar:WorldSurfaceKind ; rdfs:range ar:WorldSurfaceKind ;
+  rdfs:comment "Plausible location of instances of a file/resource kind; does not assert that every instance exists there or inherits its container's permission." .
 ar:sharesKind a rdf:Property ; rdfs:domain ar:WorldSurfaceKind ; rdfs:range ar:WorldSurfaceKind ;
   rdfs:comment "Possible shared state or resource scope. This is neither subtype nor containment and does not imply universal visibility." .
 ar:targetsKind a rdf:Property ; rdfs:domain ar:Operation ; rdfs:range ar:WorldSurfaceKind .

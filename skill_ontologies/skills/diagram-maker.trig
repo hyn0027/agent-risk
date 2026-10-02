@@ -7,6 +7,8 @@ ar:g_diagram_maker {
     ar:sourcePath "/Users/yhong3/Documents/Research/agent-risk/top_skills/diagram-maker-1.0.0/SKILL.md" ;
     ar:sourceSha256 "b8a3355cf2b7ca1c18b672d3fb23fba331db0da75308b403721a9918094b7bcb" ;
     ar:requiresOntologyModule "nanoclaw-runtime" ;
+    ar:subjectToControlKind ar:NanoClawContainerIsolationControl,
+      ar:NanoClawMountModeControl, ar:NanoClawMountAllowlistControl ;
     ar:governedByAdaptationPolicy ar:NanoClawSkillAdaptationPolicy ;
     ar:hasAdaptationMapping ar:adapt_diagram_file_tools ;
     ar:sourceNote "NanoClaw adaptation: provider file tools read and write artifacts within the container-visible filesystem." ;
@@ -24,6 +26,20 @@ ar:g_diagram_maker {
   ar:DiagramHTML a ar:WorldSurfaceKind ; ar:specializesKind ar:LocalFile .
   ar:DiagramSVG a ar:WorldSurfaceKind ; ar:specializesKind ar:LocalFile .
   ar:ExcalidrawJSON a ar:WorldSurfaceKind ; ar:specializesKind ar:LocalFile .
+  ar:DiagramTemplate ar:mayResideInKind ar:NanoClawSharedSkillsDirectory,
+    ar:NanoClawAdditionalHostDirectory .
+  ar:DiagramArtifact ar:mayResideInKind ar:NanoClawContainerLayer,
+    ar:NanoClawSessionWorkspace, ar:NanoClawAgentGroupWorkspace,
+    ar:NanoClawAdditionalHostDirectory .
+  ar:DiagramHTML ar:mayResideInKind ar:NanoClawSessionWorkspace,
+    ar:NanoClawAgentGroupWorkspace, ar:NanoClawAdditionalHostDirectory .
+  ar:DiagramSVG ar:mayResideInKind ar:NanoClawSessionWorkspace,
+    ar:NanoClawAgentGroupWorkspace, ar:NanoClawAdditionalHostDirectory .
+  ar:ExcalidrawJSON ar:mayResideInKind ar:NanoClawSessionWorkspace,
+    ar:NanoClawAgentGroupWorkspace, ar:NanoClawAdditionalHostDirectory .
+  ar:op_diagram_read_patterns ar:requires ar:cond_container_file_readable .
+  ar:op_diagram_write_artifact ar:requires ar:cond_container_file_writable .
+  ar:op_diagram_verify ar:requires ar:cond_container_file_readable .
   ar:LocalFileSystem ar:containsKind ar:DiagramTemplate, ar:DiagramArtifact .
   ar:NanoClawContainerFileSystem ar:containsKind ar:DiagramTemplate, ar:DiagramArtifact .
   ar:DiagramArtifact ar:containsKind ar:DiagramHTML, ar:DiagramSVG, ar:ExcalidrawJSON .

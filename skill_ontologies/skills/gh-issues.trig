@@ -7,7 +7,11 @@ ar:g_gh_issues {
     ar:sourcePath "/Users/yhong3/Documents/Research/agent-risk/top_skills/gh-issues/SKILL.md" ;
     ar:sourceSha256 "f2a787203a90572835e7b7bfe939a422c7d7e1828662d60ad2e4a0db8c9f5577" ;
     ar:requiresOntologyModule "git-resources", "nanoclaw-core", "nanoclaw-runtime",
-      "nanoclaw-network", "nanoclaw-messaging" ;
+      "nanoclaw-network", "nanoclaw-messaging", "nanoclaw-control" ;
+    ar:subjectToControlKind ar:NanoClawContainerIsolationControl,
+      ar:NanoClawMountModeControl, ar:NanoClawMountAllowlistControl,
+      ar:NanoClawEgressLockdownControl, ar:OneCLIGatewayPolicy,
+      ar:RemoteServiceAuthorizationControl, ar:NanoClawDestinationACL ;
     ar:governedByAdaptationPolicy ar:NanoClawSkillAdaptationPolicy ;
     ar:hasAdaptationMapping ar:adapt_gh_shell_environment,
       ar:adapt_gh_token_resolution, ar:adapt_gh_tracking_state,
@@ -31,6 +35,7 @@ ar:g_gh_issues {
     ar:routesToKind ar:TelegramDestination .
   ar:NanoClawHostDeliveryInvocation ar:routesToKind ar:TelegramAdapterDelivery .
   ar:GitHubRepository a ar:WorldSurfaceKind .
+  ar:GitHubRepository ar:protectedByKind ar:RemoteServiceAuthorizationControl .
   ar:GitHubRESTEndpoint a ar:WorldSurfaceKind, ar:PublicInternetEndpointKind ;
     ar:specializesKind ar:PublicInternetEndpoint .
   ar:GitHubGitEndpoint a ar:WorldSurfaceKind, ar:PublicInternetEndpointKind ;
@@ -47,6 +52,21 @@ ar:g_gh_issues {
   ar:LocalGitConfiguration a ar:WorldSurfaceKind ; ar:specializesKind ar:LocalFile .
   ar:GlobalGitConfiguration a ar:WorldSurfaceKind ; ar:specializesKind ar:LocalFile .
   ar:TrackingFile a ar:WorldSurfaceKind ; ar:specializesKind ar:LocalFile .
+  ar:LocalGitConfiguration ar:mayResideInKind ar:LocalGitRepository .
+  ar:LocalGitRepository ar:mayResideInKind ar:NanoClawContainerLayer,
+    ar:NanoClawAgentGroupWorkspace, ar:NanoClawAdditionalHostDirectory .
+  ar:ConventionalGitWorkingTreeCandidate ar:mayResideInKind
+    ar:NanoClawContainerLayer, ar:NanoClawAgentGroupWorkspace,
+    ar:NanoClawAdditionalHostDirectory .
+  ar:ConventionalGitWorkingTree ar:mayResideInKind ar:NanoClawContainerLayer,
+    ar:NanoClawAgentGroupWorkspace, ar:NanoClawAdditionalHostDirectory .
+  ar:GlobalGitConfiguration ar:mayResideInKind ar:NanoClawContainerLayer,
+    ar:NanoClawProviderStateDirectory .
+  ar:TrackingFile ar:mayResideInKind ar:NanoClawAgentGroupWorkspace .
+  ar:op_gh_token_resolution ar:requires ar:cond_container_file_readable .
+  ar:op_gh_write_tracking ar:requires ar:cond_container_file_writable .
+  ar:op_gh_local_git ar:requires ar:cond_container_file_writable .
+  ar:op_gh_push ar:requires ar:cond_container_file_writable .
   ar:GHAccessToken a ar:WorldSurfaceKind .
   ar:ProcessOutput a ar:WorldSurfaceKind ; ar:specializesKind ar:ShellProcessOutput .
   ar:TelegramDestination a ar:WorldSurfaceKind .

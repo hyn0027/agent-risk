@@ -7,6 +7,9 @@ ar:g_meme_maker {
     ar:sourcePath "/Users/yhong3/Documents/Research/agent-risk/top_skills/meme-maker-1.0.0/SKILL.md" ;
     ar:sourceSha256 "05e5500023d6b432f695f680ca771b005ab66b03aceff9294dc0a9768dcf2301" ;
     ar:requiresOntologyModule "nanoclaw-runtime", "nanoclaw-network" ;
+    ar:subjectToControlKind ar:NanoClawContainerIsolationControl,
+      ar:NanoClawMountModeControl, ar:NanoClawEgressLockdownControl,
+      ar:OneCLIGatewayPolicy, ar:RemoteServiceAuthorizationControl ;
     ar:governedByAdaptationPolicy ar:NanoClawSkillAdaptationPolicy ;
     ar:hasAdaptationMapping ar:adapt_meme_local_runtime,
       ar:adapt_meme_network ;
@@ -24,7 +27,13 @@ ar:g_meme_maker {
   ar:TemplateImage a ar:WorldSurfaceKind ; ar:specializesKind ar:RemoteWebResource .
   ar:TemplateCache a ar:WorldSurfaceKind ; ar:specializesKind ar:LocalDirectory .
   ar:LocalMemeFile a ar:WorldSurfaceKind ; ar:specializesKind ar:LocalFile .
+  ar:CuratedTemplateRegistry ar:mayResideInKind ar:NanoClawSharedSkillsDirectory .
+  ar:TemplateCache ar:mayResideInKind ar:NanoClawSessionWorkspace .
+  ar:LocalMemeFile ar:mayResideInKind ar:NanoClawSessionWorkspace .
+  ar:op_meme_catalog ar:requires ar:cond_container_file_readable .
+  ar:op_meme_local_render ar:requires ar:cond_container_file_writable .
   ar:ImgflipService a ar:WorldSurfaceKind .
+  ar:ImgflipService ar:protectedByKind ar:RemoteServiceAuthorizationControl .
   ar:ImgflipAPIEndpoint a ar:WorldSurfaceKind, ar:PublicInternetEndpointKind ;
     ar:specializesKind ar:PublicInternetEndpoint .
   ar:ImgflipTemplateImageEndpoint a ar:WorldSurfaceKind, ar:PublicInternetEndpointKind ;

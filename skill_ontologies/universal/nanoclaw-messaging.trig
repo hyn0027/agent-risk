@@ -28,6 +28,9 @@ ar:g_nanoclaw_messaging {
   ar:NanoClawDeliveryRecord a ar:WorldSurfaceKind .
   ar:NanoClawOutboxArtifact a ar:WorldSurfaceKind ;
     ar:specializesKind ar:LocalFile .
+  ar:NanoClawOutboxArtifact ar:mayResideInKind ar:NanoClawSessionWorkspace .
+  ar:NanoClawInboundMailbox ar:mayResideInKind ar:NanoClawSessionWorkspace .
+  ar:NanoClawOutboundMailbox ar:mayResideInKind ar:NanoClawSessionWorkspace .
 
   ar:MessagingPlatform ar:containsKind ar:MessagingGroup, ar:MessagingMessage .
   ar:MessagingGroup ar:containsKind ar:MessagingThread, ar:MessagingMessage .
@@ -94,9 +97,38 @@ ar:g_nanoclaw_messaging {
     ar:specializesInvocationKind ar:NanoClawBuiltInMCPTool, ar:MessagingToolEndpoint ;
     ar:routesToKind ar:NanoClawOutboundMailboxWrite .
 
+  ar:cond_builtin_messaging_tool_available a ar:Requirement ;
+    rdfs:comment "The configured provider exposes the NanoClaw built-in messaging tool in this session." .
+  ar:cond_destination_projected_and_authorized a ar:Requirement ;
+    rdfs:comment "A concrete destination is projected into the session and host delivery authorizes it; adapter/platform permission is a separate condition." .
+  ar:NativeMessageEnqueue a ar:NativeCapability ;
+    ar:nativeEndpointKind ar:NanoClawSendMessageTool ;
+    ar:nativeResourceKind ar:NanoClawOutboundMessage ;
+    ar:nativeEffectType ar:Create ;
+    ar:nativeScopeKind ar:NanoClawOutboundMailbox ;
+    ar:nativeRequires ar:cond_builtin_messaging_tool_available ;
+    ar:sourceNote "Calling the built-in send tool may enqueue an outbound message; this is not proof of remote delivery." .
+  ar:NativeMessageDelivery a ar:NativeCapability ;
+    ar:nativeEndpointKind ar:NanoClawSendMessageTool ;
+    ar:nativeResourceKind ar:NanoClawDestination ;
+    ar:nativeEffectType ar:Transmit ;
+    ar:nativeScopeKind ar:NanoClawDestination ;
+    ar:nativeRequires ar:cond_builtin_messaging_tool_available,
+      ar:cond_destination_projected_and_authorized ;
+    ar:sourceNote "A queued message may be delivered by the host to a named channel or agent destination when the applicable destination and adapter checks pass." .
+  ar:NativeFileSendRead a ar:NativeCapability ;
+    ar:nativeEndpointKind ar:NanoClawSendFileTool ;
+    ar:nativeResourceKind ar:NanoClawOutboxArtifact ;
+    ar:nativeEffectType ar:Read ;
+    ar:nativeScopeKind ar:NanoClawSessionWorkspace ;
+    ar:nativeRequires ar:cond_builtin_messaging_tool_available,
+      ar:cond_container_file_readable ;
+    ar:sourceNote "Sending a file may read a staged outbox artifact; the exact path and later delivery are separate facts." .
+
   ar:NanoClawMessagingModule a ar:OntologyModule ;
     ar:ontologyModuleId "nanoclaw-messaging" ;
-    ar:requiresOntologyModule "tool-endpoints", "local-filesystem", "nanoclaw-core" ;
+    ar:requiresOntologyModule "tool-endpoints", "local-filesystem",
+      "nanoclaw-core", "nanoclaw-runtime" ;
     rdfs:seeAlso
       <https://github.com/hyn0027/nanoclaw/blob/7902716b5b930215dbee4f56b8fb5b938d40468d/src/channels/adapter.ts>,
       <https://github.com/hyn0027/nanoclaw/blob/7902716b5b930215dbee4f56b8fb5b938d40468d/src/mailbox/types.ts>,

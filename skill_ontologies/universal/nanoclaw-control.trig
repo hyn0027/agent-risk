@@ -11,6 +11,7 @@ ar:g_nanoclaw_control {
   ar:NanoClawTaskRunLog a ar:WorldSurfaceKind ;
     ar:specializesKind ar:LocalFile ;
     rdfs:comment "Host-timestamped task-series log under the agent-group tasks directory; it is state, not a delivery channel." .
+  ar:NanoClawTaskRunLog ar:mayResideInKind ar:NanoClawAgentGroupWorkspace .
   ar:NanoClawMessagingRouteConfiguration a ar:WorldSurfaceKind ;
     rdfs:comment "The combined messaging-group, wiring, destination, membership, and policy records managed by ncl." .
 
@@ -30,6 +31,8 @@ ar:g_nanoclaw_control {
     rdfs:comment "Approval path for HOLD decisions; approval identity and the action guard are checked again before execution." .
   ar:NanoClawDestinationACL a ar:WorldSurfaceKind, ar:SecurityControlKind ;
     rdfs:comment "Named destination and agent-to-agent authorization checked by host delivery." .
+  ar:NanoClawHostSocketAccessControl a ar:WorldSurfaceKind, ar:SecurityControlKind ;
+    rdfs:comment "Host-side Unix socket access is the operator boundary for host ncl commands. The inspected CLI guard treats a host caller as trusted; container cli_scope and action guards must not be projected onto this path." .
 
   ar:NanoClawHostCommandDispatch a ar:InvocationSurfaceKind ;
     ar:routesToKind ar:NanoClawHostGuardInvocation .
@@ -48,6 +51,7 @@ ar:g_nanoclaw_control {
   ar:NanoClawHostNclCLI a ar:InvocationSurfaceKind, ar:ToolEndpointKind ;
     ar:specializesInvocationKind ar:ShellCommandExecution ;
     ar:routesToKind ar:NanoClawUnixSocketTransport ;
+    ar:protectedByKind ar:NanoClawHostSocketAccessControl ;
     rdfs:comment "Operator-side ncl command path through the host Unix socket; it does not use a session mailbox." .
   ar:NanoClawHostMessagingAdminCLI a ar:InvocationSurfaceKind, ar:ToolEndpointKind ;
     ar:specializesInvocationKind ar:NanoClawHostNclCLI ;

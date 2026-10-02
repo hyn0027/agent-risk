@@ -7,6 +7,8 @@ ar:g_skill_creator {
     ar:sourcePath "/Users/yhong3/Documents/Research/agent-risk/top_skills/skill-creator-1.0.0/SKILL.md" ;
     ar:sourceSha256 "50ceafc65b49526d94b1263bc4a8ee381ce36249f2e370f3cdc414efa6a75c2f" ;
     ar:requiresOntologyModule "nanoclaw-runtime" ;
+    ar:subjectToControlKind ar:NanoClawContainerIsolationControl,
+      ar:NanoClawMountModeControl, ar:NanoClawMountAllowlistControl ;
     ar:governedByAdaptationPolicy ar:NanoClawSkillAdaptationPolicy ;
     ar:hasAdaptationMapping ar:adapt_skill_creator_staging,
       ar:adapt_skill_creator_edit, ar:adapt_skill_creator_validation ;
@@ -27,6 +29,17 @@ ar:g_skill_creator {
     rdfs:comment "Bundled resources may be files or directories; a single narrower file kind would overstate the source." .
   ar:PendingSkillProposal a ar:WorldSurfaceKind ; ar:mayBeStoredAsKind ar:LocalFile, ar:LocalDirectory .
   ar:RepositorySkillSource a ar:WorldSurfaceKind ; ar:specializesKind ar:LocalDirectory .
+  ar:SkillDirectory ar:mayResideInKind ar:NanoClawSharedSkillsDirectory,
+    ar:NanoClawAgentGroupWorkspace, ar:NanoClawAdditionalHostDirectory .
+  ar:SkillFile ar:mayResideInKind ar:SkillDirectory .
+  ar:SkillResource ar:mayResideInKind ar:SkillDirectory .
+  ar:PendingSkillProposal ar:mayResideInKind ar:NanoClawSessionWorkspace .
+  ar:RepositorySkillSource ar:mayResideInKind ar:NanoClawAgentGroupWorkspace,
+    ar:NanoClawAdditionalHostDirectory .
+  ar:op_creator_inspect ar:requires ar:cond_container_file_readable .
+  ar:op_creator_propose ar:requires ar:cond_container_file_writable .
+  ar:op_creator_repo_edit ar:requires ar:cond_container_file_writable .
+  ar:op_creator_validate ar:requires ar:cond_container_file_readable .
   ar:ValidationResult a ar:WorldSurfaceKind .
   ar:SkillDirectory ar:containsKind ar:SkillFile, ar:SkillResource .
   ar:RepositorySkillSource ar:containsKind ar:SkillDirectory .
