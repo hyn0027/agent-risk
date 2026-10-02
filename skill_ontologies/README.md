@@ -55,10 +55,11 @@ universal/vocabulary.ttl             schema vocabulary
 universal/shapes.ttl                 SHACL integrity constraints
 manifest.json                        one list of selected ontology IDs
 loader.py                            assembly, validation, and reports
+llm_annotation.py                    optional LLM joint-risk annotation
 examples/*.ttl                       standalone concrete observation fixtures
 ```
 
-The loader never fetches or dynamically introduces a dependency. A dependency named by any selected ontology must already appear in `manifest.json`; otherwise loading aborts before an active dataset is assembled.
+The loader never fetches or dynamically introduces a dependency. A dependency named by any selected ontology must already appear in `manifest.json`; otherwise loading aborts before the combined graph is assembled.
 
 ### Sources and evidence boundary
 
@@ -75,6 +76,7 @@ All graphs use `ar: <urn:agent-risk:>`. These are local identifiers, not derefer
 skill_ontologies/
   manifest.json          one list of selected ontology IDs
   loader.py              dependency checks, validation, reports
+  llm_annotation.py      resource pairing, prompts, and OpenAI calls
   examples/              sample observation graphs for external RDF tools
   universal/
     vocabulary.ttl
@@ -194,7 +196,7 @@ The active model is assembled as follows:
 vocabulary.ttl
   + shared ontology graphs listed in manifest.json
   + skill graphs listed in manifest.json
-  = active named-graph dataset + combined validation graph
+  = combined validation and reporting graph
 ```
 
 `manifest.json` lists selected ontology IDs without separate module and skill fields. RDF resources inside each graph own its identity, dependencies, and provenance. The loader discovers the corresponding graph files from that metadata.
@@ -256,9 +258,9 @@ ar:skill_coding_agent a ar:Skill ;
 
 The loader discovers module graphs in `universal/*.trig` and `skills/*.trig`, and discovers skill graphs in `skills/*.trig`. Each file contains one named graph. Fixed infrastructure files remain at `universal/vocabulary.ttl` and `universal/shapes.ttl`; this avoids duplicating their paths in a catalog.
 
-During dependency preflight, the loader parses graph metadata, checks that selected ontology IDs exist, verifies the NanoClaw source revision, and requires every dependency to already be selected in `manifest.json`. It does not create the active dataset until this dependency preflight succeeds. Before loading each selected skill graph, it separately verifies that skill's source hash. A missing or unknown dependency produces a warning and aborts; dependencies are never introduced automatically.
+During dependency preflight, the loader parses graph metadata, checks that selected ontology IDs exist, and requires every dependency to already be selected in `manifest.json`. It does not assemble the combined graph until this preflight succeeds. As selected graphs are added, it verifies module source revisions and skill-source hashes. A missing or unknown dependency produces a warning and aborts; dependencies are never introduced automatically. Individual named graphs remain in the catalog; no redundant dataset copy is constructed.
 
-`manifest.json` is the only ontology-selection configuration file and is a literal JSON array. The loader resolves each ID against RDF metadata; no type label is needed in the list. To change the loaded ontologies, edit this list and run `python loader.py`. The loader accepts no command-line arguments. Optional API credentials and analysis settings may be supplied by environment variables or a local `.env` file.
+`manifest.json` is the only ontology-selection configuration file and is a literal JSON array. The loader resolves each ID against RDF metadata; no type label is needed in the list. To change the loaded ontologies, edit this list and run `python loader.py`. Use `--max-pairs N` to limit LLM annotation and `--model MODEL` to select the model. API credentials may be supplied by environment variables or a local `.env` file.
 
 ```json
 [
@@ -291,7 +293,7 @@ For an agent modifying this project, the order matters:
 6. Check typed relationship endpoints, subtype cycles, endpoint parentage, shared-graph restrictions, and equivalent-class shape coverage.
 7. Run SHACL over the assembled graph.
 8. Print loaded skill operations, potential effect/resource rows, and modeled potential Internet calls.
-9. Form every unordered pair of distinct affected resource kinds across all loaded operations. Optionally ask an OpenAI model about joint consequences, after consent.
+9. Form unordered pairs of distinct affected resource kinds across all loaded operations, apply `max_pairs`, and ask an OpenAI model about joint consequences. `max_pairs=0` skips annotation.
 
 This sequence prevents a dependency declaration from silently widening the environment model. It also separates asserted named-graph data from the temporary union graph used for validation and reporting.
 
@@ -574,34 +576,50 @@ The prototype has no packaging wrapper. Run it from this directory with Python 3
 python3 -m pip install -r requirements.txt
 ```
 
-The loader takes no arguments. Edit `manifest.json` to select the ontologies, then run:
+Edit `manifest.json` to select the ontologies, then run (this annotates all pairs):
 
 ```bash
 python3 loader.py
 ```
 
+The execution flow lives in `loader.main()` behind an `if __name__ == "__main__"` guard. Importing `loader` does not read ontologies, print reports, or call the LLM; call `loader.main()` explicitly to run the workflow.
+
 For example, add `coding-agent` to the manifest alongside its declared dependencies to include that skill. Remove `discord` or `gh-issues` from the list to exclude them. The files in `examples/` remain standalone observation fixtures for external RDF/OWL/SHACL experiments; this loader does not read them.
 
 ### Reading the report
 
-The loader prints the loaded skills, an operation count, one compact row per operation/effect/resource combination, and the modeled potential Internet calls with their initiator, endpoint, and conditions. It then counts **all unordered pairs of distinct resource kinds** appearing in potential effects across the selected skills. Pairs can come from different operations or skills. Repeated touches to one kind are consolidated, but all their operation and effect-type provenance is sent with that kind. Resource inventories, hierarchies, invocation routes, security controls, and subtype-definition tables are still loaded and validated but are no longer printed. The report describes modeled possibilities, not a trace of a running system.
+The loader prints the loaded skills, an operation count, one compact row per operation/effect/resource combination, and the modeled potential Internet calls with their initiator, endpoint, and conditions. It then counts **all unordered pairs of distinct resource kinds** appearing in potential effects across the selected skills. Pairs can come from different operations or skills. Repeated touches to one kind are consolidated into a set of effect types. Skill and operation provenance remains in the local report but is excluded from the annotation input. Resource inventories, hierarchies, invocation routes, security controls, and subtype-definition tables are still loaded and validated but are no longer printed. The report describes modeled possibilities, not a trace of a running system.
 
 ### Optional joint-consequence analysis
 
-Put `OPENAI_API_KEY=...` in this directory's `.env` file or your process environment. `.env` is git-ignored; do not commit or print it. The default model is `gpt-5-mini`; set `OPENAI_MODEL` to override it. When run in a terminal, the loader shows the total pair and batch count and asks before making paid API requests. It skips the analysis by default in a non-interactive run. To opt in non-interactively, set `ONTOLOGY_ANALYZE=1` in the environment (or `.env`):
+`llm_annotation.py` owns the resource pairing, prompt, response schema, API calls, and annotation output. `loader.py` builds a list of resource descriptions and effect types, then calls `analyze_pairs(resources, model=..., max_pairs=...)`. The annotation module never receives the ontology graph, selected skills, operation identifiers, source paths, adaptation mappings, or invocation routes. Continue running `loader.py` as the entry point; importing `llm_annotation.py` alone does not run an analysis.
+
+Each resource description contains its RDF kind identifier, label, definition, subtype ancestors (`parents`), possible containing kinds (`contained_in`), and deduplicated effect types (`effects`, such as `Read`, `Update`, or `Transmit`). Definitions project `rdfs:label`, `rdfs:comment`, `skos:definition`, and `owl:equivalentClass`, including connected OWL expressions and definitions of referenced terms. They are serialized as sorted, canonical N-Triples (also valid Turtle), stabilizing blank-node identifiers for prompt caching across runs. They exclude graph/skill provenance and source metadata. Related kinds carry their own definitions. A missing definition is `null`; the loader does not invent prose. Parents follow explicit `ar:specializesKind` links; containing kinds follow inverse `ar:containsKind` links, transitively. Containment is not subtype, ownership, or proof of co-location. Resource/platform names remain meaningful (for example, `DiscordMessage`); this removes explicit skill provenance, not every possible inference about capability from a resource's name or definition.
+
+To cap the number of annotated pairs, run `python3 loader.py --max-pairs 50`. Omit the flag to include every pair, or use `--max-pairs 0` to skip annotation. The limit must be a non-negative integer. Resource order is shuffled on each run before forming pairs; a limit selects the first N combinations of that shuffled order. This removes the fixed RDF-identifier ordering, but is not a uniform sample of pairs: early combinations share resources. The catalog remains sorted for stable prompt caching when the selected resource set is unchanged. The report shows both the selected and total pair counts; unselected pairs remain unanalyzed. The underlying `analyze_pairs(resources, model="gpt-6-luna", max_pairs=50)` function remains available for programmatic use.
+
+Put `OPENAI_API_KEY=...` in this directory's `.env` file or your process environment. `.env` is git-ignored; do not commit or print it. The default model is `gpt-6-luna`; use `--model MODEL` to override it, or pass `model=...` to `analyze_pairs`. `OPENAI_MODEL` is no longer used. A supplied model must support the Responses API and structured outputs and be available to your API account. Running the loader directly makes paid API requests for the selected pairs, without an environment toggle or confirmation prompt. Use `--max-pairs 0` to skip annotation. Missing API credentials are reported by the OpenAI SDK.
 
 ```bash
-ONTOLOGY_ANALYZE=1 python3 loader.py
+python3 loader.py --model gpt-6-luna --max-pairs 50
 ```
 
-The loader sends batches of 20 pairs through the OpenAI Responses API. Each pair includes the RDF kind identifiers plus the skills, operations, and effect types that may touch them. The model is asked to flag only a credible bad consequence that depends on **both** resources being touched in one hypothetical agent session; `Read` means access, not mutation. It prints flagged consequences, a reason both resources matter, and explicit assumptions. The model's answer is a brainstorming aid, **not a sound inference or proof of an exploitable path**. The ontology is a may-effect model; it does not establish action order, argument values, concrete instances, permissions, runtime reachability, or that two effects actually occur in one session. Cost scales with the number of resource-kind pairs, approximately quadratically in the number of distinct affected kinds. No pairs are silently sampled or dropped.
+The loader makes one sequential OpenAI Responses API call per resource pair, returning one assessment object per call. A shared resource catalog contains definitions, subtype/containment context, and effect types; each call adds only the two resource kind identifiers to that shared prefix. The simplified prompt asks for a consequence requiring **both** resources in one hypothetical agent session, grounded only in the catalog. `Read` means access, not mutation; skill identity and actual execution are not assumed. Each flagged result prints both resources' possible effect types, the consequence, why both matter, and necessary assumptions. The printed effects are the supplied possibilities, not observed actions or a claim that every effect occurs. Removing operation provenance deliberately loses which effects belong to the same action and their prerequisites. The model's answer is a brainstorming aid, **not a sound inference or proof of an exploitable path**. The ontology is a may-effect model; it does not establish action order, argument values, concrete instances, permissions, runtime reachability, or that two effects actually occur in one session. Without a limit, cost scales approximately quadratically in the number of distinct affected kinds. A supplied `max_pairs` caps the pairs sent for annotation; omitted pairs are not assessed. For example, `--max-pairs 50` makes up to 50 assessment calls, depending on the available pairs.
+
+### Saved assessments
+
+Each annotation run creates `results/assessments-<UTC timestamp>.jsonl` and prints its absolute path. Each line is a JSON object with `model`, `first`, `second`, and `assessment`. The two resource objects include the definitions, hierarchy context, and possible effects supplied for that pair. The assessment contains `joint_risk`, `consequence`, `why_both`, and `assumptions`; negative assessments are saved too. Each completed assessment is appended and the file closed before continuing, preserving earlier results if a later call fails or the run is interrupted. A partial file contains only completed assessments, not evidence that every selected pair was analyzed. Runs use separate files rather than overwriting previous results. `--max-pairs 0` creates no result file. The `results/` directory is git-ignored because outputs may contain sensitive resource descriptions. These files save parsed assessments, not raw API responses, and are not used as an answer cache.
+
+### Prompt caching
+
+The instructions, output schema, and catalog are identical across assessments. Only resources appearing in selected pairs are included in the catalog. GPT-6 and GPT-5.6 requests use an explicit cache breakpoint after the catalog, with `prompt_cache_options={"mode": "explicit", "ttl": "30m"}`; the changing pair is not written to that prefix cache. A stable `prompt_cache_key` is supplied for all models; older models use their automatic prefix caching instead of the newer explicit controls. This is API prompt caching, not a local cache of generated answers. Each response's reported cached-input-token count is printed when usage is available. Cache hits are not guaranteed: minimum prefix lengths, expiry, model changes, and changes to the resource catalog can prevent reuse. The first cache write may cost more than ordinary input; reuse can reduce input-processing cost. See the [official prompt-caching guide](https://developers.openai.com/api/docs/guides/prompt-caching).
 
 ### Expected failures and what they mean
 
 | Error | Meaning | Correct response |
 |---|---|---|
 | `Unknown ontologies in manifest.json` | A listed ID matches no discovered graph | Fix the selection or graph metadata |
-| `loader.py takes no arguments` | A command-line argument was supplied | Edit `manifest.json` and run `python3 loader.py` |
+| `--max-pairs must be non-negative` | A negative annotation limit was supplied | Use zero to skip, a positive limit, or omit the flag for all pairs |
 | `Duplicate ontology ID` | Two graphs claim the same identity | Give each graph a unique ID |
 | `Expected one named graph` | A TriG file violates the discovery convention | Keep one populated named graph per file |
 | `is stale: source checkout changed` | The pinned NanoClaw checkout moved | Re-review the changed source before updating the revision |
