@@ -126,11 +126,11 @@ def add_gateway(snap: Snapshot, grp: URIRef) -> None:
     policy = f["gateway_policy"]
     rules = applicable_rules(policy, agent["id"])
     mode, why = effective_mode(policy)
-    control = snap.add(snap.node("control_gateway_policy"), AR.OneCLIGatewayPolicy, OBSERVED, "gateway policy", ruleCount=len(rules), mode=mode, reason=why, appliesTo=identity)
+    control = snap.add(snap.node("control_gateway_policy"), AR.OneCLIGatewayPolicy, OBSERVED, "gateway policy", ruleCount=len(rules), mode=mode, strict=bool(policy and policy.get("strict")), reason=why, appliesTo=identity)
     for r in rules:
         rule = snap.add(snap.node(f"gateway_rule_{r['name']}"), AR.OneCLIPolicyRule, OBSERVED, r["name"], action=r["action"], matches=rule_label(r), scope=r.get("scope"), forAllAgents=not r.get("agentId"))
         snap.graph.add((control, OBS.hasRule, rule))
-    if mode == "deny":
+    if mode == "deny" and not policy.get("strict"):
         snap.findings.append("OneCLI deny-by-default only covers credentialed requests to non-LLM hosts; uncredentialed web traffic still passes unless a block rule matches it.")
 
 
