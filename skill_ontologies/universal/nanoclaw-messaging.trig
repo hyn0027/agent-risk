@@ -194,7 +194,7 @@ ar:g_nanoclaw_messaging {
     ar:requiresOntologyModule "tool-endpoints", "local-filesystem",
       "nanoclaw-core", "nanoclaw-runtime" ;
     rdfs:seeAlso
-      <https://github.com/hyn0027/nanoclaw/blob/64064244396ecbfee72fcd2c069290fb21d9c6ee/src/channels/adapter.ts>,
-      <https://github.com/hyn0027/nanoclaw/blob/64064244396ecbfee72fcd2c069290fb21d9c6ee/src/mailbox/types.ts>,
-      <https://github.com/hyn0027/nanoclaw/blob/64064244396ecbfee72fcd2c069290fb21d9c6ee/container/agent-runner/src/mcp-tools/core.ts> .
+      <https://github.com/hyn0027/nanoclaw/blob/08ceb915e23fff1ec22a322cd44bb82294d9907b/src/channels/adapter.ts>,
+      <https://github.com/hyn0027/nanoclaw/blob/08ceb915e23fff1ec22a322cd44bb82294d9907b/src/mailbox/types.ts>,
+      <https://github.com/hyn0027/nanoclaw/blob/08ceb915e23fff1ec22a322cd44bb82294d9907b/container/agent-runner/src/mcp-tools/core.ts> .
 }

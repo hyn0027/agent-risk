@@ -145,7 +145,7 @@ ar:UnsupportedAdaptation a ar:AdaptationDisposition ;
 
 ar:NanoClawSkillAdaptationPolicy a ar:AdaptationPolicy ;
   rdfs:label "NanoClaw skill-ontology adaptation policy" ;
-  rdfs:comment "Records where source skills differ from their ontology translation. It is an audit model, not executable skill text. Source skills span several environments and some explicitly assume OpenClaw; mappings describe plausible execution in NanoClaw revision 64064244396ecbfee72fcd2c069290fb21d9c6ee." ;
+  rdfs:comment "Records where source skills differ from their ontology translation. It is an audit model, not executable skill text. Source skills span several environments and some explicitly assume OpenClaw; mappings describe plausible execution in NanoClaw revision 08ceb915e23fff1ec22a322cd44bb82294d9907b." ;
   ar:sourceNote "Every adapted operation uses ar:adaptationStatus ar:InferredForNanoClaw while ar:sourceStatus independently records skill-text, inspected-script, or example evidence. Effects are conservative possibilities, not proof of deployment, permission, successful execution, or behavioral equivalence. An absent exact endpoint must be omitted or represented as an explicit approximation with its requirements; the model must not silently widen NanoClaw's interface." .
 
 ar:Read a ar:EffectType ; rdfs:comment "Access or obtain information; does not assert world-state mutation." .

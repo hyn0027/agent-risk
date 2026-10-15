@@ -146,7 +146,7 @@ ar:g_nanoclaw_network {
     ar:ontologyModuleId "nanoclaw-network" ;
     ar:requiresOntologyModule "freeform-internet", "tool-endpoints", "nanoclaw-core", "nanoclaw-runtime" ;
     rdfs:seeAlso
-      <https://github.com/hyn0027/nanoclaw/blob/64064244396ecbfee72fcd2c069290fb21d9c6ee/src/gateway-providers/onecli.ts>,
-      <https://github.com/hyn0027/nanoclaw/blob/64064244396ecbfee72fcd2c069290fb21d9c6ee/src/egress-lockdown.ts>,
-      <https://github.com/hyn0027/nanoclaw/blob/64064244396ecbfee72fcd2c069290fb21d9c6ee/container/agent-runner/src/providers/claude-config.ts> .
+      <https://github.com/hyn0027/nanoclaw/blob/08ceb915e23fff1ec22a322cd44bb82294d9907b/src/gateway-providers/onecli.ts>,
+      <https://github.com/hyn0027/nanoclaw/blob/08ceb915e23fff1ec22a322cd44bb82294d9907b/src/egress-lockdown.ts>,
+      <https://github.com/hyn0027/nanoclaw/blob/08ceb915e23fff1ec22a322cd44bb82294d9907b/container/agent-runner/src/providers/claude-config.ts> .
 }

@@ -54,9 +54,10 @@ skills/git-resources.trig            shared support ontology, not a skill
 universal/vocabulary.ttl             schema vocabulary
 universal/shapes.ttl                 SHACL integrity constraints
 manifest.json                        one list of selected ontology IDs
-loader.py                            assembly, validation, and reports
+loader.py                            entry point: assembly, validation, and reports
 llm_annotation.py                    optional LLM joint-risk annotation
-materialize.py                       instantiate the model for one live NanoClaw session
+materialize.py                       entry point: instantiate the model for one live NanoClaw session
+ontology/                            implementation package for both entry points
 observations/                        session snapshots written by materialize.py (git-ignored)
 examples/*.ttl                       standalone concrete observation fixtures
 ```
@@ -70,16 +71,32 @@ This directory combines two kinds of source-derived model:
 - `universal/` describes the generic resource vocabulary and the NanoClaw harness architecture that is present independently of a selected skill.
 - `skills/` describes interfaces and potential effects asserted by individual `top_skills/*/SKILL.md` files, plus support graphs shared only by those skills.
 
-The NanoClaw model was checked against local checkout commit `64064244396ecbfee72fcd2c069290fb21d9c6ee` (branch `customized`: upstream `7902716b` plus local commits). It models architecture abstractly: installed channel adapters appear only as the generic adapter kinds, and per-install settings (such as whether egress lockdown is enabled) are conditions, not facts. Host-only behavior that an agent cannot trigger is out of scope, as is model-provider API traffic. Repository code is treated as the primary source; the [shared architecture discussion](https://chatgpt.com/s/cx_6ab168a066788191a0767199e971bbd4) was useful orientation but is not the authority when it differs from code. The model is not a statement about the live configuration of any NanoClaw installation.
+The NanoClaw model was checked against local checkout commit `08ceb915e23fff1ec22a322cd44bb82294d9907b` (branch `customized`: upstream `7902716b` plus local commits). It models architecture abstractly: installed channel adapters appear only as the generic adapter kinds, and per-install settings (such as whether egress lockdown is enabled) are conditions, not facts. Host-only behavior that an agent cannot trigger is out of scope, as is model-provider API traffic. Repository code is treated as the primary source; the [shared architecture discussion](https://chatgpt.com/s/cx_6ab168a066788191a0767199e971bbd4) was useful orientation but is not the authority when it differs from code. The model is not a statement about the live configuration of any NanoClaw installation.
 
 All graphs use `ar: <urn:agent-risk:>`. These are local identifiers, not dereferenceable Web URLs. A published ontology should use an owned persistent HTTPS namespace.
 
 ```text
 skill_ontologies/
   manifest.json          one list of selected ontology IDs
-  loader.py              dependency checks, validation, reports
+  loader.py              entry point → ontology.loader
   llm_annotation.py      resource pairing, prompts, and OpenAI calls
-  materialize.py         live-session instantiation and per-session report
+  table_output.py        aligned text tables for both reports
+  materialize.py         entry point → ontology.materialize
+  ontology/
+    common/              paths.py, namespaces.py, rdf.py (parsing and label helpers)
+    loader/              catalog.py (manifest, discovery, dependency preflight)
+                         assemble.py (source pins, shared-graph rules)
+                         checks.py (typed relations, hierarchies, SHACL)
+                         inventory.py (operations, effects, calls, native capabilities)
+                         report.py (one function per table)
+                         annotation_input.py (resource descriptions for the LLM)
+                         cli.py (main)
+    materialize/         runtime.py (read-only CLI wrappers) and collect.py (facts)
+                         model.py (model queries: sides, mount kinds, pins)
+                         snapshot.py (snapshot graph and shared state)
+                         instantiate.py, conditions.py, capabilities.py, routes.py
+                         modifications/ (inside.py, host.py, remote.py, common.py)
+                         report.py, output.py, constants.py, cli.py (main)
   observations/          snapshot graphs (git-ignored; contain real identifiers)
   examples/              sample observation graphs for external RDF tools
   universal/
@@ -645,7 +662,7 @@ Edit `manifest.json` to select the ontologies, then run (this annotates all pair
 python3 loader.py
 ```
 
-The execution flow lives in `loader.main()` behind an `if __name__ == "__main__"` guard. Importing `loader` does not read ontologies, print reports, or call the LLM; call `loader.main()` explicitly to run the workflow.
+`loader.py` is a thin entry point; the execution flow is `ontology.loader.cli.main()`, which calls one function per stage (`read_manifest` / `discover_catalog` / `check_selection` → `assemble` → `run_checks` → `build_inventory` → `print_report` → `analyze_pairs`). Importing the package does not read ontologies, print reports, or call the LLM; call `main()` explicitly to run the workflow, or call the stages individually.
 
 For example, add `coding-agent` to the manifest alongside its declared dependencies to include that skill. Remove `discord` or `gh-issues` from the list to exclude them. The files in `examples/` remain standalone observation fixtures for external RDF/OWL/SHACL experiments; this loader does not read them.
 
@@ -714,7 +731,7 @@ It needs a running NanoClaw service, Docker, and the `onecli` CLI. `ncl`, `onecl
 ### How it works
 
 1. **Load the model.** `vocabulary.ttl` plus every `universal/*.trig` graph. If the checkout's `HEAD` differs from `nanoclaw-core`'s pinned `sourceRevision`, it warns that the results may be stale. Skill graphs are only consulted to match installed skills by `skillDirectory`.
-2. **Collect facts** (`collect()`), names and settings only, never secret values, tokens, or environment values:
+2. **Collect facts** (`collect.py`, through the read-only wrappers in `runtime.py`), names and settings only, never secret values, tokens, or environment values:
 
    | Source | Facts |
    |---|---|
@@ -725,13 +742,13 @@ It needs a running NanoClaw service, Docker, and the `onecli` CLI. `ncl`, `onecl
    | `onecli agents/secrets/rules list` | gateway identity and secret mode (never the access token), secret names and host patterns, rule count in scope |
    | the checkout | installed `container/skills`, whether the agent-to-agent module is present, `HEAD` |
 
-3. **Instantiate** (`Snapshot.build()`). Mounts are matched to mount kinds by the model's `ar:containerPath` (most specific match). Each mount yields a container-side location instance (`obs:onSide ar:NanoClawAgentContainer`) and a separate host-side instance of its `ar:bindsFromKind` kind (`obs:onSide ar:NanoClawHostProcess`, host path relative to the checkout), linked by `obs:bindsFrom` / `obs:backedBy`. Each fact becomes an instance typed with an existing kind (`a ar:NanoClawSession`, `a ar:NanoClawSessionWorkspaceMount`, `a ar:NanoClawDestinationGrant`, `a ar:NanoClawEgressLockdownControl`, ...) and linked with `obs:` properties (`obs:inAgentGroup`, `obs:mountedIn`, `obs:exposes`, `obs:accessMode`, ...). Every instance carries `obs:evidenceKind`: `obs:Observed` (read from the running container or gateway) or `obs:FromConfiguration` (read from configuration). Observed mounts are classified by container path, and each mount's location is typed with the kinds the model says it exposes. Mismatches are reported as model/runtime differences: a mount whose mode contradicts its kind, an unknown mount path, or a projected destination with no central grant.
-4. **Resolve requirements** (`resolve_conditions()`). Each `ar:Requirement` in the universal graphs gets an `obs:ConditionEvaluation` with status `obs:Satisfied`, `obs:Unsatisfied`, or `obs:Unknown` and a reason, e.g. `cond_additional_mount_admitted` is unsatisfied when no `/workspace/extra` mount exists, and `cond_default_claude_provider` is satisfied when the provider is Claude and `/home/node/.claude` is mounted. Requirements that depend on a concrete path or a per-request decision (`cond_container_file_readable`, `cond_container_file_writable`, `cond_network_route_permitted`) stay **unknown**, never assumed satisfied; any requirement without an evaluator is also unknown.
-5. **Assess** (`capabilities()`, `routes()`, `modifications()`):
+3. **Instantiate** (`instantiate.py`, into the `Snapshot` from `snapshot.py`). Mounts are matched to mount kinds by the model's `ar:containerPath` (most specific match). Each mount yields a container-side location instance (`obs:onSide ar:NanoClawAgentContainer`) and a separate host-side instance of its `ar:bindsFromKind` kind (`obs:onSide ar:NanoClawHostProcess`, host path relative to the checkout), linked by `obs:bindsFrom` / `obs:backedBy`. Each fact becomes an instance typed with an existing kind (`a ar:NanoClawSession`, `a ar:NanoClawSessionWorkspaceMount`, `a ar:NanoClawDestinationGrant`, `a ar:NanoClawEgressLockdownControl`, ...) and linked with `obs:` properties (`obs:inAgentGroup`, `obs:mountedIn`, `obs:exposes`, `obs:accessMode`, ...). Every instance carries `obs:evidenceKind`: `obs:Observed` (read from the running container or gateway) or `obs:FromConfiguration` (read from configuration). Observed mounts are classified by container path, and each mount's location is typed with the kinds the model says it exposes. Mismatches are reported as model/runtime differences: a mount whose mode contradicts its kind, an unknown mount path, or a projected destination with no central grant.
+4. **Resolve requirements** (`conditions.py`). Each `ar:Requirement` in the universal graphs gets an `obs:ConditionEvaluation` with status `obs:Satisfied`, `obs:Unsatisfied`, or `obs:Unknown` and a reason, e.g. `cond_additional_mount_admitted` is unsatisfied when no `/workspace/extra` mount exists, and `cond_default_claude_provider` is satisfied when the provider is Claude and `/home/node/.claude` is mounted. Requirements that depend on a concrete path or a per-request decision (`cond_container_file_readable`, `cond_container_file_writable`, `cond_network_route_permitted`) stay **unknown**, never assumed satisfied; any requirement without an evaluator is also unknown.
+5. **Assess** (`capabilities.py`, `routes.py`, and the `modifications/` package: `inside.py`, `host.py`, `remote.py`):
    - every `ar:NativeCapability` becomes `obs:Available` (all requirements satisfied), `obs:Conditional` (some unknown), or `obs:Unavailable` (some unsatisfied), with the concrete instances it can reach. File-writing capabilities reach only read-write mounts and the writable container layer; reads reach every mount.
    - routes and management paths are assessed from observed facts: lockdown on (the container is on an internal network) blocks the direct route and host services; `cli_scope` decides which container `ncl` paths exist and whether `create_agent` needs approval.
    - what the session can change is reported in two tables. **Inside the container**: each writable location with the modeled resources residing there (minus those shadowed by a read-only mount), capabilities aimed at specific resources (mailboxes, task logs, provider settings, network, processes, subagents), and the read-only mounts as unmodifiable, each with the host path it writes through to, or "container only". **Outside the container**: host-side steps found by walking `routesToKind` from container-side tool endpoints (stopping at the delivery hub), with the entry points that trigger each, plus host-mediated management actions with their approval gates. **Outside this machine**: capabilities whose resource is on `ar:ExternalNetwork` (web fetch, shell network requests, provider web search), configured remote MCP servers, and messages delivered through a remote channel adapter to each channel destination grant. Model-provider API traffic is out of scope.
-6. **Check and write.** Every `rdf:type` in the snapshot must be a kind declared in the model (or an `obs:` assessment class), otherwise it aborts. The snapshot is written as one named graph, `urn:agent-risk:snapshot:<session>:<timestamp>`, to `observations/<session>-<timestamp>.trig`.
+6. **Check and write** (`output.py`). Every `rdf:type` in the snapshot must be a kind declared in the model (or an `obs:` assessment class), otherwise it aborts. The snapshot is written as one named graph, `urn:agent-risk:snapshot:<session>:<timestamp>`, to `observations/<session>-<timestamp>.trig`.
 
 ### Reading the report
 
@@ -754,8 +771,8 @@ It needs a running NanoClaw service, Docker, and the `onecli` CLI. `ncl`, `onecl
 
 - **Live sessions only.** Mounts and network attachment are read from the running container; a session without one is rejected rather than reconstructed from configuration.
 - **Point in time.** A later change (a new grant, MCP server, or mount) needs a new snapshot.
-- **Display tables in the script.** Subpaths of resources inside a mount (`inbound.db`, `memory/`, `tasks/`, ...) and the effect and concrete location of each host step are listed in `materialize.py`, not the ontology.
-- **Hard-coded management mapping.** The `ncl`, `create_agent`, `install_packages`, and `add_mcp_server` rows in `routes()` and `modifications()` encode NanoClaw's guard rules in the script, because the ontology states them only in comments. Update the script when those guards change.
+- **Display tables in the script.** Subpaths of resources inside a mount (`inbound.db`, `memory/`, `tasks/`, ...) and the effect and concrete location of each host step are listed in `ontology/materialize/constants.py` and `modifications/host.py`, not the ontology.
+- **Hard-coded management mapping.** The `ncl`, `create_agent`, `install_packages`, and `add_mcp_server` rows in `ontology/materialize/routes.py` and `modifications/host.py` encode NanoClaw's guard rules in the script, because the ontology states them only in comments. Update the script when those guards change.
 - **Claude provider only.** Tool availability is resolved from the Claude provider's tool allowlist; other providers leave the tool requirements unknown.
 - **Undeclared observation vocabulary.** `obs:` classes and properties are not yet declared in `vocabulary.ttl` or validated by SHACL; only instance types are checked.
 - **Sensitive output.** Snapshots contain real session, group, and messaging identifiers, handles, and host paths. `observations/` is git-ignored; do not commit or share snapshots.

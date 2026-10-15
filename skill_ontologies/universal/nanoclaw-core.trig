@@ -6,11 +6,11 @@ ar:g_nanoclaw_core {
     ar:ontologyModuleId "nanoclaw-core" ;
     ar:requiresOntologyModule "local-filesystem" ;
     ar:sourceRepositoryPath "/Users/yhong3/Documents/Research/nanoclaw" ;
-    ar:sourceRevision "64064244396ecbfee72fcd2c069290fb21d9c6ee" .
+    ar:sourceRevision "08ceb915e23fff1ec22a322cd44bb82294d9907b" .
 
   ar:NanoClawRuntime a ar:WorldSurfaceKind, ar:SystemComponentKind ;
-    rdfs:comment "The NanoClaw installation described by checkout 64064244396ecbfee72fcd2c069290fb21d9c6ee (branch customized: upstream 7902716b plus local commits). Types in this graph are architectural possibilities, not observations about a running instance or its configuration." ;
-    rdfs:seeAlso <https://github.com/hyn0027/nanoclaw/tree/64064244396ecbfee72fcd2c069290fb21d9c6ee> .
+    rdfs:comment "The NanoClaw installation described by checkout 08ceb915e23fff1ec22a322cd44bb82294d9907b (branch customized: upstream 7902716b plus local commits). Types in this graph are architectural possibilities, not observations about a running instance or its configuration." ;
+    rdfs:seeAlso <https://github.com/hyn0027/nanoclaw/tree/08ceb915e23fff1ec22a322cd44bb82294d9907b> .
   ar:NanoClawHostProcess a ar:WorldSurfaceKind, ar:SystemComponentKind ;
     rdfs:comment "Trusted host-side orchestrator for routing, authorization, persistence, container lifecycle, and delivery. Agents cannot run commands here; host-side effects of agent actions happen only through its fixed code paths." .
   ar:NanoClawCentralDatabase a ar:WorldSurfaceKind, ar:SystemComponentKind ;
