@@ -75,6 +75,14 @@ ar:nativeEffectType a rdf:Property ; rdfs:domain ar:NativeCapability ; rdfs:rang
 ar:nativeScopeKind a rdf:Property ; rdfs:domain ar:NativeCapability ; rdfs:range ar:WorldSurfaceKind ;
   rdfs:comment "Potential scope for the capability, not a claim that a concrete resource in that scope is accessible." .
 ar:nativeRequires a rdf:Property ; rdfs:domain ar:NativeCapability ; rdfs:range ar:Requirement .
+ar:refinesCapability a rdf:Property ; rdfs:domain ar:NativeCapability ; rdfs:range ar:NativeCapability ;
+  rdfs:comment "A provider-specific capability that states more precisely what a generic native capability means for one concrete tool. When refinements are loaded, a runtime assessment reports the refinements instead of the generic capability." .
+ar:providerToolName a rdf:Property ; rdfs:domain ar:InvocationSurfaceKind ; rdfs:range xsd:string ;
+  rdfs:comment "Exact name under which a provider exposes this tool (e.g. Claude's \"Bash\"); used to match a deployment's tool allow and deny lists." .
+ar:requiresProviderTool a rdf:Property ; rdfs:domain ar:Requirement ; rdfs:range xsd:string ;
+  rdfs:comment "The requirement holds only when the provider tool with this exact name is enabled for the session." .
+ar:satisfiedByEndpointKind a rdf:Property ; rdfs:domain ar:Requirement ; rdfs:range ar:InvocationSurfaceKind ;
+  rdfs:comment "The requirement holds when at least one enabled provider tool specializes this endpoint kind (e.g. the generic shell requirement holds when Claude's Bash is enabled)." .
 ar:routesToKind a rdf:Property ; rdfs:range ar:SurfaceKind .
 ar:protectedByKind a rdf:Property ; rdfs:domain ar:SurfaceKind ; rdfs:range ar:SecurityControlKind ;
   rdfs:comment "A type-level protection or policy relationship. Runtime configuration and enforcement must be observed separately." .

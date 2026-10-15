@@ -77,6 +77,7 @@ ar:g_nanoclaw_network {
     rdfs:comment "Provider search tool (Claude: WebSearch) executed by the model provider's own service. The query leaves the container inside the model-provider request (which does pass the gateway), but the search and any site contacts happen at the provider, so local egress controls cannot see or restrict which searches run or which sites are reached. Removing the tool from the provider's allowlist is the local control." .
 
   ar:cond_provider_web_tool_available a ar:Requirement ;
+    ar:satisfiedByEndpointKind ar:NanoClawProviderWebTool ;
     rdfs:comment "The selected provider exposes a web search/fetch tool to this session." .
   ar:cond_network_route_permitted a ar:Requirement ;
     rdfs:comment "A concrete outbound route, destination, and applicable gateway or direct-egress policy permit the request; remote authorization is separate." .

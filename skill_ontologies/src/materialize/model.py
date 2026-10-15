@@ -6,14 +6,14 @@ from pathlib import Path
 from rdflib import Dataset, Graph, URIRef
 
 from ..common.namespaces import AR
-from ..common.paths import SKILLS_DIR, UNIVERSAL_DIR, VOCABULARY
+from ..common.paths import MODEL_DIRS, SKILLS_DIR, VOCABULARY
 
 
 def load_model() -> Graph:
-    """The vocabulary plus every universal graph, merged."""
+    """The vocabulary plus every universal, NanoClaw, and Claude graph, merged."""
     model = Graph()
     model.parse(VOCABULARY, format="turtle")
-    for path in sorted(UNIVERSAL_DIR.glob("*.trig")):
+    for path in [p for d in MODEL_DIRS for p in sorted(d.glob("*.trig"))]:
         for graph in Dataset().parse(path, format="trig").graphs():
             for triple in graph:
                 model.add(triple)

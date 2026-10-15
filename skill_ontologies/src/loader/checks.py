@@ -83,6 +83,24 @@ def check_mounts_and_sides(combined: Graph, kinds: Kinds) -> None:
             raise SystemExit(f"Untyped bind source: {mount} -> {source}")
 
 
+def check_provider_tools(combined: Graph, kinds: Kinds) -> None:
+    """Provider tool names, tool requirements, and capability refinements."""
+    capabilities = set(combined.subjects(RDF.type, AR.NativeCapability))
+    tool_names = {str(name) for kind, name in combined.subject_objects(AR.providerToolName) if kind in kinds.invocations}
+    for kind, _ in combined.subject_objects(AR.providerToolName):
+        if kind not in kinds.invocations:
+            raise SystemExit(f"Provider tool name on a non-invocation kind: {kind}")
+    for requirement, name in combined.subject_objects(AR.requiresProviderTool):
+        if (requirement, RDF.type, AR.Requirement) not in combined or str(name) not in tool_names:
+            raise SystemExit(f"Requirement names an unmodeled provider tool: {requirement} -> {name}")
+    for requirement, endpoint in combined.subject_objects(AR.satisfiedByEndpointKind):
+        if (requirement, RDF.type, AR.Requirement) not in combined or endpoint not in kinds.invocations:
+            raise SystemExit(f"Untyped tool requirement: {requirement} -> {endpoint}")
+    for refined, generic in combined.subject_objects(AR.refinesCapability):
+        if refined not in capabilities or generic not in capabilities:
+            raise SystemExit(f"Refinement between non-capabilities: {refined} -> {generic}")
+
+
 def check_hierarchies(combined: Graph, kinds: Kinds) -> None:
     world, invocations = kinds.world, kinds.invocations
     for predicate in (AR.specializesKind, AR.specializesInvocationKind):
@@ -124,6 +142,7 @@ def run_checks(combined: Graph) -> Kinds:
     kinds = kinds_of(combined)
     check_relation_types(combined, kinds)
     check_mounts_and_sides(combined, kinds)
+    check_provider_tools(combined, kinds)
     check_hierarchies(combined, kinds)
     validate_shapes(combined, kinds)
     return kinds

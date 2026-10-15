@@ -19,13 +19,16 @@ ASSESSMENT_CLASSES = {
     OBS.ModificationAssessment,
 }
 
-# Effect types that change something (reads are excluded from modification tables).
+# Effect types that change something.
 MUTATING_EFFECTS = {AR.Create, AR.Update, AR.Delete, AR.Configure, AR.Transmit, AR.Execute, AR.Delegate, AR.Install}
+# Effect types the session tables report: changes and reads.
+REPORTED_EFFECTS = MUTATING_EFFECTS | {AR.Read}
 
 # Channel adapters that deliver to a client on this machine rather than a remote platform.
 LOCAL_CHANNELS = {"cli", "emacs"}
 
-# Display subpaths for modeled resources inside a mounted location.
+# Display subpaths for modeled resources inside a mounted location. A dict value
+# maps the parent location kind to the subpath used under it.
 SUBPATHS = {
     AR.NanoClawInboundMailbox: "inbound.db",
     AR.NanoClawOutboundMailbox: "outbound.db",
@@ -35,6 +38,8 @@ SUBPATHS = {
     AR.NanoClawPersistentMemory: "memory/",
     AR.NanoClawTaskRunLog: "tasks/",
     AR.NanoClawConversationContinuation: "projects/",
+    AR.ClaudeTodoList: "todos/",
+    AR.ClaudeSkillDefinition: {AR.NanoClawProviderStateDirectory: "skills/", AR.NanoClawSharedSkillsDirectory: "<skill>/"},
 }
 
 CONTAINER_ONLY = "— (container only)"

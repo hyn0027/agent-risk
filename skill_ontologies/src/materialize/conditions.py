@@ -12,6 +12,7 @@ from rdflib.namespace import RDF
 from ..common.namespaces import AR, OBS
 from ..common.rdf import short
 from .constants import OBSERVED, SATISFIED, UNKNOWN, UNSATISFIED
+from .provider_tools import tool_status, tools_implementing
 from .snapshot import Snapshot
 
 
@@ -27,18 +28,11 @@ def evaluate(snap: Snapshot) -> dict[str, tuple[URIRef, str]]:
     def mounted(path: str, what: str) -> tuple[URIRef, str]:
         return (SATISFIED if path in mounts else UNSATISFIED), f"{what} mount " + ("present" if path in mounts else "absent")
 
-    def claude_tool(names: str) -> tuple[URIRef, str]:
-        return (SATISFIED, f"Claude allowlist includes {names}") if claude else (UNKNOWN, f"provider {provider} not modeled")
-
     claude_state = claude and "/home/node/.claude" in mounts
     any_rw_extra = any(mounts[d] for d in extras)
     onecli_files = any("onecli" in d for d in mounts)
     return {
         "cond_default_claude_provider": (SATISFIED if claude_state else UNSATISFIED, f"provider={provider}; /home/node/.claude {'mounted' if '/home/node/.claude' in mounts else 'not mounted'}"),
-        "cond_provider_file_tool_available": claude_tool("Read/Write/Edit/Glob/Grep"),
-        "cond_container_shell_available": claude_tool("Bash"),
-        "cond_provider_web_tool_available": claude_tool("WebFetch/WebSearch"),
-        "cond_provider_subagent_tool_available": claude_tool("Task"),
         "cond_builtin_messaging_tool_available": (SATISFIED, "built-in nanoclaw MCP server is always registered"),
         "cond_shared_skills_exist": mounted("/app/skills", "/app/skills"),
         "cond_container_config_exists": mounted("/workspace/agent/container.json", "container.json"),
@@ -51,12 +45,39 @@ def evaluate(snap: Snapshot) -> dict[str, tuple[URIRef, str]]:
         "cond_network_route_permitted": (UNKNOWN, ("lockdown on: only gateway-proxied requests can leave; " if snap.lockdown_on else "lockdown off: direct and proxied routes exist; ") + "per-request gateway and remote decisions are not observable"),
         "cond_container_file_readable": (UNKNOWN, "depends on the concrete path"),
         "cond_container_file_writable": (UNKNOWN, "depends on the concrete path; see mount modes"),
+        "cond_ncl_available": (UNSATISFIED if snap.cli_scope == "disabled" else SATISFIED, f"cli_scope={snap.cli_scope}"),
+        "cond_cli_scope_global": (SATISFIED if snap.cli_scope == "global" else UNSATISFIED, f"cli_scope={snap.cli_scope}"),
     }
+
+
+def provider(snap: Snapshot) -> str:
+    return (snap.facts["config"].get("provider") or snap.facts["session"].get("agent_provider") or "claude").lower()
+
+
+def evaluate_tool_requirements(snap: Snapshot) -> dict[URIRef, tuple[URIRef, str]]:
+    """Requirements decided by which provider tools are enabled (from the model)."""
+    lists, out = snap.facts["claude_tools"], {}
+    if provider(snap) != "claude":
+        for cond in set(snap.model.subjects(AR.requiresProviderTool, None)) | set(snap.model.subjects(AR.satisfiedByEndpointKind, None)):
+            out[cond] = (UNKNOWN, f"provider {provider(snap)} not modeled")
+        return out
+    for cond, name in snap.model.subject_objects(AR.requiresProviderTool):
+        enabled, reason = tool_status(lists, str(name))
+        out[cond] = (SATISFIED if enabled else UNSATISFIED, f"{name}: {reason}")
+    for cond, endpoint in snap.model.subject_objects(AR.satisfiedByEndpointKind):
+        tools = tools_implementing(snap.model, endpoint)
+        enabled = [name for _, name in tools if tool_status(lists, name)[0]]
+        if enabled:
+            out[cond] = (SATISFIED, "enabled: " + ", ".join(enabled))
+        else:
+            out[cond] = (UNSATISFIED, "no enabled tool implements it" + (f" ({', '.join(n for _, n in tools)} disabled)" if tools else ""))
+    return out
 
 
 def resolve_conditions(snap: Snapshot) -> None:
     for name, result in evaluate(snap).items():
         snap.conditions[AR[name]] = result
+    snap.conditions.update(evaluate_tool_requirements(snap))
     for cond in sorted(set(snap.model.subjects(RDF.type, AR.Requirement))):
         if cond not in snap.conditions:
             snap.conditions[cond] = (UNKNOWN, "no evaluator for this requirement")

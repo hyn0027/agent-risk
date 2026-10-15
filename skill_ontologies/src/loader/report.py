@@ -92,6 +92,8 @@ def print_native_capabilities(inv: Inventory, combined: Graph) -> None:
                 (key, "Note", notes(combined, capability, AR.sourceNote)),
             ]
         )
+        if refined := set(combined.objects(capability, AR.refinesCapability)):
+            rows.append((key, "Refines", names(refined)))
     print_table(
         "Native endpoint capabilities (independent of skills; conditional)",
         ("Capability", "Field", "Details"),

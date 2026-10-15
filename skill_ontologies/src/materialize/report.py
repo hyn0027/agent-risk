@@ -8,6 +8,7 @@ from ..common.namespaces import OBS
 from ..common.rdf import short
 from .model import skill_directories
 from .snapshot import Snapshot
+from .tools import tool_summary
 
 
 def print_session(snap: Snapshot) -> None:
@@ -26,6 +27,7 @@ def print_session(snap: Snapshot) -> None:
         ("MCP servers (third-party)", ", ".join(config.get("mcp_servers") or {}) or "none"),
         ("Gateway identity", f"{agent['identifier']} secretMode={agent.get('secretMode')}" if agent else "none"),
         ("Gateway rules in scope", str(rules_in_scope)),
+        ("Claude tool lists", f"{len(f['claude_tools']['allowlist'])} allowlisted, {len(f['claude_tools']['disallowed'])} disallowed (claude-config.ts)"),
         ("Instances / triples", f"{len(set(snap.graph.subjects(RDF.type, None)))} / {len(snap.graph)}"),
     ], (26, 90))
 
@@ -50,10 +52,14 @@ def print_requirements(snap: Snapshot) -> None:
     ], (44, 11, 70))
 
 
+def print_tools(tools: list[tuple]) -> None:
+    print_table(f"Claude built-in tools ({tool_summary(tools)})", ("Tool", "Status", "Implements", "Runs on", "Capabilities (status)"), tools, (16, 32, 34, 22, 60))
+
+
 def print_capabilities(caps: list[dict]) -> None:
-    print_table("Native capabilities in this session (may-effects)", ("Capability", "Status", "Effect", "Resource", "Reaches", "Why"), [
-        (r["capability"], r["status"], r["effect"], r["resource"], r["scope"], r["why"]) for r in sorted(caps, key=lambda r: (r["status"], r["capability"]))
-    ], (34, 11, 18, 26, 34, 40))
+    print_table("Native capabilities in this session (may-effects)", ("Capability", "Via", "Status", "Effect", "Resource", "Reaches", "Why"), [
+        (r["capability"], r["endpoint"], r["status"], r["effect"], r["resource"], r["scope"], r["why"]) for r in sorted(caps, key=lambda r: (r["status"], r["capability"]))
+    ], (34, 18, 11, 18, 26, 30, 40))
 
 
 def print_routes(routes: list[tuple]) -> None:
@@ -61,8 +67,8 @@ def print_routes(routes: list[tuple]) -> None:
 
 
 def print_modifications(inside: list[tuple], outside: list[tuple], remote: list[tuple]) -> None:
-    print_table("Modifiable inside the container (may-effects; reads excluded)", ("Resource", "Container path", "Host backing", "Effects", "Via", "Status", "Scope / gate"), inside, (36, 30, 40, 22, 18, 11, 28))
-    print_table("Changed outside the container, on the host (triggered by the agent)", ("Resource", "Host location", "Effects", "Triggered by", "Status", "Gate"), outside, (36, 38, 20, 40, 11, 30))
+    print_table("Inside the container: read or changed (may-effects)", ("Resource", "Container path", "Host backing", "Effects", "Via", "Status", "Scope / gate"), inside, (36, 30, 40, 22, 18, 11, 28))
+    print_table("Outside the container, on the host: read or changed (triggered by the agent)", ("Resource", "Host location", "Effects", "Triggered by", "Status", "Gate"), outside, (36, 38, 20, 40, 11, 30))
     print_table("Outside this machine (remote): reached or changed", ("Resource", "Remote location", "Effects", "Path off the machine", "Status", "Gate"), remote, (22, 30, 16, 52, 11, 40))
 
 
@@ -83,10 +89,11 @@ def print_findings(snap: Snapshot) -> None:
             print(f"  - {item}")
 
 
-def print_report(snap: Snapshot, caps: list[dict], routes: list[tuple], inside: list[tuple], outside: list[tuple], remote: list[tuple]) -> None:
+def print_report(snap: Snapshot, caps: list[dict], tools: list[tuple], routes: list[tuple], inside: list[tuple], outside: list[tuple], remote: list[tuple]) -> None:
     print_session(snap)
     print_mounts(snap)
     print_requirements(snap)
+    print_tools(tools)
     print_capabilities(caps)
     print_routes(routes)
     print_modifications(inside, outside, remote)

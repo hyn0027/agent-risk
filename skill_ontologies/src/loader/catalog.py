@@ -9,7 +9,7 @@ from rdflib.namespace import RDF
 from rdflib.term import Identifier
 
 from ..common.namespaces import AR
-from ..common.paths import MANIFEST, ROOT, SKILLS_DIR, UNIVERSAL_DIR
+from ..common.paths import MANIFEST, MODEL_DIRS, ROOT, SKILLS_DIR
 from ..common.rdf import parse_graph, required_literal
 
 
@@ -41,7 +41,7 @@ def discover_catalog() -> Catalog:
     ar:OntologyModule.
     """
     catalog: Catalog = {}
-    paths = sorted(UNIVERSAL_DIR.glob("*.trig")) + sorted(SKILLS_DIR.glob("*.trig"))
+    paths = [p for d in MODEL_DIRS for p in sorted(d.glob("*.trig"))] + sorted(SKILLS_DIR.glob("*.trig"))
     for path in paths:
         graph = parse_graph(path)
         nodes = [(node, False) for node in graph.subjects(RDF.type, AR.OntologyModule)]

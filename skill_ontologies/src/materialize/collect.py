@@ -7,6 +7,7 @@ never read.
 import subprocess
 from pathlib import Path
 
+from .provider_tools import read_tool_lists
 from .runtime import docker_json, ncl, onecli, run, sqlite_rows, tool
 
 
@@ -76,6 +77,7 @@ def collect_checkout(nanoclaw: Path) -> dict:
     return {
         "container_skills": sorted(p.name for p in (nanoclaw / "container" / "skills").iterdir() if p.is_dir()),
         "a2a_installed": (nanoclaw / "src" / "modules" / "agent-to-agent").is_dir(),
+        "claude_tools": read_tool_lists(nanoclaw),
         "nanoclaw_head": run([tool("git"), "-C", str(nanoclaw), "rev-parse", "HEAD"]).strip(),
         "nanoclaw_root": nanoclaw.resolve(),
     }

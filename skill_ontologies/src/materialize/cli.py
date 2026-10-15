@@ -32,6 +32,7 @@ from .output import check_instance_types, write_snapshot
 from .report import print_report
 from .routes import assess_routes
 from .snapshot import Snapshot
+from .tools import assess_tools
 
 
 def parse_args() -> argparse.Namespace:
@@ -57,10 +58,11 @@ def main() -> None:
     instantiate(snap)
     resolve_conditions(snap)
     caps = assess_capabilities(snap)
+    tools = assess_tools(snap)
     routes = assess_routes(snap)
     inside, outside, remote = assess_modifications(snap)
     check_instance_types(snap)
 
-    print_report(snap, caps, routes, inside, outside, remote)
+    print_report(snap, caps, tools, routes, inside, outside, remote)
     if not args.no_write:
         print(f"\nSnapshot written: {write_snapshot(snap, args.out)}")

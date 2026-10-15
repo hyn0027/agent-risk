@@ -1,6 +1,7 @@
-"""What this session can change, split by where the change happens.
+"""What this session can read or change, split by where it happens.
 
-``inside``  in the container (with the host path a bind mount writes through to)
+``inside``  in the container, reads and changes (with the host path a bind mount
+            reads or writes through to)
 ``host``    on the host, through host steps the agent can trigger
 ``remote``  beyond the local machine
 """

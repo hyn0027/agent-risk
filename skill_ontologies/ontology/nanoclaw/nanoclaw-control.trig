@@ -144,6 +144,72 @@ ar:g_nanoclaw_control {
   ar:NanoClawAddMCPServerTool ar:routesToKind ar:NanoClawHostGuardInvocation,
     ar:NanoClawHostConfigMaterialization .
 
+  # ── Host-side reads an agent can request through container ncl ───────────
+  # Every ncl read verb is open (no approval). The host reads its own state and
+  # returns the result into the container, so these are information flows into
+  # the agent's context, not just bookkeeping.
+  ar:NanoClawSessionTranscript a ar:WorldSurfaceKind ;
+    ar:locatedOn ar:NanoClawHostProcess ;
+    rdfs:comment "Merged inbound and outbound messages of one session, read from its mailbox files by `ncl sessions history`. An agent can read any session of its own agent group, including other chats wired to the group." .
+  ar:NanoClawDroppedMessage a ar:WorldSurfaceKind ;
+    ar:locatedOn ar:NanoClawHostProcess ;
+    rdfs:comment "A message from an unregistered sender that the router dropped and recorded centrally." .
+  ar:NanoClawCentralDatabase ar:containsKind ar:NanoClawDroppedMessage, ar:NanoClawApprovalRequest,
+    ar:NanoClawRoleMembershipState .
+  ar:NanoClawSession ar:containsKind ar:NanoClawSessionTranscript .
+  ar:NanoClawScheduledTask ar:locatedOn ar:NanoClawHostProcess .
+  ar:NanoClawMessagingRouteConfiguration ar:locatedOn ar:NanoClawHostProcess .
+  ar:NanoClawRoleMembershipState ar:locatedOn ar:NanoClawHostProcess .
+  ar:NanoClawApprovalRequest ar:locatedOn ar:NanoClawHostProcess .
+
+  ar:cond_ncl_available a ar:Requirement ;
+    rdfs:comment "The agent group's cli_scope is group or global (not disabled), so container ncl requests are dispatched." .
+  ar:cond_cli_scope_global a ar:Requirement ;
+    rdfs:comment "The agent group's cli_scope is global, which opens resources beyond its own group." .
+
+  ar:NativeNclGroupStateRead a ar:NativeCapability ;
+    ar:nativeEndpointKind ar:NanoClawContainerGroupAdminCLI ;
+    ar:nativeResourceKind ar:NanoClawCentralDatabase ; ar:nativeEffectType ar:Read ;
+    ar:nativeScopeKind ar:NanoClawAgentGroup ;
+    ar:nativeRequires ar:cond_ncl_available ;
+    ar:sourceNote "ncl list/get on the agent's own group, container config, sessions, destinations, and members; open, results returned into the container." .
+  ar:NativeNclSessionHistoryRead a ar:NativeCapability ;
+    ar:nativeEndpointKind ar:NanoClawContainerGroupAdminCLI ;
+    ar:nativeResourceKind ar:NanoClawSessionTranscript ; ar:nativeEffectType ar:Read ;
+    ar:nativeScopeKind ar:NanoClawAgentGroup ;
+    ar:nativeRequires ar:cond_ncl_available ;
+    ar:sourceNote "ncl sessions history reads the full message transcript of any session in the agent's own group, including conversations in other chats; open." .
+  ar:NativeNclTaskRead a ar:NativeCapability ;
+    ar:nativeEndpointKind ar:NanoClawContainerTasksCLI ;
+    ar:nativeResourceKind ar:NanoClawScheduledTask ; ar:nativeEffectType ar:Read ;
+    ar:nativeScopeKind ar:NanoClawAgentGroup ;
+    ar:nativeRequires ar:cond_ncl_available ;
+    ar:sourceNote "ncl tasks list/get reads the group's scheduled tasks and their run history; open." .
+  ar:NativeNclRouteConfigurationRead a ar:NativeCapability ;
+    ar:nativeEndpointKind ar:NanoClawContainerGlobalAdminCLI ;
+    ar:nativeResourceKind ar:NanoClawMessagingRouteConfiguration ; ar:nativeEffectType ar:Read ;
+    ar:nativeScopeKind ar:NanoClawRuntime ;
+    ar:nativeRequires ar:cond_cli_scope_global ;
+    ar:sourceNote "Under global scope, ncl reads every messaging group, wiring, agent message policy, and user DM mapping; open." .
+  ar:NativeNclRoleMembershipRead a ar:NativeCapability ;
+    ar:nativeEndpointKind ar:NanoClawContainerGlobalAdminCLI ;
+    ar:nativeResourceKind ar:NanoClawRoleMembershipState ; ar:nativeEffectType ar:Read ;
+    ar:nativeScopeKind ar:NanoClawRuntime ;
+    ar:nativeRequires ar:cond_cli_scope_global ;
+    ar:sourceNote "Under global scope, ncl reads all users and roles; open." .
+  ar:NativeNclDroppedMessageRead a ar:NativeCapability ;
+    ar:nativeEndpointKind ar:NanoClawContainerGlobalAdminCLI ;
+    ar:nativeResourceKind ar:NanoClawDroppedMessage ; ar:nativeEffectType ar:Read ;
+    ar:nativeScopeKind ar:NanoClawRuntime ;
+    ar:nativeRequires ar:cond_cli_scope_global ;
+    ar:sourceNote "Under global scope, ncl reads messages dropped from unregistered senders; open." .
+  ar:NativeNclApprovalRead a ar:NativeCapability ;
+    ar:nativeEndpointKind ar:NanoClawContainerGlobalAdminCLI ;
+    ar:nativeResourceKind ar:NanoClawApprovalRequest ; ar:nativeEffectType ar:Read ;
+    ar:nativeScopeKind ar:NanoClawRuntime ;
+    ar:nativeRequires ar:cond_cli_scope_global ;
+    ar:sourceNote "Under global scope, ncl reads pending approval requests (actions, payloads, approvers); open." .
+
   ar:NanoClawControlModule a ar:OntologyModule ;
     ar:ontologyModuleId "nanoclaw-control" ;
     ar:requiresOntologyModule "shell-execution", "nanoclaw-messaging", "nanoclaw-runtime" ;

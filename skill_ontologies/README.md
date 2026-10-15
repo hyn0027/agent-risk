@@ -48,28 +48,32 @@ The model describes **potential endpoints and world-facing consequences**. Runti
 ### Thirty-second orientation
 
 ```text
-universal/*.trig                     always-available type/model modules
-skills/<skill>.trig                  operations and potential effects for one skill
-skills/git-resources.trig            shared support ontology, not a skill
-universal/vocabulary.ttl             schema vocabulary
-universal/shapes.ttl                 SHACL integrity constraints
+ontology/universal/*.trig            generic always-available modules (files, shell, Internet, tool endpoints)
+ontology/nanoclaw/*.trig             NanoClaw harness modules (core, messaging, control, runtime, network)
+ontology/claude/*.trig               Claude provider modules (built-in tools)
+ontology/skills/<skill>.trig         operations and potential effects for one skill
+ontology/skills/git-resources.trig   shared support ontology, not a skill
+ontology/universal/vocabulary.ttl    schema vocabulary
+ontology/universal/shapes.ttl        SHACL integrity constraints
+ontology/examples/*.ttl              standalone concrete observation fixtures
 manifest.json                        one list of selected ontology IDs
 loader.py                            entry point: assembly, validation, and reports
-llm_annotation.py                    optional LLM joint-risk annotation
 materialize.py                       entry point: instantiate the model for one live NanoClaw session
-ontology/                            implementation package for both entry points
+src/                                 implementation package for both entry points
+llm_annotation.py                    optional LLM joint-risk annotation
 observations/                        session snapshots written by materialize.py (git-ignored)
-examples/*.ttl                       standalone concrete observation fixtures
 ```
 
 The loader never fetches or dynamically introduces a dependency. A dependency named by any selected ontology must already appear in `manifest.json`; otherwise loading aborts before the combined graph is assembled.
 
 ### Sources and evidence boundary
 
-This directory combines two kinds of source-derived model:
+The `ontology/` directory combines source-derived models:
 
-- `universal/` describes the generic resource vocabulary and the NanoClaw harness architecture that is present independently of a selected skill.
-- `skills/` describes interfaces and potential effects asserted by individual `top_skills/*/SKILL.md` files, plus support graphs shared only by those skills.
+- `ontology/universal/` describes the generic resource vocabulary (files, shell, Internet, tool endpoints), plus the shared vocabulary and SHACL shapes.
+- `ontology/nanoclaw/` describes the NanoClaw harness architecture that is present independently of a selected skill.
+- `ontology/claude/` describes the Claude provider's built-in tools as a NanoClaw container exposes them.
+- `ontology/skills/` describes interfaces and potential effects asserted by individual `top_skills/*/SKILL.md` files, plus support graphs shared only by those skills.
 
 The NanoClaw model was checked against local checkout commit `08ceb915e23fff1ec22a322cd44bb82294d9907b` (branch `customized`: upstream `7902716b` plus local commits). It models architecture abstractly: installed channel adapters appear only as the generic adapter kinds, and per-install settings (such as whether egress lockdown is enabled) are conditions, not facts. Host-only behavior that an agent cannot trigger is out of scope, as is model-provider API traffic. Repository code is treated as the primary source; the [shared architecture discussion](https://chatgpt.com/s/cx_6ab168a066788191a0767199e971bbd4) was useful orientation but is not the authority when it differs from code. The model is not a statement about the live configuration of any NanoClaw installation.
 
@@ -78,11 +82,12 @@ All graphs use `ar: <urn:agent-risk:>`. These are local identifiers, not derefer
 ```text
 skill_ontologies/
   manifest.json          one list of selected ontology IDs
-  loader.py              entry point → ontology.loader
+  loader.py              entry point → src.loader
   llm_annotation.py      resource pairing, prompts, and OpenAI calls
   table_output.py        aligned text tables for both reports
-  materialize.py         entry point → ontology.materialize
-  ontology/
+  materialize.py         entry point → src.materialize
+  observations/          snapshot graphs (git-ignored; contain real identifiers)
+  src/                   code
     common/              paths.py, namespaces.py, rdf.py (parsing and label helpers)
     loader/              catalog.py (manifest, discovery, dependency preflight)
                          assemble.py (source pins, shared-graph rules)
@@ -95,25 +100,29 @@ skill_ontologies/
                          model.py (model queries: sides, mount kinds, pins)
                          snapshot.py (snapshot graph and shared state)
                          instantiate.py, conditions.py, capabilities.py, routes.py
+                         provider_tools.py (reads NanoClaw's tool lists), tools.py (per-tool table)
                          modifications/ (inside.py, host.py, remote.py, common.py)
                          report.py, output.py, constants.py, cli.py (main)
-  observations/          snapshot graphs (git-ignored; contain real identifiers)
-  examples/              sample observation graphs for external RDF tools
-  universal/
-    vocabulary.ttl
-    shapes.ttl
-    tool-endpoints.trig
-    local-filesystem.trig
-    freeform-internet.trig
-    shell-execution.trig
-    nanoclaw-core.trig
-    nanoclaw-messaging.trig
-    nanoclaw-control.trig
-    nanoclaw-runtime.trig
-    nanoclaw-network.trig
-  skills/
-    git-resources.trig
-    ...one graph per skill...
+  ontology/              every ontology graph
+    universal/
+      vocabulary.ttl
+      shapes.ttl
+      tool-endpoints.trig
+      local-filesystem.trig
+      freeform-internet.trig
+      shell-execution.trig
+    nanoclaw/
+      nanoclaw-core.trig
+      nanoclaw-messaging.trig
+      nanoclaw-control.trig
+      nanoclaw-runtime.trig
+      nanoclaw-network.trig
+    claude/
+      claude-tools.trig
+    skills/
+      git-resources.trig
+      ...one graph per skill...
+    examples/            sample observation graphs for external RDF tools
 ```
 
 ### Non-negotiable project invariants
@@ -228,37 +237,38 @@ The current module inventory is:
 
 | Module ID | File | Responsibility |
 |---|---|---|
-| `tool-endpoints` | `universal/tool-endpoints.trig` | Common callable endpoint parent, messaging tools, and MCP tool/transport distinctions |
-| `local-filesystem` | `universal/local-filesystem.trig` | Files, directories, metadata, symlinks, and structural entry observations |
-| `freeform-internet` | `universal/freeform-internet.trig` | Uncontrolled Internet hosts, endpoints, services, web resources, logs, and accounts |
-| `shell-execution` | `universal/shell-execution.trig` | Shell/command/script invocation and process-related resources |
-| `nanoclaw-core` | `universal/nanoclaw-core.trig` | Host, database, agent groups, sessions, containers, runners, and provider runtime |
-| `nanoclaw-messaging` | `universal/nanoclaw-messaging.trig` | Channels, destinations, inbound/outbound mailboxes, delivery, and built-in messaging tools |
-| `nanoclaw-control` | `universal/nanoclaw-control.trig` | `ncl` management paths, tasks, guards, approval, roles, and destination controls |
-| `nanoclaw-runtime` | `universal/nanoclaw-runtime.trig` | Container/host filesystems, mounts, shell/file tools, isolation, and resource limits |
-| `nanoclaw-network` | `universal/nanoclaw-network.trig` | OneCLI, direct/proxied egress, local/remote MCP, and lockdown controls |
-| `git-resources` | `skills/git-resources.trig` | Reusable Git resource kinds and qualified working-tree definitions |
+| `tool-endpoints` | `ontology/universal/tool-endpoints.trig` | Common callable endpoint parent, messaging tools, and MCP tool/transport distinctions |
+| `local-filesystem` | `ontology/universal/local-filesystem.trig` | Files, directories, metadata, symlinks, and structural entry observations |
+| `freeform-internet` | `ontology/universal/freeform-internet.trig` | Uncontrolled Internet hosts, endpoints, services, web resources, logs, and accounts |
+| `shell-execution` | `ontology/universal/shell-execution.trig` | Shell/command/script invocation and process-related resources |
+| `nanoclaw-core` | `ontology/nanoclaw/nanoclaw-core.trig` | Host, database, agent groups, sessions, containers, runners, and provider runtime |
+| `nanoclaw-messaging` | `ontology/nanoclaw/nanoclaw-messaging.trig` | Channels, destinations, inbound/outbound mailboxes, delivery, and built-in messaging tools |
+| `nanoclaw-control` | `ontology/nanoclaw/nanoclaw-control.trig` | `ncl` management paths, tasks, guards, approval, roles, and destination controls |
+| `nanoclaw-runtime` | `ontology/nanoclaw/nanoclaw-runtime.trig` | Container/host filesystems, mounts, shell/file tools, isolation, and resource limits |
+| `nanoclaw-network` | `ontology/nanoclaw/nanoclaw-network.trig` | OneCLI, direct/proxied egress, local/remote MCP, and lockdown controls |
+| `claude-tools` | `ontology/claude/claude-tools.trig` | Claude built-in tools: names, the NanoClaw endpoints they implement, per-tool capabilities and refinements |
+| `git-resources` | `ontology/skills/git-resources.trig` | Reusable Git resource kinds and qualified working-tree definitions |
 
-`git-resources` lives under `skills/` because it is skill-oriented support vocabulary, but it is still an ontology module rather than an `ar:Skill`. It is selected because `gh-issues` requires it; `coding-agent` also requires it. Static dependency validation would reject either skill if this ontology were absent. Folder placement and loading policy are separate concerns.
+`git-resources` lives under `ontology/skills/` because it is skill-oriented support vocabulary, but it is still an ontology module rather than an `ar:Skill`. It is selected because `gh-issues` requires it; `coding-agent` also requires it. Static dependency validation would reject either skill if this ontology were absent. Folder placement and loading policy are separate concerns.
 
 The current skill inventory is:
 
 | Skill directory | Graph file | Main modeled capability | Declared module dependencies |
 |---|---|---|---|
-| `1password-1.0.0` | `skills/1password.trig` | CLI/browser-oriented credential access and injection | `nanoclaw-runtime`, `nanoclaw-network` |
-| `coding-agent` | `skills/coding-agent.trig` | Worktrees, coding workers, process control, PRs, notification | `git-resources`, `nanoclaw-runtime`, `nanoclaw-messaging`, `nanoclaw-network` |
-| `configure-channel` | `skills/configure-channel.trig` | Channel inspection/configuration and delivery tests | `nanoclaw-messaging`, `nanoclaw-control` |
-| `diagram-maker-1.0.0` | `skills/diagram-maker.trig` | Read/write/verify diagram artifacts | `nanoclaw-runtime` |
-| `discord` | `skills/discord.trig` | Send text/files, edit, and react through NanoClaw messaging | `nanoclaw-messaging` |
-| `gh-issues` | `skills/gh-issues.trig` | GitHub issue/PR orchestration, Git, delegation, notification | `git-resources`, `nanoclaw-core`, `nanoclaw-runtime`, `nanoclaw-network`, `nanoclaw-messaging` |
-| `meme-maker-1.0.0` | `skills/meme-maker.trig` | Local/hosted meme rendering and catalog refresh | `nanoclaw-runtime`, `nanoclaw-network` |
-| `sherpa-onnx-tts-1.0.0` | `skills/sherpa-onnx-tts.trig` | Download/configure/run local TTS and produce audio | `nanoclaw-core`, `nanoclaw-runtime`, `nanoclaw-network`, `nanoclaw-control` |
-| `skill-creator-1.0.0` | `skills/skill-creator.trig` | Inspect, stage, edit, and validate skill files | `nanoclaw-runtime` |
-| `taskflow-inbox-triage` | `skills/taskflow-inbox-triage.trig` | Approximate durable task coordination, triage, and notification | `nanoclaw-core`, `nanoclaw-messaging`, `nanoclaw-control` |
+| `1password-1.0.0` | `ontology/skills/1password.trig` | CLI/browser-oriented credential access and injection | `nanoclaw-runtime`, `nanoclaw-network` |
+| `coding-agent` | `ontology/skills/coding-agent.trig` | Worktrees, coding workers, process control, PRs, notification | `git-resources`, `nanoclaw-runtime`, `nanoclaw-messaging`, `nanoclaw-network` |
+| `configure-channel` | `ontology/skills/configure-channel.trig` | Channel inspection/configuration and delivery tests | `nanoclaw-messaging`, `nanoclaw-control` |
+| `diagram-maker-1.0.0` | `ontology/skills/diagram-maker.trig` | Read/write/verify diagram artifacts | `nanoclaw-runtime` |
+| `discord` | `ontology/skills/discord.trig` | Send text/files, edit, and react through NanoClaw messaging | `nanoclaw-messaging` |
+| `gh-issues` | `ontology/skills/gh-issues.trig` | GitHub issue/PR orchestration, Git, delegation, notification | `git-resources`, `nanoclaw-core`, `nanoclaw-runtime`, `nanoclaw-network`, `nanoclaw-messaging` |
+| `meme-maker-1.0.0` | `ontology/skills/meme-maker.trig` | Local/hosted meme rendering and catalog refresh | `nanoclaw-runtime`, `nanoclaw-network` |
+| `sherpa-onnx-tts-1.0.0` | `ontology/skills/sherpa-onnx-tts.trig` | Download/configure/run local TTS and produce audio | `nanoclaw-core`, `nanoclaw-runtime`, `nanoclaw-network`, `nanoclaw-control` |
+| `skill-creator-1.0.0` | `ontology/skills/skill-creator.trig` | Inspect, stage, edit, and validate skill files | `nanoclaw-runtime` |
+| `taskflow-inbox-triage` | `ontology/skills/taskflow-inbox-triage.trig` | Approximate durable task coordination, triage, and notification | `nanoclaw-core`, `nanoclaw-messaging`, `nanoclaw-control` |
 
 ## Static loading policy
 
-The manifest currently lists ten shared ontologies and four skill ontologies. Five shared ontologies describe NanoClaw itself: core, messaging/mailboxes, management controls, container/filesystem runtime, and network/OneCLI paths. Generic tool, filesystem, internet, and shell graphs are also selected. Git resource definitions live under `skills/` even though they are selected on every run; folder placement and load policy are separate concerns.
+The manifest currently lists ten shared ontologies and four skill ontologies. Five shared ontologies describe NanoClaw itself: core, messaging/mailboxes, management controls, container/filesystem runtime, and network/OneCLI paths. Generic tool, filesystem, internet, and shell graphs are also selected. Git resource definitions live under `ontology/skills/` even though they are selected on every run; folder placement and load policy are separate concerns.
 
 Dependencies never load dynamically. Every ontology module owns its metadata in RDF:
 
@@ -279,7 +289,7 @@ ar:skill_coding_agent a ar:Skill ;
   ...
 ```
 
-The loader discovers module graphs in `universal/*.trig` and `skills/*.trig`, and discovers skill graphs in `skills/*.trig`. Each file contains one named graph. Fixed infrastructure files remain at `universal/vocabulary.ttl` and `universal/shapes.ttl`; this avoids duplicating their paths in a catalog.
+The loader discovers module graphs in `ontology/universal/*.trig`, `ontology/nanoclaw/*.trig`, `ontology/claude/*.trig`, and `ontology/skills/*.trig`, and discovers skill graphs in `ontology/skills/*.trig`. Each file contains one named graph. Fixed infrastructure files remain at `ontology/universal/vocabulary.ttl` and `ontology/universal/shapes.ttl`; this avoids duplicating their paths in a catalog.
 
 During dependency preflight, the loader parses graph metadata, checks that selected ontology IDs exist, and requires every dependency to already be selected in `manifest.json`. It does not assemble the combined graph until this preflight succeeds. As selected graphs are added, it verifies module source revisions and skill-source hashes. A missing or unknown dependency produces a warning and aborts; dependencies are never introduced automatically. Individual named graphs remain in the catalog; no redundant dataset copy is constructed.
 
@@ -309,7 +319,7 @@ Every always-loaded graph is checked to contain no `ar:Operation`, `ar:Potential
 For an agent modifying this project, the order matters:
 
 1. Read `manifest.json` as a JSON array of unique ontology IDs.
-2. Discover every `*.trig` file under `universal/` and `skills/`. Each must contain exactly one non-empty named graph.
+2. Discover every `*.trig` file under `ontology/universal/` and `ontology/skills/`. Each must contain exactly one non-empty named graph.
 3. In one pass, identify each graph as a module or skill from its RDF metadata and reject duplicate IDs.
 4. Resolve the manifest IDs and check every selected graph's declared dependencies. Missing dependencies warn and abort before any active graph is loaded.
 5. Load the vocabulary and selected graphs in manifest order, checking module source pins and skill-source hashes as they are added.
@@ -473,6 +483,17 @@ SELECT ?location ?mount ?mode WHERE {
 
 The query does not return container-private locations (which are not mounts), decide which alternative was configured, account for nested path overrides, or compute effective access. That requires a runtime inventory of mount specs, canonical paths, process identity, OS permissions, tool policy, and remote-service authorization. SHACL validates the declarations' structure and RO/RW consistency; it does not evaluate those runtime facts.
 
+## Claude built-in tools
+
+`ontology/claude/claude-tools.trig` models the Claude Agent SDK tools a NanoClaw container can expose:
+
+- **Every tool is a kind** with its exact SDK name in `ar:providerToolName`, specializing the provider-neutral NanoClaw endpoint it implements: `Bash` → `NanoClawContainerShellExecution`; `Read`, `Write`, `Edit`, `Glob`, `Grep`, `NotebookEdit` → `NanoClawProviderFileTool`; `WebFetch` → `NanoClawProviderWebFetchTool`; `WebSearch` → `NanoClawProviderWebSearchTool` (executes on `ar:ExternalNetwork`); `Task` → `NanoClawProviderSubagentTool`; `TaskOutput`/`TaskStop` → `ProcessControlTool`; `TeamCreate`/`TeamDelete` → `SubagentSpawnTool`; `TodoWrite`, `ToolSearch`, `Skill` → `ToolEndpoint`. The twelve tools NanoClaw disables (`CronCreate`, `ScheduleWakeup`, `AskUserQuestion`, `SendMessage`, plan/worktree tools, ...) are modeled too, so re-enabling one is visible.
+- **Enablement is a requirement.** Each tool has `ar:cond_claude_<Name>` with `ar:requiresProviderTool "<Name>"`. The generic NanoClaw requirements (`cond_container_shell_available`, `cond_provider_file_tool_available`, `cond_provider_web_tool_available`, `cond_provider_subagent_tool_available`) carry `ar:satisfiedByEndpointKind`: they hold when at least one enabled tool specializes that endpoint. Disabling `Bash` therefore makes every generic shell capability unavailable.
+- **Per-tool precision via refinements.** Where tools differ, Claude capabilities `ar:refinesCapability` a generic one: `Edit` and `NotebookEdit` update but cannot create or delete; `Write` creates or overwrites; `Glob` reads only paths (`LocalFileMetadata`); `Read`/`Grep` read contents; `WebFetch` both reads a page and can transmit data in the URL it chooses; `WebSearch` only reads results (its query is the only input). A runtime assessment reports the refinements in place of the generic capability.
+- **Tools with no generic counterpart** get their own capabilities: `TaskOutput` (read background output), `TaskStop` (terminate a process), `TeamCreate`/`TeamDelete` (in-session teammates, `ClaudeAgentTeam`), `TodoWrite` (`ClaudeTodoList` under the provider state directory, group-scoped), `ToolSearch` (`ClaudeToolCatalog`, no world effect), `Skill` (`ClaudeSkillDefinition`).
+
+The loader checks that tool names sit on invocation kinds, that every `requiresProviderTool` names a modeled tool, and that refinements link two native capabilities. `materialize.py` reads both lists from `container/agent-runner/src/providers/claude-config.ts` in the checkout (`src/materialize/provider_tools.py`), so editing them changes the next snapshot.
+
 ## Network, OneCLI, and MCP
 
 The ontology deliberately separates proxy configuration from forced egress:
@@ -524,7 +545,7 @@ Important conservative choices include:
 
 ### Add a new universal or support module
 
-1. Add one `.trig` file under `universal/` or `skills/`.
+1. Add one `.trig` file under `ontology/universal/` or `ontology/skills/`.
 2. Put exactly one non-empty named graph in that file.
 3. Declare exactly one `ar:OntologyModule` resource with a unique string ID.
 4. Declare every module dependency with `ar:requiresOntologyModule`.
@@ -554,7 +575,7 @@ Do not put skill operations or `ar:PotentialEffect` nodes in an always-loaded mo
 ### Add a new skill ontology
 
 1. Read the entire source `SKILL.md` and any scripts or references needed to understand its actual interfaces.
-2. Create one file under `skills/` with one named graph.
+2. Create one file under `ontology/skills/` with one named graph.
 3. Declare exactly one `ar:Skill` resource.
 4. Record the exact source directory name in `ar:skillDirectory`.
 5. Record the absolute source file in `ar:sourcePath` and its SHA-256 in `ar:sourceSha256`.
@@ -639,7 +660,7 @@ Before accepting a new graph, ask:
 
 Every specialization edge is a necessary-only definition. A kind becomes necessary-and-sufficient only with `owl:equivalentClass`; the loader then requires a corresponding SHACL target shape.
 
-`skills/git-resources.trig` demonstrates the pattern without falsely defining every Git repository as a directory containing `.git`:
+`ontology/skills/git-resources.trig` demonstrates the pattern without falsely defining every Git repository as a directory containing `.git`:
 
 - `GitMetadataEntryCandidate`: exactly an entry named `.git`.
 - `ConventionalGitWorkingTreeCandidate`: exactly a local directory containing such an entry.
@@ -662,9 +683,9 @@ Edit `manifest.json` to select the ontologies, then run (this annotates all pair
 python3 loader.py
 ```
 
-`loader.py` is a thin entry point; the execution flow is `ontology.loader.cli.main()`, which calls one function per stage (`read_manifest` / `discover_catalog` / `check_selection` → `assemble` → `run_checks` → `build_inventory` → `print_report` → `analyze_pairs`). Importing the package does not read ontologies, print reports, or call the LLM; call `main()` explicitly to run the workflow, or call the stages individually.
+`loader.py` is a thin entry point; the execution flow is `src.loader.cli.main()`, which calls one function per stage (`read_manifest` / `discover_catalog` / `check_selection` → `assemble` → `run_checks` → `build_inventory` → `print_report` → `analyze_pairs`). Importing the package does not read ontologies, print reports, or call the LLM; call `main()` explicitly to run the workflow, or call the stages individually.
 
-For example, add `coding-agent` to the manifest alongside its declared dependencies to include that skill. Remove `discord` or `gh-issues` from the list to exclude them. The files in `examples/` remain standalone observation fixtures for external RDF/OWL/SHACL experiments; this loader does not read them.
+For example, add `coding-agent` to the manifest alongside its declared dependencies to include that skill. Remove `discord` or `gh-issues` from the list to exclude them. The files in `ontology/examples/` remain standalone observation fixtures for external RDF/OWL/SHACL experiments; this loader does not read them.
 
 ### Reading the report
 
@@ -730,7 +751,7 @@ It needs a running NanoClaw service, Docker, and the `onecli` CLI. `ncl`, `onecl
 
 ### How it works
 
-1. **Load the model.** `vocabulary.ttl` plus every `universal/*.trig` graph. If the checkout's `HEAD` differs from `nanoclaw-core`'s pinned `sourceRevision`, it warns that the results may be stale. Skill graphs are only consulted to match installed skills by `skillDirectory`.
+1. **Load the model.** `vocabulary.ttl` plus every `ontology/universal/`, `ontology/nanoclaw/`, and `ontology/claude/` graph. If the checkout's `HEAD` differs from `nanoclaw-core`'s pinned `sourceRevision`, it warns that the results may be stale. Skill graphs are only consulted to match installed skills by `skillDirectory`.
 2. **Collect facts** (`collect.py`, through the read-only wrappers in `runtime.py`), names and settings only, never secret values, tokens, or environment values:
 
    | Source | Facts |
@@ -747,7 +768,7 @@ It needs a running NanoClaw service, Docker, and the `onecli` CLI. `ncl`, `onecl
 5. **Assess** (`capabilities.py`, `routes.py`, and the `modifications/` package: `inside.py`, `host.py`, `remote.py`):
    - every `ar:NativeCapability` becomes `obs:Available` (all requirements satisfied), `obs:Conditional` (some unknown), or `obs:Unavailable` (some unsatisfied), with the concrete instances it can reach. File-writing capabilities reach only read-write mounts and the writable container layer; reads reach every mount.
    - routes and management paths are assessed from observed facts: lockdown on (the container is on an internal network) blocks the direct route and host services; `cli_scope` decides which container `ncl` paths exist and whether `create_agent` needs approval.
-   - what the session can change is reported in two tables. **Inside the container**: each writable location with the modeled resources residing there (minus those shadowed by a read-only mount), capabilities aimed at specific resources (mailboxes, task logs, provider settings, network, processes, subagents), and the read-only mounts as unmodifiable, each with the host path it writes through to, or "container only". **Outside the container**: host-side steps found by walking `routesToKind` from container-side tool endpoints (stopping at the delivery hub), with the entry points that trigger each, plus host-mediated management actions with their approval gates. **Outside this machine**: capabilities whose resource is on `ar:ExternalNetwork` (web fetch, shell network requests, provider web search), configured remote MCP servers, and messages delivered through a remote channel adapter to each channel destination grant. Model-provider API traffic is out of scope.
+   - what the session can read or change is reported in three tables. **Inside the container** (reads and changes): every location, writable or read-only, with the modeled resources residing there (minus those shadowed by a nested read-only mount), and capabilities aimed at specific resources (mailboxes, outbox, task logs, provider settings, todo list, skills, background output, processes, subagents), each with the host path it reads or writes through to, or "container only". Read capabilities reach every location; write capabilities only writable ones, so a read-only mount shows `Read` alone. **Outside the container**: host-side steps found by walking `routesToKind` from container-side tool endpoints (stopping at the delivery hub), with the entry points that trigger each, plus host-mediated management actions with their approval gates. **Outside this machine**: capabilities whose resource is on `ar:ExternalNetwork` (web fetch, shell network requests, provider web search), configured remote MCP servers, and messages delivered through a remote channel adapter to each channel destination grant. Model-provider API traffic is out of scope.
 6. **Check and write** (`output.py`). Every `rdf:type` in the snapshot must be a kind declared in the model (or an `obs:` assessment class), otherwise it aborts. The snapshot is written as one named graph, `urn:agent-risk:snapshot:<session>:<timestamp>`, to `observations/<session>-<timestamp>.trig`.
 
 ### Reading the report
@@ -757,9 +778,10 @@ It needs a running NanoClaw service, Docker, and the `onecli` CLI. `ncl`, `onecl
 | Session snapshot | session, agent group, container, provider, `cli_scope`, lockdown, destination grants, MCP servers, gateway identity, rule count |
 | Observed mounts (container view ← host source) | each mount's container path, mode, container-side kind, host path (relative to the checkout), and host-side kind |
 | Requirements for this session | each requirement's status and reason |
+| Claude built-in tools | each modeled tool: enabled / disabled / not allowlisted, the NanoClaw endpoint it implements, where it runs, and the capabilities it provides with their status |
 | Native capabilities in this session | each capability's status, effects, resource kind, concrete reach, and the requirements blocking or pending it |
 | Routes and management paths | network routes and container `ncl` / `create_agent` paths for this session |
-| Modifiable inside the container | resource, container path, host backing (or "container only"), effects, via (shell, file tools, `send_message`, ...), status, and scope (e.g. "agent group (all its sessions)") |
+| Inside the container: read or changed | resource, container path, host backing (or "container only"), effects including `Read`, via (`Bash`, `Edit`, `Read`, `send_message`, ...), status, and scope (e.g. "agent group (all its sessions)", "read-only mount") |
 | Changed outside the container, on the host | resource, host location, effects, the host step and container entry points that trigger it, status, and gate (e.g. "held for approval"); includes deliveries to local channels |
 | Outside this machine (remote): reached or changed | remote resource, where, effects (reads included: the remote party sees the request), the path off the machine (container ▸ OneCLI gateway ▸ Internet, host delivery ▸ channel adapter, or provider-side search), status, and gate |
 | Skills | installed container skills and whether a skill graph models them; with none, only native capabilities apply |
@@ -771,9 +793,9 @@ It needs a running NanoClaw service, Docker, and the `onecli` CLI. `ncl`, `onecl
 
 - **Live sessions only.** Mounts and network attachment are read from the running container; a session without one is rejected rather than reconstructed from configuration.
 - **Point in time.** A later change (a new grant, MCP server, or mount) needs a new snapshot.
-- **Display tables in the script.** Subpaths of resources inside a mount (`inbound.db`, `memory/`, `tasks/`, ...) and the effect and concrete location of each host step are listed in `ontology/materialize/constants.py` and `modifications/host.py`, not the ontology.
-- **Hard-coded management mapping.** The `ncl`, `create_agent`, `install_packages`, and `add_mcp_server` rows in `ontology/materialize/routes.py` and `modifications/host.py` encode NanoClaw's guard rules in the script, because the ontology states them only in comments. Update the script when those guards change.
-- **Claude provider only.** Tool availability is resolved from the Claude provider's tool allowlist; other providers leave the tool requirements unknown.
+- **Display tables in the script.** Subpaths of resources inside a mount (`inbound.db`, `memory/`, `tasks/`, ...) and the effect and concrete location of each host step are listed in `src/materialize/constants.py` and `modifications/host.py`, not the ontology.
+- **Hard-coded management mapping.** The `ncl`, `create_agent`, `install_packages`, and `add_mcp_server` rows in `src/materialize/routes.py` and `modifications/host.py` encode NanoClaw's guard rules in the script, because the ontology states them only in comments. Update the script when those guards change.
+- **Claude provider only.** Tool availability is read from NanoClaw's `TOOL_ALLOWLIST` / `SDK_DISALLOWED_TOOLS`, which apply to the Claude provider; for other providers the tool requirements stay unknown. The lists are install-wide: NanoClaw has no per-group tool setting.
 - **Undeclared observation vocabulary.** `obs:` classes and properties are not yet declared in `vocabulary.ttl` or validated by SHACL; only instance types are checked.
 - **Sensitive output.** Snapshots contain real session, group, and messaging identifiers, handles, and host paths. `observations/` is git-ignored; do not commit or share snapshots.
 

@@ -28,6 +28,8 @@ class Snapshot:
         self.taken_at = taken_at
         self.conditions: dict[URIRef, tuple[URIRef, str]] = {}
         self.cap_status: dict[URIRef, URIRef] = {}
+        # generic capability -> provider-specific refinements loaded in the model
+        self.refined_by: dict[URIRef, list[URIRef]] = {}
         self.findings: list[str] = []
 
     # ── derived facts ──

@@ -161,8 +161,10 @@ ar:g_nanoclaw_runtime {
   ar:cond_container_file_writable a ar:Requirement ;
     rdfs:comment "The concrete file operation is allowed by nested mount mode, OS permissions, and provider restrictions; create/delete also depend on parent-directory permissions. Optional host folders need allowlist admission." .
   ar:cond_provider_file_tool_available a ar:Requirement ;
+    ar:satisfiedByEndpointKind ar:NanoClawProviderFileTool ;
     rdfs:comment "The selected provider exposes its file read/write/search tool to this session." .
   ar:cond_container_shell_available a ar:Requirement ;
+    ar:satisfiedByEndpointKind ar:NanoClawContainerShellExecution ;
     rdfs:comment "The selected provider exposes container shell execution to this session." .
   ar:cond_default_claude_provider a ar:Requirement ;
     rdfs:comment "The default Claude provider supplies the group-scoped state mount; other providers can contribute different mounts." .
@@ -266,6 +268,7 @@ ar:g_nanoclaw_runtime {
     ar:nativeRequires ar:cond_provider_subagent_tool_available ;
     ar:sourceNote "The provider may start a subagent in the same container; it can use the same native capabilities as the main agent." .
   ar:cond_provider_subagent_tool_available a ar:Requirement ;
+    ar:satisfiedByEndpointKind ar:NanoClawProviderSubagentTool ;
     rdfs:comment "The selected provider exposes a subagent tool to this session." .
 
   # ── Container side vs host side ────────────────────────────────────────

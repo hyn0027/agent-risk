@@ -41,8 +41,21 @@ def filesystem_scope(snap: Snapshot, cap: URIRef) -> list[tuple[URIRef, str]]:
     return reach
 
 
+def endpoint_label(snap: Snapshot, cap: URIRef) -> str:
+    """The provider tool name of a capability's endpoint, else its kind's local name."""
+    endpoint = snap.model.value(cap, AR.nativeEndpointKind)
+    name = snap.model.value(endpoint, AR.providerToolName)
+    return str(name) if name is not None else short(endpoint)
+
+
 def assess_capabilities(snap: Snapshot) -> list[dict]:
-    """Status of every native capability; also fills ``snap.cap_status``."""
+    """Status of every native capability; also fills ``snap.cap_status`` and ``snap.refined_by``.
+
+    A generic capability with provider-specific refinements keeps its own
+    status, but the refinements are what later tables use.
+    """
+    for refined, generic in snap.model.subject_objects(AR.refinesCapability):
+        snap.refined_by.setdefault(generic, []).append(refined)
     rows = []
     for cap in sorted(set(snap.model.subjects(RDF.type, AR.NativeCapability))):
         reqs = sorted(snap.model.objects(cap, AR.nativeRequires))
@@ -53,12 +66,16 @@ def assess_capabilities(snap: Snapshot) -> list[dict]:
         snap.cap_status[cap] = status
         scope = capability_scope(snap, cap)
         snap.add(snap.node(f"capability_{short(cap)}"), OBS.CapabilityAssessment, OBSERVED, short(cap), capability=cap, status=status, blockedBy=blocked, pendingOn=pending, scopedTo=[s for s, _ in scope])
+        why = "; ".join([f"blocked: {short(r)}" for r in blocked] + [f"pending: {short(r)}" for r in pending]) or "all requirements satisfied"
+        if cap in snap.refined_by:
+            why = "refined by " + ", ".join(sorted(short(r) for r in snap.refined_by[cap])) + f" ({why})"
         rows.append({
             "capability": short(cap),
+            "endpoint": endpoint_label(snap, cap),
             "status": short(status),
             "effect": ", ".join(short(e) for e in sorted(snap.model.objects(cap, AR.nativeEffectType))),
             "resource": short(next(snap.model.objects(cap, AR.nativeResourceKind))),
-            "why": "; ".join([f"blocked: {short(r)}" for r in blocked] + [f"pending: {short(r)}" for r in pending]) or "all requirements satisfied",
+            "why": why,
             "scope": ", ".join(label for _, label in scope) or "-",
         })
     return rows

@@ -1,8 +1,10 @@
-"""What this session can cause to change on the host, outside its container.
+"""What this session can cause the host to read or change, outside its container.
 
 Rows: (resource, host location, effects, triggered by, status, gate). Host-side
 steps are found by walking routesToKind from container-side tool endpoints;
-host-mediated management actions are listed from NanoClaw's guard rules.
+host-side reads come from capabilities whose resource is located on the host
+(their results return into the container); host-mediated management actions are
+listed from NanoClaw's guard rules.
 """
 
 from rdflib import URIRef
@@ -11,14 +13,20 @@ from rdflib.namespace import RDF
 from ...common.namespaces import AR
 from ...common.rdf import short
 from ..constants import LOCAL_CHANNELS
+from ..provider_tools import tool_status
 from ..snapshot import Snapshot
-from .common import tool_label
+from .common import merge, reported_capabilities, tool_label
 
 
 def container_entry_points(snap: Snapshot) -> list[URIRef]:
     """Agent-callable endpoints running in the container, filtered by cli_scope."""
     m, scope = snap.model, snap.cli_scope
-    entries = [k for k in m.subjects(RDF.type, AR.ToolEndpointKind) if snap.side_of(k) == AR.NanoClawAgentContainer]
+    lists = snap.facts["claude_tools"]
+    entries = [
+        k for k in m.subjects(RDF.type, AR.ToolEndpointKind)
+        if snap.side_of(k) == AR.NanoClawAgentContainer
+        and (m.value(k, AR.providerToolName) is None or tool_status(lists, str(m.value(k, AR.providerToolName)))[0])
+    ]
     ncl_kinds = {
         k for k in entries
         if k == AR.NanoClawContainerNclCLI or AR.NanoClawContainerNclCLI in m.transitive_objects(k, AR.specializesInvocationKind)
@@ -70,7 +78,7 @@ def step_effects(snap: Snapshot) -> dict[URIRef, tuple[str, str, str, str]]:
         AR.NanoClawHostTaskLogAppend: ("NanoClawTaskRunLog", "Update", f"groups/{folder}/tasks/<series>.md", ncl_status),
         AR.NanoClawHostImageBuild: ("NanoClawAgentImage", "Install, Update", "per-group image (Docker image store)", "Available"),
         AR.NanoClawHostConfigMaterialization: ("NanoClawHostContainerConfigFile, NanoClawHostComposedInstructionsFile", "Update", f"groups/{folder}/container.json, groups/{folder}/CLAUDE.md", ncl_status),
-        AR.NanoClawHostCommandDispatch: ("NanoClawCentralDatabase", "Create, Update, Delete", "data/v2.db", ncl_status),
+        AR.NanoClawHostCommandDispatch: ("NanoClawCentralDatabase", "Create, Read, Update, Delete", "data/v2.db", ncl_status),
         AR.NanoClawHostGuardInvocation: ("NanoClawCentralDatabase", "Create, Update, Delete", "data/v2.db", ncl_status),
     }
 
@@ -90,6 +98,28 @@ def route_rows(snap: Snapshot, reached: dict[URIRef, set[URIRef]]) -> list[tuple
             via = "every outbound row (all built-in tools, ncl, direct writes)"
         controls = sorted(short(c) for c in m.objects(step, AR.protectedByKind))
         rows.append((resource, where, eff, f"{short(step).replace('NanoClaw', '')} ← {via}", status, ", ".join(controls) or "-"))
+    return rows
+
+
+def host_read_rows(snap: Snapshot) -> list[tuple]:
+    """Capabilities on host-located resources (e.g. ncl reads), whose results return to the agent."""
+    m = snap.model
+    gid = snap.facts["group"]["id"]
+    locations = {
+        AR.NanoClawCentralDatabase: "data/v2.db (own group: config, sessions, destinations, members)",
+        AR.NanoClawSessionTranscript: f"data/v2-sessions/{gid}/<any session>/inbound.db + outbound.db",
+        AR.NanoClawScheduledTask: "data/v2.db + task session inbound.db",
+        AR.NanoClawMessagingRouteConfiguration: "data/v2.db (messaging groups, wirings, policies, user DMs)",
+        AR.NanoClawRoleMembershipState: "data/v2.db (users, roles)",
+        AR.NanoClawDroppedMessage: "data/v2.db (dropped_messages)",
+        AR.NanoClawApprovalRequest: "data/v2.db (pending_approvals)",
+    }
+    hits = reported_capabilities(snap, lambda c: snap.side_of(m.value(c, AR.nativeResourceKind)) == AR.NanoClawHostProcess)
+    rows = []
+    for cap, status, effects in sorted(hits, key=lambda h: short(h[0])):
+        resource = m.value(cap, AR.nativeResourceKind)
+        eff, via, st = merge(snap, [(cap, status, effects)])
+        rows.append((short(resource), locations.get(resource, "host"), eff, via, st, "no approval; result returned into the container"))
     return rows
 
 
@@ -127,5 +157,5 @@ def host_rows(snap: Snapshot) -> tuple[list[tuple], dict[URIRef, set[URIRef]]]:
     """Host table rows, plus the reached host steps whose effect is remote (adapter delivery)."""
     reached = reachable_host_steps(snap)
     remote_via_host = {step: srcs for step, srcs in reached.items() if step == AR.NanoClawChannelAdapterDelivery}
-    rows = route_rows(snap, reached) + local_delivery_rows(snap, reached) + management_rows(snap)
+    rows = route_rows(snap, reached) + host_read_rows(snap) + local_delivery_rows(snap, reached) + management_rows(snap)
     return rows, remote_via_host

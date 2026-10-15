@@ -13,7 +13,7 @@ from ...common.namespaces import AR
 from ...common.rdf import short
 from ..constants import LOCAL_CHANNELS, UNAVAILABLE
 from ..snapshot import Snapshot
-from .common import tool_label
+from .common import endpoint_name, tool_label
 
 ENDPOINT_NAMES = {
     AR.NanoClawContainerShellExecution: "shell (curl, scripts, ...)",
@@ -39,11 +39,11 @@ def capability_rows(snap: Snapshot) -> list[tuple]:
     rows = []
     for cap, status in sorted(snap.cap_status.items(), key=lambda kv: short(kv[0])):
         resource = m.value(cap, AR.nativeResourceKind)
-        if status == UNAVAILABLE or snap.side_of(resource) != AR.ExternalNetwork:
+        if cap in snap.refined_by or status == UNAVAILABLE or snap.side_of(resource) != AR.ExternalNetwork:
             continue
         endpoint = m.value(cap, AR.nativeEndpointKind)
         effects = ", ".join(sorted(short(e) for e in m.objects(cap, AR.nativeEffectType)))
-        name = ENDPOINT_NAMES.get(endpoint, short(endpoint))
+        name = ENDPOINT_NAMES.get(endpoint) or endpoint_name(snap, endpoint)
         if snap.side_of(endpoint) == AR.ExternalNetwork:
             rows.append((short(resource), "search results (any site)", effects, f"{name}: query sent inside the model request ▸ OneCLI gateway ▸ model provider, which runs the search", short(status), "local controls see only the model request, not the searches or sites; disable via the tool allowlist"))
         else:
