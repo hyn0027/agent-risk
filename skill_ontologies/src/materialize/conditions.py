@@ -12,6 +12,7 @@ from rdflib.namespace import RDF
 from ..common.namespaces import AR, OBS
 from ..common.rdf import short
 from .constants import OBSERVED, SATISFIED, UNKNOWN, UNSATISFIED
+from .gateway_policy import reachability
 from .provider_tools import tool_status, tools_implementing
 from .snapshot import Snapshot
 
@@ -42,12 +43,22 @@ def evaluate(snap: Snapshot) -> dict[str, tuple[URIRef, str]]:
         "cond_onecli_files_contributed": (SATISFIED if onecli_files else UNSATISFIED, "OneCLI CA mounts " + ("present" if onecli_files else "absent")),
         "cond_network_client_available": (SATISFIED, f"curl at {f['curl']}") if f["curl"] else (UNKNOWN, "no curl found; other clients may exist"),
         "cond_destination_projected_and_authorized": (SATISFIED if f["grants"] or origin else UNSATISFIED, f"{len(f['grants'])} destination grant(s); origin chat {'present' if origin else 'absent'}"),
-        "cond_network_route_permitted": (UNKNOWN, ("lockdown on: only gateway-proxied requests can leave; " if snap.lockdown_on else "lockdown off: direct and proxied routes exist; ") + "per-request gateway and remote decisions are not observable"),
+        "cond_network_route_permitted": network_route_requirement(snap),
         "cond_container_file_readable": (UNKNOWN, "depends on the concrete path"),
         "cond_container_file_writable": (UNKNOWN, "depends on the concrete path; see mount modes"),
         "cond_ncl_available": (UNSATISFIED if snap.cli_scope == "disabled" else SATISFIED, f"cli_scope={snap.cli_scope}"),
         "cond_cli_scope_global": (SATISFIED if snap.cli_scope == "global" else UNSATISFIED, f"cli_scope={snap.cli_scope}"),
     }
+
+
+def network_route_requirement(snap: Snapshot) -> tuple[URIRef, str]:
+    """Unsatisfied only when lockdown forces the gateway and its effective policy allows nothing."""
+    agent = snap.facts["onecli_agent"]
+    where, why, reachable = reachability(snap.facts["gateway_policy"], agent["id"] if agent else None, snap.facts["secrets"])
+    route = "lockdown on: only gateway-proxied requests can leave" if snap.lockdown_on else "lockdown off: direct and proxied routes exist"
+    if snap.lockdown_on and not reachable:
+        return UNSATISFIED, f"{route}; gateway reachable hosts: {where} ({why})"
+    return UNKNOWN, f"{route}; gateway reachable hosts: {where}; per-request and remote decisions are not observable"
 
 
 def provider(snap: Snapshot) -> str:

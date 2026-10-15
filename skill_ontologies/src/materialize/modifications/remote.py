@@ -13,6 +13,7 @@ from ...common.namespaces import AR
 from ...common.rdf import short
 from ..constants import LOCAL_CHANNELS, UNAVAILABLE
 from ..snapshot import Snapshot
+from ..gateway_policy import reachability
 from .common import endpoint_name, tool_label
 
 ENDPOINT_NAMES = {
@@ -22,20 +23,19 @@ ENDPOINT_NAMES = {
 }
 
 
-def network_route(snap: Snapshot) -> tuple[str, str]:
-    """(path off the machine, gate) for container-originated requests."""
-    f = snap.facts
-    agent = f["onecli_agent"]
-    rule_count = len([r for r in f["rules"] if not r.get("agentId") or (agent and r.get("agentId") == agent["id"])])
+def network_route(snap: Snapshot) -> tuple[str, str, str]:
+    """(path off the machine, gate, reachable hosts) for container-originated requests."""
+    agent = snap.facts["onecli_agent"]
+    where, why, _ = reachability(snap.facts["gateway_policy"], agent["id"] if agent else None, snap.facts["secrets"])
     lockdown = snap.lockdown_on
     leave = "container ▸ OneCLI gateway ▸ Internet" if lockdown else "container ▸ OneCLI gateway or direct ▸ Internet"
-    gate = f"gateway policy ({rule_count} rule(s) in scope); credentials injected per host" + ("; direct route blocked" if lockdown else "; direct route open")
-    return leave, gate
+    gate = f"{why}; credentials injected per host" + ("; direct route blocked" if lockdown else "; direct route open (bypasses the policy)")
+    return leave, gate, where
 
 
 def capability_rows(snap: Snapshot) -> list[tuple]:
     m = snap.model
-    leave, gate = network_route(snap)
+    leave, gate, where = network_route(snap)
     rows = []
     for cap, status in sorted(snap.cap_status.items(), key=lambda kv: short(kv[0])):
         resource = m.value(cap, AR.nativeResourceKind)
@@ -47,12 +47,12 @@ def capability_rows(snap: Snapshot) -> list[tuple]:
         if snap.side_of(endpoint) == AR.ExternalNetwork:
             rows.append((short(resource), "search results (any site)", effects, f"{name}: query sent inside the model request ▸ OneCLI gateway ▸ model provider, which runs the search", short(status), "local controls see only the model request, not the searches or sites; disable via the tool allowlist"))
         else:
-            rows.append((short(resource), "any public host", effects, f"{name}: {leave}", short(status), gate))
+            rows.append((short(resource), where, effects, f"{name}: {leave}", short(status), gate))
     return rows
 
 
 def mcp_rows(snap: Snapshot) -> list[tuple]:
-    leave, gate = network_route(snap)
+    leave, gate, _ = network_route(snap)
     rows = []
     for name, spec in (snap.facts["config"].get("mcp_servers") or {}).items():
         if isinstance(spec, dict) and spec.get("url"):

@@ -7,6 +7,7 @@ from table_output import print_table
 from ..common.namespaces import OBS
 from ..common.rdf import short
 from .model import skill_directories
+from .gateway_policy import applicable_rules, effective_mode
 from .snapshot import Snapshot
 from .tools import tool_summary
 
@@ -14,7 +15,9 @@ from .tools import tool_summary
 def print_session(snap: Snapshot) -> None:
     f = snap.facts
     sess, group, config, agent = f["session"], f["group"], f["config"], f["onecli_agent"]
-    rules_in_scope = len([r for r in f["rules"] if not r.get("agentId") or (agent and r.get("agentId") == agent["id"])])
+    policy = f["gateway_policy"]
+    rules_in_scope = len(applicable_rules(policy, agent["id"] if agent else None))
+    mode, why = effective_mode(policy)
     print_table("Session snapshot", ("Field", "Value"), [
         ("Session", sess["id"]),
         ("Agent group", f"{group['name']} ({group['id']})"),
@@ -26,6 +29,7 @@ def print_session(snap: Snapshot) -> None:
         ("Destination grants", ", ".join(d["local_name"] for d in f["grants"]) or "none"),
         ("MCP servers (third-party)", ", ".join(config.get("mcp_servers") or {}) or "none"),
         ("Gateway identity", f"{agent['identifier']} secretMode={agent.get('secretMode')}" if agent else "none"),
+        ("Gateway policy", why),
         ("Gateway rules in scope", str(rules_in_scope)),
         ("Claude tool lists", f"{len(f['claude_tools']['allowlist'])} allowlisted, {len(f['claude_tools']['disallowed'])} disallowed (claude-config.ts)"),
         ("Instances / triples", f"{len(set(snap.graph.subjects(RDF.type, None)))} / {len(snap.graph)}"),

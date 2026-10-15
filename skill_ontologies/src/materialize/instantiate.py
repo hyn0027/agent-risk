@@ -6,6 +6,7 @@ from rdflib.namespace import XSD
 from ..common.namespaces import AR, OBS
 from ..common.rdf import short
 from .constants import FROM_CONFIG, OBSERVED
+from .gateway_policy import applicable_rules, effective_mode, rule_label
 from .model import mount_kind
 from .snapshot import Snapshot
 
@@ -122,8 +123,15 @@ def add_gateway(snap: Snapshot, grp: URIRef) -> None:
     identity = snap.add(snap.node("onecli_identity"), AR.OneCLIAgentIdentity, OBSERVED, agent["name"] or agent["identifier"], identifier=agent["identifier"], secretMode=agent.get("secretMode"), identifies=grp)
     for s in f["secrets"]:
         snap.add(snap.node(f"secret_{s['name']}"), AR.Credential, OBSERVED, s["name"], hostPattern=s.get("hostPattern"), secretType=s.get("type"), injectableFor=identity if agent.get("secretMode") == "all" else None)
-    scoped = [r for r in f["rules"] if not r.get("agentId") or r.get("agentId") == agent["id"]]
-    snap.add(snap.node("control_gateway_policy"), AR.OneCLIGatewayPolicy, OBSERVED, "gateway policy", ruleCount=len(scoped), appliesTo=identity)
+    policy = f["gateway_policy"]
+    rules = applicable_rules(policy, agent["id"])
+    mode, why = effective_mode(policy)
+    control = snap.add(snap.node("control_gateway_policy"), AR.OneCLIGatewayPolicy, OBSERVED, "gateway policy", ruleCount=len(rules), mode=mode, reason=why, appliesTo=identity)
+    for r in rules:
+        rule = snap.add(snap.node(f"gateway_rule_{r['name']}"), AR.OneCLIPolicyRule, OBSERVED, r["name"], action=r["action"], matches=rule_label(r), scope=r.get("scope"), forAllAgents=not r.get("agentId"))
+        snap.graph.add((control, OBS.hasRule, rule))
+    if mode == "deny":
+        snap.findings.append("OneCLI deny-by-default only covers credentialed requests to non-LLM hosts; uncredentialed web traffic still passes unless a block rule matches it.")
 
 
 def add_mcp_servers(snap: Snapshot, grp: URIRef) -> None:

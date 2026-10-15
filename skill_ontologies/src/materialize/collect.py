@@ -7,6 +7,7 @@ never read.
 import subprocess
 from pathlib import Path
 
+from .gateway_policy import read_gateway_policy
 from .provider_tools import read_tool_lists
 from .runtime import docker_json, ncl, onecli, run, sqlite_rows, tool
 
@@ -56,6 +57,7 @@ def collect_gateway(group_id: str) -> dict:
         "onecli_agent": next((a for a in agents if a["identifier"] == group_id), None),
         "secrets": [{k: s.get(k) for k in ("name", "type", "hostPattern")} for s in onecli("secrets", "list")],
         "rules": [{k: r.get(k) for k in ("name", "action", "hostPattern", "agentId", "enabled")} for r in onecli("rules", "list")],
+        "gateway_policy": read_gateway_policy(),
     }
 
 
