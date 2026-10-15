@@ -121,6 +121,7 @@ skill_ontologies/
       claude-tools.trig
     skills/
       git-resources.trig
+      container-tooling.trig
       ...one graph per skill...
     examples/            sample observation graphs for external RDF tools
 ```
@@ -248,6 +249,7 @@ The current module inventory is:
 | `nanoclaw-network` | `ontology/nanoclaw/nanoclaw-network.trig` | OneCLI, direct/proxied egress, local/remote MCP, and lockdown controls |
 | `claude-tools` | `ontology/claude/claude-tools.trig` | Claude built-in tools: names, the NanoClaw endpoints they implement, per-tool capabilities and refinements |
 | `git-resources` | `ontology/skills/git-resources.trig` | Reusable Git resource kinds and qualified working-tree definitions |
+| `container-tooling` | `ontology/skills/container-tooling.trig` | Shared by NanoClaw's container skills: the agent-browser CLI and browser state (pages, cookies, saved auth state, captures), and package managers with the npm registry |
 
 `git-resources` lives under `ontology/skills/` because it is skill-oriented support vocabulary, but it is still an ontology module rather than an `ar:Skill`. It is selected because `gh-issues` requires it; `coding-agent` also requires it. Static dependency validation would reject either skill if this ontology were absent. Folder placement and loading policy are separate concerns.
 
@@ -255,6 +257,11 @@ The current skill inventory is:
 
 | Skill directory | Graph file | Main modeled capability | Declared module dependencies |
 |---|---|---|---|
+| `agent-browser` | `ontology/skills/agent-browser.trig` | NanoClaw container skill: headless browsing, form interaction, site logins, uploads, saved auth state, cookies, page JS | `container-tooling`, `nanoclaw-runtime`, `nanoclaw-network` |
+| `frontend-engineer` | `ontology/skills/frontend-engineer.trig` | NanoClaw container skill: edit, install, build, dev server, browser verify, Vercel deploy (conditional on `/add-vercel`), report | `container-tooling`, `nanoclaw-runtime`, `nanoclaw-network`, `nanoclaw-messaging` |
+| `onecli-gateway` | `ontology/skills/onecli-gateway.trig` | NanoClaw container skill: read and write connected services with gateway-injected credentials, credential stubs, connect links | `nanoclaw-runtime`, `nanoclaw-network`, `nanoclaw-messaging` |
+| `self-customize` | `ontology/skills/self-customize.trig` | NanoClaw container skill: edit memory/instructions, `install_packages`, `add_mcp_server`, `create_agent` builder, delegation; builder source edits unsupported (`/app/src` is read-only) | `container-tooling`, `nanoclaw-core`, `nanoclaw-runtime`, `nanoclaw-control`, `nanoclaw-messaging`, `nanoclaw-network` |
+| `welcome` | `ontology/skills/welcome.trig` | NanoClaw container skill: greeting and capability tour via messaging tools, channel addenda, first memory entries | `nanoclaw-core`, `nanoclaw-runtime`, `nanoclaw-messaging` |
 | `1password-1.0.0` | `ontology/skills/1password.trig` | CLI/browser-oriented credential access and injection | `nanoclaw-runtime`, `nanoclaw-network` |
 | `coding-agent` | `ontology/skills/coding-agent.trig` | Worktrees, coding workers, process control, PRs, notification | `git-resources`, `nanoclaw-runtime`, `nanoclaw-messaging`, `nanoclaw-network` |
 | `configure-channel` | `ontology/skills/configure-channel.trig` | Channel inspection/configuration and delivery tests | `nanoclaw-messaging`, `nanoclaw-control` |
@@ -268,7 +275,7 @@ The current skill inventory is:
 
 ## Static loading policy
 
-The manifest currently lists ten shared ontologies and four skill ontologies. Five shared ontologies describe NanoClaw itself: core, messaging/mailboxes, management controls, container/filesystem runtime, and network/OneCLI paths. Generic tool, filesystem, internet, and shell graphs are also selected. Git resource definitions live under `ontology/skills/` even though they are selected on every run; folder placement and load policy are separate concerns.
+The manifest currently lists twelve shared ontologies (including `claude-tools`, `git-resources`, and `container-tooling`) and seven skill ontologies: `discord`, `gh-issues`, and the five container skills NanoClaw loads into every session (`agent-browser`, `frontend-engineer`, `onecli-gateway`, `self-customize`, `welcome`). Five shared ontologies describe NanoClaw itself: core, messaging/mailboxes, management controls, container/filesystem runtime, and network/OneCLI paths. Generic tool, filesystem, internet, and shell graphs are also selected. Git resource definitions live under `ontology/skills/` even though they are selected on every run; folder placement and load policy are separate concerns.
 
 Dependencies never load dynamically. Every ontology module owns its metadata in RDF:
 
@@ -306,9 +313,16 @@ During dependency preflight, the loader parses graph metadata, checks that selec
   "nanoclaw-control",
   "nanoclaw-runtime",
   "nanoclaw-network",
-  "git-resources",
   "discord",
-  "gh-issues"
+  "gh-issues",
+  "git-resources",
+  "claude-tools",
+  "container-tooling",
+  "agent-browser",
+  "frontend-engineer",
+  "onecli-gateway",
+  "self-customize",
+  "welcome"
 ]
 ```
 

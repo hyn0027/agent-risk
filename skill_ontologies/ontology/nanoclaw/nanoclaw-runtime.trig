@@ -46,6 +46,11 @@ ar:g_nanoclaw_runtime {
   ar:NanoClawSessionContextFile a ar:WorldSurfaceKind ;
     ar:specializesKind ar:LocalFile ;
     rdfs:comment "Host-written session identity file mounted read-only at /app/.nanoclaw-session.json; tells the runner which agent group and session it serves." .
+  ar:NanoClawInstructionSource a ar:WorldSurfaceKind ;
+    ar:specializesKind ar:LocalFile ;
+    ar:locatedOn ar:NanoClawAgentContainer ;
+    rdfs:comment "Agent-editable standing-instruction source /workspace/agent/instructions.prepend.md. The host composes it into the read-only CLAUDE.md at the next spawn, so an edit changes the agent's own instructions for every later session of the group." .
+  ar:NanoClawInstructionSource ar:mayResideInKind ar:NanoClawAgentGroupWorkspace .
   ar:NanoClawConversationArchive a ar:WorldSurfaceKind ;
     ar:specializesKind ar:LocalFile ;
     rdfs:comment "Searchable transcripts of earlier sessions under /workspace/agent/conversations/, readable and writable by every session of the group." .

@@ -11,5 +11,11 @@
   "discord",
   "gh-issues",
   "git-resources",
-  "claude-tools"
+  "claude-tools",
+  "container-tooling",
+  "agent-browser",
+  "frontend-engineer",
+  "onecli-gateway",
+  "self-customize",
+  "welcome"
 ]
