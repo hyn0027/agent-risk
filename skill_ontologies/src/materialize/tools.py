@@ -36,7 +36,8 @@ def assess_tools(snap: Snapshot) -> list[tuple[str, str, str, str, str]]:
     claude = (snap.facts["config"].get("provider") or "claude").lower() == "claude"
     rows = []
     for kind, name in provider_tools(snap.model):
-        enabled, reason = tool_status(lists, name) if claude else (False, "provider is not claude")
+        enabled, source = tool_status(lists, name) if claude else (False, f"provider={snap.facts['config'].get('provider')}")
+        reason = f"{'enabled' if enabled else 'disabled'} ({source})"
         caps = tool_capabilities(snap, kind)
         caps_text = ", ".join(f"{short(c)} ({short(snap.cap_status[c])})" for c in sorted(caps, key=short) if c in snap.cap_status) or "-"
         side = snap.side_of(kind)

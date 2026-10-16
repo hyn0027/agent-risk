@@ -1,10 +1,12 @@
 """What this session can cause the host to read or change, outside its container.
 
-Rows: (resource, host location, effects, triggered by, status, gate). Host-side
-steps are found by walking routesToKind from container-side tool endpoints;
-host-side reads come from capabilities whose resource is located on the host
-(their results return into the container); host-mediated management actions are
-listed from NanoClaw's guard rules.
+Rows: (resource, location, effects, via, status, gate), the layout shared by all
+three tables; via is the host step with the entry points that reach it.
+Host-side steps are found by walking routesToKind from container-side tool
+endpoints; each step's resources are the world kinds it routes to. Host-side
+reads come from capabilities whose resource is located on the host. Locations,
+effects, and controls are read from the model (hostPathPattern / containsKind,
+nativeEffectType, protectedByKind).
 """
 
 from rdflib import URIRef
@@ -15,7 +17,7 @@ from ...common.rdf import short
 from ..constants import LOCAL_CHANNELS
 from ..provider_tools import tool_status
 from ..snapshot import Snapshot
-from .common import merge, reported_capabilities, tool_label
+from .common import gate, kind_location, merge, reported_capabilities, step_effects, tool_label, via_steps
 
 
 def container_entry_points(snap: Snapshot) -> list[URIRef]:
@@ -62,64 +64,40 @@ def reachable_host_steps(snap: Snapshot) -> dict[URIRef, set[URIRef]]:
     return reached
 
 
-def step_effects(snap: Snapshot) -> dict[URIRef, tuple[str, str, str, str]]:
-    """Host step -> (resource, effects, concrete host location, status) in this session."""
-    f, scope = snap.facts, snap.cli_scope
-    folder = f["group"].get("folder") or "{folder}"
-    agent_grants = [d["local_name"] for d in f["grants"] if d["target_type"] == "agent"]
-    ws = next((x for x in f["inspect"]["Mounts"] if x["Destination"] == "/workspace"), {})
-    session_dir = snap.host_path(ws.get("Source")) or "data/v2-sessions/<group>/<session>"
-    ncl_status = "Available" if scope != "disabled" else "Unavailable"
-    a2a_status = "Available" if agent_grants else "Unavailable"
-    return {
-        AR.NanoClawHostDeliveryInvocation: ("NanoClawDeliveryRecord", "Create", f"{session_dir}/inbound.db (delivered)", "Available"),
-        AR.NanoClawAgentRouteInvocation: ("NanoClawInboundMessage (another agent's session)", "Create", ", ".join(agent_grants) or "no agent destination grants", a2a_status),
-        AR.NanoClawHostAttachmentStaging: ("NanoClawInboxArtifact (another agent's session)", "Create", "data/v2-sessions/<target group>/<session>/inbox/", a2a_status),
-        AR.NanoClawHostTaskLogAppend: ("NanoClawTaskRunLog", "Update", f"groups/{folder}/tasks/<series>.md", ncl_status),
-        AR.NanoClawHostImageBuild: ("NanoClawAgentImage", "Install, Update", "per-group image (Docker image store)", "Available"),
-        AR.NanoClawHostConfigMaterialization: ("NanoClawHostContainerConfigFile, NanoClawHostComposedInstructionsFile", "Update", f"groups/{folder}/container.json, groups/{folder}/CLAUDE.md", ncl_status),
-        AR.NanoClawHostCommandDispatch: ("NanoClawCentralDatabase", "Create, Read, Update, Delete", "data/v2.db", ncl_status),
-        AR.NanoClawHostGuardInvocation: ("NanoClawCentralDatabase", "Create, Update, Delete", "data/v2.db", ncl_status),
-    }
+def resource_effects(snap: Snapshot, resource: URIRef) -> str:
+    """Effects of the reported capabilities on ``resource`` (from the model)."""
+    m = snap.model
+    hits = reported_capabilities(snap, lambda c: m.value(c, AR.nativeResourceKind) == resource)
+    return ", ".join(sorted({short(e) for _, _, es in hits for e in es})) or "-"
 
 
 def route_rows(snap: Snapshot, reached: dict[URIRef, set[URIRef]]) -> list[tuple]:
     m = snap.model
-    effects = step_effects(snap)
-    names = {AR.NanoClawContainerShellExecution: "shell"}
+    agent_grants = [d for d in snap.facts["grants"] if d["target_type"] == "agent"]
     rows = []
     for step, sources in sorted(reached.items(), key=lambda kv: short(kv[0])):
-        if step not in effects:
-            continue
-        resource, eff, where, status = effects[step]
+        resources = sorted((t for t in m.objects(step, AR.routesToKind) if (t, RDF.type, AR.WorldSurfaceKind) in m), key=short)
         leaves = {e for e in sources if not any(e in m.objects(o, AR.specializesInvocationKind) for o in sources)}
-        via = ", ".join(sorted(names.get(e, tool_label(e)) for e in leaves))
-        if step == AR.NanoClawHostDeliveryInvocation:
-            via = "every outbound row (all built-in tools, ncl, direct writes)"
-        controls = sorted(short(c) for c in m.objects(step, AR.protectedByKind))
-        rows.append((resource, where, eff, f"{short(step).replace('NanoClaw', '')} ← {via}", status, ", ".join(controls) or "-"))
+        sources = sorted(tool_label(e) for e in leaves)
+        # Observed: agent-to-agent routes need an agent destination grant.
+        status = "Unavailable" if step == AR.NanoClawAgentRouteInvocation and not agent_grants else "Available"
+        for res in resources:
+            if snap.side_of(res) not in (AR.NanoClawHostProcess, None):
+                continue
+            effects = ", ".join(sorted(short(e) for e in step_effects(snap, step))) or resource_effects(snap, res)
+            rows.append((short(res), kind_location(snap, res), effects, via_steps(short(step), sources), status, gate(snap, [], step, res)))
     return rows
 
 
 def host_read_rows(snap: Snapshot) -> list[tuple]:
     """Capabilities on host-located resources (e.g. ncl reads), whose results return to the agent."""
     m = snap.model
-    gid = snap.facts["group"]["id"]
-    locations = {
-        AR.NanoClawCentralDatabase: "data/v2.db (own group: config, sessions, destinations, members)",
-        AR.NanoClawSessionTranscript: f"data/v2-sessions/{gid}/<any session>/inbound.db + outbound.db",
-        AR.NanoClawScheduledTask: "data/v2.db + task session inbound.db",
-        AR.NanoClawMessagingRouteConfiguration: "data/v2.db (messaging groups, wirings, policies, user DMs)",
-        AR.NanoClawRoleMembershipState: "data/v2.db (users, roles)",
-        AR.NanoClawDroppedMessage: "data/v2.db (dropped_messages)",
-        AR.NanoClawApprovalRequest: "data/v2.db (pending_approvals)",
-    }
     hits = reported_capabilities(snap, lambda c: snap.side_of(m.value(c, AR.nativeResourceKind)) == AR.NanoClawHostProcess)
     rows = []
     for cap, status, effects in sorted(hits, key=lambda h: short(h[0])):
         resource = m.value(cap, AR.nativeResourceKind)
         eff, via, st = merge(snap, [(cap, status, effects)])
-        rows.append((short(resource), locations.get(resource, "host"), eff, via, st, "no approval; result returned into the container"))
+        rows.append((short(resource), kind_location(snap, resource), eff, via, st, gate(snap, [], resource, m.value(cap, AR.nativeEndpointKind))))
     return rows
 
 
@@ -127,35 +105,18 @@ def local_delivery_rows(snap: Snapshot, reached: dict[URIRef, set[URIRef]]) -> l
     """Deliveries to local channels (CLI, Emacs) stay on this machine."""
     if AR.NanoClawChannelAdapterDelivery not in reached:
         return []
+    cell = gate(snap, [], AR.NanoClawChannelAdapterDelivery, AR.NanoClawHostDeliveryInvocation)
+    via = via_steps("NanoClawChannelAdapterDelivery", sorted(tool_label(e) for e in reached[AR.NanoClawChannelAdapterDelivery]))
     return [
-        ("MessagingMessage (local channel)", f"{d.get('channel_type')}: {d.get('display_name') or d['local_name']} (local client)", "Create, Transmit", "ChannelAdapterDelivery ← built-in messaging tools", "Available", "destination grant; origin chat always allowed")
+        ("MessagingMessage", f"{d.get('channel_type')}: {d.get('display_name') or d['local_name']}", ", ".join(sorted(short(e) for e in step_effects(snap, AR.NanoClawChannelAdapterDelivery))) or "-", via, "Available", cell)
         for d in snap.facts["grants"]
         if d["target_type"] == "channel" and d.get("channel_type") in LOCAL_CHANNELS
     ]
-
-
-def management_rows(snap: Snapshot) -> list[tuple]:
-    """Host-mediated management actions (guard rules encoded here; see README)."""
-    scope = snap.cli_scope
-    folder = snap.facts["group"].get("folder") or "{folder}"
-    rows = []
-    if scope != "disabled":
-        rows.append(("NanoClawScheduledTask", "data/v2.db + task session inbound.db", "Create, Update, Delete", "ncl tasks", "Available", "no approval"))
-        rows.append(("NanoClawContainerConfiguration", "data/v2.db (container_configs)", "Update", "ncl groups config", "Available", "held for approval"))
-        rows.append(("NanoClawDestinationGrant", "data/v2.db (agent_destinations)", "Create, Delete", "ncl destinations", "Available", "held for approval"))
-        rows.append(("NanoClawRoleMembershipState", "data/v2.db (members)", "Create, Delete", "ncl members", "Available", "held for approval"))
-    if scope == "global":
-        rows.append(("NanoClawMessagingRouteConfiguration", "data/v2.db (wirings, messaging groups, policies)", "Create, Update, Delete", "ncl (global scope)", "Available", "held for approval"))
-        rows.append(("NanoClawRoleMembershipState", "data/v2.db (users, roles)", "Create, Update, Delete", "ncl (global scope)", "Available", "held for approval"))
-    rows.append(("NanoClawAgentGroup", "data/v2.db + groups/<new folder>", "Create", "create_agent", "Available", "no approval (cli_scope=global)" if scope == "global" else "held for approval"))
-    rows.append(("NanoClawAgentImage", "per-group image (Docker image store)", "Install, Update", "install_packages", "Available", "held for approval; rebuild + restart"))
-    rows.append(("NanoClawContainerConfiguration", f"data/v2.db → groups/{folder}/container.json", "Configure", "add_mcp_server", "Available", "held for approval; restart"))
-    return rows
 
 
 def host_rows(snap: Snapshot) -> tuple[list[tuple], dict[URIRef, set[URIRef]]]:
     """Host table rows, plus the reached host steps whose effect is remote (adapter delivery)."""
     reached = reachable_host_steps(snap)
     remote_via_host = {step: srcs for step, srcs in reached.items() if step == AR.NanoClawChannelAdapterDelivery}
-    rows = route_rows(snap, reached) + host_read_rows(snap) + local_delivery_rows(snap, reached) + management_rows(snap)
+    rows = route_rows(snap, reached) + host_read_rows(snap) + local_delivery_rows(snap, reached)
     return rows, remote_via_host

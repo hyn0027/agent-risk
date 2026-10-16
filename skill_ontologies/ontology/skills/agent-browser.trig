@@ -52,12 +52,12 @@ ar:g_agent_browser {
       [ a ar:PotentialEffect ; ar:effectType ar:Transmit ; ar:affectsKind ar:BrowserSiteAccount ] .
 
   ar:op_browser_upload a ar:Operation ; ar:invokedThroughKind ar:AgentBrowserCLI ;
-    ar:targetsKind ar:LocalFile, ar:BrowserRemoteAppState ;
+    ar:targetsKind ar:NanoClawContainerFile, ar:BrowserRemoteAppState ;
     ar:requires ar:cond_agent_browser_available, ar:cond_container_file_readable, ar:cond_network_route_permitted ;
     ar:mayInitiateInternetCall ar:call_browser_upload ;
     ar:sourceStatus ar:SkillText ;
     ar:sourceNote "upload @ref file: sends a container-visible file to the site through a file input." ;
-    ar:hasPotentialEffect [ a ar:PotentialEffect ; ar:effectType ar:Read ; ar:affectsKind ar:LocalFile ],
+    ar:hasPotentialEffect [ a ar:PotentialEffect ; ar:effectType ar:Read ; ar:affectsKind ar:NanoClawContainerFile ],
       [ a ar:PotentialEffect ; ar:effectType ar:Transmit ; ar:affectsKind ar:BrowserRemoteAppState ] .
 
   ar:op_browser_capture a ar:Operation ; ar:invokedThroughKind ar:AgentBrowserCLI ;

@@ -17,6 +17,7 @@ ar:g_nanoclaw_core {
     ar:mayBeStoredAsKind ar:LocalFile ;
     rdfs:comment "Host-owned central state for agent groups, users, roles, wirings, sessions, and configuration; the default checkout uses data/v2.db." .
   ar:NanoClawAgentGroup a ar:WorldSurfaceKind ;
+    ar:locatedOn ar:NanoClawHostProcess ;
     rdfs:comment "Persistent agent identity and shared scope for configuration, workspace, instructions, memory, and gateway identity. It is not a team of agents." .
   ar:NanoClawSession a ar:WorldSurfaceKind ;
     rdfs:comment "Conversation/execution state with its own mailbox and container lifecycle, resolved from agent group + messaging group + thread. Several sessions can belong to one agent group; at most one container runs per session." .
@@ -26,6 +27,7 @@ ar:g_nanoclaw_core {
   ar:NanoClawAgentContainer a ar:WorldSurfaceKind, ar:SystemComponentKind ;
     rdfs:comment "Per-session sandbox runtime managed by the selected session driver; the current default is a Docker container started from the agent group's image." .
   ar:NanoClawAgentImage a ar:WorldSurfaceKind ;
+    ar:locatedOn ar:NanoClawHostProcess ;
     rdfs:comment "Container image an agent group's sessions start from: the shared base image, or a per-group derived image that adds approved apt/npm packages. Rebuilt on host after an approved package installation." .
   ar:NanoClawAgentRunner a ar:WorldSurfaceKind, ar:SystemComponentKind ;
     rdfs:comment "Container-side Bun process that polls the mailbox, prepares context, calls a provider, and records output." .
@@ -62,4 +64,9 @@ ar:g_nanoclaw_core {
     ar:protectedByKind ar:NanoClawProviderToolPolicyControl .
   ar:NanoClawSession ar:sharesKind ar:NanoClawPersistentMemory ;
     rdfs:comment "Sessions in the same agent group may share group memory and working files; session separation alone is not a confidentiality boundary." .
+
+  # Host paths (relative to the checkout); the image lives in the Docker image store.
+  ar:NanoClawCentralDatabase ar:hostPathPattern "data/v2.db" .
+  ar:NanoClawAgentGroup ar:hostPathPattern "groups/{folder}" .
+  ar:NanoClawAgentImage ar:hostPathPattern "docker image {image}" .
 }

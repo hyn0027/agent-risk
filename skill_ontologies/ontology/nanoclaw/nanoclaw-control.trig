@@ -217,4 +217,14 @@ ar:g_nanoclaw_control {
       <https://github.com/hyn0027/nanoclaw/blob/08ceb915e23fff1ec22a322cd44bb82294d9907b/container/agent-runner/src/cli/ncl.ts>,
       <https://github.com/hyn0027/nanoclaw/blob/08ceb915e23fff1ec22a322cd44bb82294d9907b/src/cli/guard.ts>,
       <https://github.com/hyn0027/nanoclaw/blob/08ceb915e23fff1ec22a322cd44bb82294d9907b/src/guard/guard.ts> .
+
+  # What the host-side management steps do to the kinds they route to.
+  ar:NanoClawHostConfigMaterialization ar:stepEffectType ar:Update .
+  ar:NanoClawHostGuardInvocation ar:stepEffectType ar:Create, ar:Update, ar:Delete .
+  ar:NanoClawHostImageBuild ar:stepEffectType ar:Install .
+  ar:NanoClawHostMessagingAdminCLI ar:stepEffectType ar:Create, ar:Update, ar:Delete .
+  ar:NanoClawHostTaskLogAppend ar:stepEffectType ar:Update .
+  # Host paths (relative to the checkout).
+  ar:NanoClawSessionTranscript ar:hostPathPattern "data/v2-sessions/{agentGroupId}/*/" .
+  ar:NanoClawCentralDatabase ar:containsKind ar:NanoClawScheduledTask .
 }

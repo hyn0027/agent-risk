@@ -27,8 +27,9 @@ from .gateway_policy import deny_by_default_problem
 from .collect import collect
 from .conditions import resolve_conditions
 from .instantiate import instantiate
-from .model import load_model, pinned_source
+from .model import add_skill_graphs, load_model, pinned_source
 from .modifications import assess_modifications
+from .operations import assess_operations
 from .output import check_instance_types, write_snapshot
 from .report import print_report
 from .routes import assess_routes
@@ -51,22 +52,23 @@ def main() -> None:
     pinned_repo, pinned_rev = pinned_source(model)
     nanoclaw = args.nanoclaw or pinned_repo
     facts = collect(nanoclaw, args.session)
+    facts["modeled_skills"] = add_skill_graphs(model, facts["container_skills"])
     if facts["nanoclaw_head"] != pinned_rev:
-        print(f"warning: NanoClaw HEAD {facts['nanoclaw_head'][:12]} differs from the modeled revision {pinned_rev[:12]}; results may be stale.", file=sys.stderr)
+        print(f"warning: nanoclaw_head={facts['nanoclaw_head'][:12]}; modeled_revision={pinned_rev[:12]}", file=sys.stderr)
 
     taken_at = datetime.now(timezone.utc).isoformat(timespec="seconds").replace("+00:00", "Z")
     snap = Snapshot(facts, model, taken_at)
     problem = deny_by_default_problem(facts["gateway_policy"], snap.lockdown_on)
     if problem:
-        sys.exit(f"error: web egress is reported per OneCLI Cedar policy, which assumes the Cedar deny-by-default gateway with strict deny and egress lockdown on, but {problem}. Fix that and rerun.")
+        sys.exit(f"error: precondition failed: {problem} (required: cedar_policy_rules=present, GATEWAY_STRICT_DENY=on, lockdown=on)")
     instantiate(snap)
     resolve_conditions(snap)
-    caps = assess_capabilities(snap)
-    tools = assess_tools(snap)
-    routes = assess_routes(snap)
-    inside, outside, remote = assess_modifications(snap)
+    assess_capabilities(snap)  # fills snap.cap_status, used by every table
+    assess_tools(snap)  # recorded in the snapshot graph only
+    assess_routes(snap)  # recorded in the snapshot graph only
+    inside, outside, remote = assess_modifications(snap, assess_operations(snap))
     check_instance_types(snap)
 
-    print_report(snap, caps, tools, routes, inside, outside, remote)
+    print_report(snap, inside, outside, remote)
     if not args.no_write:
         print(f"\nSnapshot written: {write_snapshot(snap, args.out)}")

@@ -135,6 +135,14 @@ ar:g_nanoclaw_runtime {
   ar:NanoClawSharedRunnerSource ar:protectedByKind ar:NanoClawMountModeControl .
   ar:NanoClawContainerConfiguration ar:protectedByKind ar:NanoClawMountModeControl .
   ar:NanoClawStandingInstructions ar:protectedByKind ar:NanoClawMountModeControl .
+  ar:NanoClawContainerFile a ar:WorldSurfaceKind ;
+    ar:specializesKind ar:LocalFile ;
+    ar:locatedOn ar:NanoClawAgentContainer ;
+    ar:mayResideInKind ar:NanoClawContainerLayer, ar:NanoClawSessionWorkspace,
+      ar:NanoClawAgentGroupWorkspace, ar:NanoClawProviderStateDirectory,
+      ar:NanoClawSharedSkillsDirectory, ar:NanoClawAdditionalHostDirectory ;
+    ar:protectedByKind ar:LocalFilesystemAccessControl ;
+    rdfs:comment "Any file visible inside the session container: in the writable container layer or under one of its mounts. Use it where a skill names an arbitrary local file; where the file is written depends on the path chosen." .
   ar:ShellScriptFile ar:mayResideInKind ar:NanoClawContainerLayer,
     ar:NanoClawSessionWorkspace, ar:NanoClawAgentGroupWorkspace,
     ar:NanoClawSharedSkillsDirectory, ar:NanoClawAdditionalHostDirectory .

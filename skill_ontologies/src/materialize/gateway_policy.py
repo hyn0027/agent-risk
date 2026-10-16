@@ -5,7 +5,9 @@ gateway's only decision engine. A request passes when at least one enabled
 `permit` policy in the agent's workspace matches and no enabled `forbid` does;
 everything else is denied, credentialed or not, LLM hosts included, and
 requests without an agent identity are refused. Each policy is one Cedar
-statement stored as its own row (`cedar_policy_rules`). The action is exactly
+statement stored as its own row (`cedar_policy_rules`) in a group
+(`cedar_policy_groups`); it applies only when it and its group are both on, and
+the gateway names it "group/policy". The action is exactly
 the HTTP method (`OneCLI::Action::"GET"`), the resource the host
 (`OneCLI::Host::"<host>"`). OneCLI's own `policy_rules_v2` rules only decide
 which stored secrets the gateway injects for which agents (grants); they never
@@ -54,11 +56,7 @@ select json_build_object(
                           where g.status = 'published' and g.scope = r.scope
                             and g.workspace_id is not distinct from r.workspace_id
                             and g.organization_id is not distinct from r.organization_id)), '[]'::json),
-  'policies', case when to_regclass('public.cedar_policy_rules') is null then '[]'::json else
-    coalesce((select json_agg(json_build_object(
-        'name', c.name, 'description', c.description, 'text', c.policy_text, 'enabled', c.enabled,
-        'workspaceId', c.workspace_id) order by c.position, c.created_at)
-      from cedar_policy_rules c), '[]'::json) end);
+  'groupsTable', to_regclass('public.cedar_policy_groups') is not null);
 """
 
 
@@ -85,12 +83,37 @@ def read_gateway_policy() -> dict | None:
     try:
         out = subprocess.run(argv, input=POLICY_QUERY, check=True, capture_output=True, text=True, timeout=30).stdout
         policy = json.loads(out.strip())
+        policy["policies"] = read_policies(argv, policy["groupsTable"]) if policy["cedarTable"] else []
     except (subprocess.CalledProcessError, subprocess.TimeoutExpired, json.JSONDecodeError, OSError):
         return None
     policy["strict"] = read_strict_deny()
     for p in policy["policies"]:
         p["scope"] = parse_policy(p["text"])
     return policy
+
+
+# Policies apply only when switched on in a group that is switched on; the gateway names them "group/policy".
+GROUPED_POLICIES = """
+select coalesce(json_agg(json_build_object(
+    'name', g.name || '/' || c.name, 'group', g.name, 'groupSource', g.source, 'description', c.description,
+    'text', c.policy_text, 'enabled', c.enabled and g.enabled, 'workspaceId', c.workspace_id)
+  order by g.position, g.created_at, c.position, c.created_at), '[]'::json)
+from cedar_policy_rules c join cedar_policy_groups g on g.id = c.group_id;
+"""
+
+# Before policy groups (migration 20261017000000_cedar_policy_groups).
+UNGROUPED_POLICIES = """
+select coalesce(json_agg(json_build_object(
+    'name', c.name, 'group', null, 'groupSource', null, 'description', c.description,
+    'text', c.policy_text, 'enabled', c.enabled, 'workspaceId', c.workspace_id)
+  order by c.position, c.created_at), '[]'::json)
+from cedar_policy_rules c;
+"""
+
+
+def read_policies(argv: list[str], grouped: bool) -> list[dict]:
+    out = subprocess.run(argv, input=GROUPED_POLICIES if grouped else UNGROUPED_POLICIES, check=True, capture_output=True, text=True, timeout=30).stdout
+    return json.loads(out.strip())
 
 
 # ── Cedar summary ────────────────────────────────────────────────────────────
@@ -307,43 +330,42 @@ def granted_secrets(policy: dict | None, agent_id: str | None) -> list[dict]:
 
 
 def rule_label(p: dict) -> str:
+    """"<methods> <host><path>" from the parsed policy; * where the policy leaves it open."""
     sc = p["scope"]
     if not sc["parsed"]:
-        return "(unreadable policy)"
-    target = (sc["host"] or "any host") + (sc["path"] or "")
-    target = f"{','.join(sc['methods'])} {target}" if sc["methods"] else f"any method {target}"
+        return "unparsed"
+    return f"{','.join(sc['methods']) if sc['methods'] else '*'} {sc['host'] or '*'}{sc['path'] or ''}"
+
+
+def rule_flags(p: dict) -> list[str]:
+    """Parsed annotations and scope markers of a policy, as tokens."""
+    sc = p["scope"]
+    flags = []
+    if sc["approval"]:
+        flags.append("@approval")
+    if sc["rate_limit"]:
+        flags.append(f"@rate_limit={sc['rate_limit']}")
     if sc["identifiers"] or sc["agent_ids"]:
-        target += " (this agent only)"
+        flags.append("principal-scoped")
     if sc["conditional"]:
-        target += " (conditional)"
-    return target
+        flags.append("conditional")
+    return flags
 
 
 def effective_mode(policy: dict | None) -> tuple[str, str]:
-    """(mode: "deny" | "unknown", explanation)."""
+    """(mode: "deny" | "unknown", evidence)."""
     if not policy:
-        return "unknown", "OneCLI database not readable"
+        return "unknown", "onecli_db=unreadable"
     if not policy.get("cedarTable"):
-        return "unknown", "OneCLI database has no Cedar policies table: not the local Cedar build"
-    return "deny", "Cedar deny-by-default: a request passes only if an enabled permit policy matches and no enabled forbid does (credentialed or not, LLM hosts included); requests without an agent identity are refused"
+        return "unknown", "cedar_policy_rules=absent"
+    return "deny", f"engine=cedar; strict_deny={'on' if policy.get('strict') else 'off'}"
 
 
-def reachability(policy: dict | None, agent_id: str | None, secrets: list[dict] | None = None) -> tuple[str, str, bool]:
-    """(where requests can go, gate text, anything reachable at all) for this agent."""
-    mode, why = effective_mode(policy)
-    if mode == "unknown":
-        return "unknown", why, True
-    rules = applicable_rules(policy, agent_id)
+def permit_labels(policy: dict | None, agent_id: str | None) -> list[str]:
+    """Labels of the enabled permit policies applying to the agent (empty if any enabled policy is unparsed)."""
     if invalid_policies(policy, agent_id):
-        return "nothing", why + "; an enabled policy is unreadable, so the gateway denies everything", False
-    permits = sorted({rule_label(p) for p in rules if p["scope"]["effect"] == "permit"})
-    forbids = sorted({rule_label(p) for p in rules if p["scope"]["effect"] == "forbid"})
-    extras = [f"needs approval: {rule_label(p)}" for p in rules if p["scope"]["approval"]]
-    extras += [f"rate-limited {p['scope']['rate_limit']}: {rule_label(p)}" for p in rules if p["scope"]["rate_limit"]]
-    where = "only " + ", ".join(permits) if permits else "nothing"
-    if forbids:
-        where += " (forbidden: " + ", ".join(forbids) + ")"
-    return where, "; ".join([why, *extras]), bool(permits)
+        return []
+    return sorted({rule_label(p) for p in applicable_rules(policy, agent_id) if p["scope"]["effect"] == "permit"})
 
 
 def host_allowed(policy: dict | None, agent_id: str | None, host: str, credentialed: bool = False, method: str | None = None) -> bool | None:
@@ -370,20 +392,19 @@ def host_allowed(policy: dict | None, agent_id: str | None, host: str, credentia
 
 
 def deny_by_default_problem(policy: dict | None, lockdown_on: bool) -> str | None:
-    """Why the policy entries do not bound this session's web egress, or None when they do.
+    """The failed precondition (as evidence), or None when the Cedar permits bound web egress.
 
-    The Cedar policies are a complete allowlist when the gateway is the local
-    Cedar build (deny-by-default for every request), runs with strict deny, and
-    egress lockdown leaves the gateway as the only way out.
+    Preconditions: the local Cedar build (deny-by-default for every request),
+    strict deny on the gateway, and egress lockdown on.
     """
     if not policy:
-        return "the OneCLI policy could not be read from its database"
+        return "onecli_db=unreadable"
     if not policy.get("cedarTable"):
-        return "OneCLI's database has no cedar_policy_rules table, so the gateway is not the local Cedar build and is not deny-by-default"
+        return "cedar_policy_rules=absent"
     if not policy.get("strict"):
-        return f"GATEWAY_STRICT_DENY is off on the {GATEWAY_CONTAINER} container"
+        return f"GATEWAY_STRICT_DENY=off ({GATEWAY_CONTAINER})"
     if not lockdown_on:
-        return "egress lockdown is off: the container can reach the Internet directly, bypassing the gateway policy"
+        return "lockdown=off"
     return None
 
 
@@ -396,10 +417,9 @@ def policy_entries(policy: dict | None, agent_id: str | None) -> list[dict]:
     entries = []
     for p in sorted((p for p in rules if p["scope"]["effect"] == "permit"), key=lambda p: (p["scope"]["host"] or "", p["name"])):
         sc = p["scope"]
-        how = "held for approval per request" if sc["approval"] else f"allowed, rate-limited {sc['rate_limit']}" if sc["rate_limit"] else "allowed"
-        carved = [f"{f['name']} ({rule_label(f)})" for f in forbids if patterns_overlap(f["scope"]["host"], sc["host"])]
+        carved = [f["name"] for f in forbids if patterns_overlap(f["scope"]["host"], sc["host"])]
         entries.append({
             "name": p["name"], "label": rule_label(p), "host": sc["host"], "methods": sc["methods"], "text": p["text"],
-            "gate": f"{how} by Cedar policy '{p['name']}'" + (f"; except forbidden: {', '.join(carved)}" if carved else ""),
+            "tokens": [f"cedar: {p['name']}"] + ([f"flags: {', '.join(rule_flags(p))}"] if rule_flags(p) else []) + ([f"forbid: {', '.join(carved)}"] if carved else []),
         })
     return entries

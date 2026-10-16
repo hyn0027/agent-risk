@@ -36,8 +36,8 @@ def filesystem_scope(snap: Snapshot, cap: URIRef) -> list[tuple[URIRef, str]]:
     mounts = [m for m in snap.mounts if m["RW"] or not writes]
     reach = [(snap.node(f"mount{m['Destination']}"), f"{m['Destination']} ({'rw' if m['RW'] else 'ro'})") for m in mounts]
     if writes and not snap.facts["inspect"]["HostConfig"].get("ReadonlyRootfs"):
-        layer = snap.add(snap.node("container_layer"), AR.NanoClawContainerLayer, OBSERVED, "container layer (writable, discarded with the container)")
-        reach.append((layer, "container layer (writable, ephemeral)"))
+        layer = snap.add(snap.node("container_layer"), AR.NanoClawContainerLayer, OBSERVED, "container layer")
+        reach.append((layer, "NanoClawContainerLayer (rw)"))
     return reach
 
 
@@ -66,9 +66,9 @@ def assess_capabilities(snap: Snapshot) -> list[dict]:
         snap.cap_status[cap] = status
         scope = capability_scope(snap, cap)
         snap.add(snap.node(f"capability_{short(cap)}"), OBS.CapabilityAssessment, OBSERVED, short(cap), capability=cap, status=status, blockedBy=blocked, pendingOn=pending, scopedTo=[s for s, _ in scope])
-        why = "; ".join([f"blocked: {short(r)}" for r in blocked] + [f"pending: {short(r)}" for r in pending]) or "all requirements satisfied"
+        why = "; ".join([f"blocked: {short(r)}" for r in blocked] + [f"pending: {short(r)}" for r in pending]) or "-"
         if cap in snap.refined_by:
-            why = "refined by " + ", ".join(sorted(short(r) for r in snap.refined_by[cap])) + f" ({why})"
+            why = "refined_by=" + ", ".join(sorted(short(r) for r in snap.refined_by[cap])) + f"; {why}"
         rows.append({
             "capability": short(cap),
             "endpoint": endpoint_label(snap, cap),

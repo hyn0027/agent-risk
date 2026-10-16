@@ -1,8 +1,10 @@
 """What this session can read or change inside its container.
 
-Rows: (resource, container path, host backing, effects, via, status, scope). A
-write through a bind mount also changes the listed host backing; a read through
-one reads it.
+Rows: (resource, location, effects, via, status, gate), the layout shared by
+all three tables. The location is the container path with its mount mode and the
+host path it binds from: a write through a bind mount also changes that host
+path; a read through one reads it. The gate lists the model's
+``ar:protectedByKind`` of the resource and endpoint kinds.
 """
 
 from rdflib import URIRef
@@ -12,14 +14,7 @@ from ...common.namespaces import AR, OBS
 from ...common.rdf import short
 from ..constants import CONTAINER_ONLY, MUTATING_EFFECTS, SUBPATHS
 from ..snapshot import Snapshot
-from .common import CapabilityHit, host_backing, merge, reported_capabilities
-
-PERSISTENCE = {
-    AR.NanoClawSessionWorkspace: "this session",
-    AR.NanoClawAgentGroupWorkspace: "agent group (all its sessions)",
-    AR.NanoClawProviderStateDirectory: "agent group (all its sessions)",
-    AR.NanoClawContainerLayer: "ephemeral (discarded with the container)",
-}
+from .common import CapabilityHit, gate, host_backing, location, merge, reported_capabilities
 
 # Container paths of resources targeted by a specific capability.
 KNOWN_PATHS = {
@@ -32,7 +27,7 @@ KNOWN_PATHS = {
     AR.ClaudeSkillDefinition: "/home/node/.claude/skills/",
 }
 
-LAYER_PATH = "/ (writable layer: /tmp, /home/node, ...)"
+LAYER_PATH = "/"
 
 
 def exposed_kinds(snap: Snapshot, dest: str) -> list[URIRef]:
@@ -78,8 +73,9 @@ def location_rows(snap: Snapshot) -> list[tuple]:
         effects, via, status = merge(snap, caps)
         cpath = dest or LAYER_PATH
         hpath = host_backing(snap, dest) if dest else CONTAINER_ONLY
-        scope = PERSISTENCE.get(kind, "-") if writable else "read-only mount"
-        rows.append((short(kind), cpath, hpath, effects, via, status, scope))
+        mode = "rw" if writable else "ro"
+        endpoints = [m.value(c, AR.nativeEndpointKind) for c, _, _ in caps]
+        rows.append((short(kind), location(cpath, mode, hpath), effects, via, status, gate(snap, [], kind, *endpoints)))
         for sub in sorted(m.subjects(AR.mayResideInKind, kind)):
             # A sub-kind behind its own read-only mount gets that mount's row instead.
             if (writable and sub in ro_kinds) or (sub, RDF.type, AR.WorldSurfaceKind) not in m:
@@ -89,7 +85,7 @@ def location_rows(snap: Snapshot) -> list[tuple]:
                 tail = tail.get(kind, "")
             sub_c = f"{dest}/{tail}" if dest and tail else cpath
             sub_h = f"{hpath}/{tail}" if dest and tail else hpath
-            rows.append((f"└ {short(sub)}", sub_c, sub_h, effects, via, status, scope))
+            rows.append((f"└ {short(sub)}", location(sub_c, mode, sub_h), effects, via, status, gate(snap, [], sub, *endpoints)))
     return rows
 
 
@@ -109,23 +105,18 @@ def targeted_rows(snap: Snapshot) -> list[tuple]:
     grouped: dict[URIRef, list[CapabilityHit]] = {}
     for item in specific:
         grouped.setdefault(m.value(item[0], AR.nativeResourceKind), []).append(item)
-    gates = {
-        AR.NanoClawOutboundMessage: "host delivery and action guards decide",
-        AR.NanoClawProviderStateDirectory: "affects later sessions of the group",
-        AR.NanoClawInboundMailbox: "projected destinations grant nothing",
-        AR.RemoteNetworkEndpoint: "leaves via the OneCLI gateway only (lockdown on)" if snap.lockdown_on else "gateway or direct (lockdown off)",
-    }
     rows = []
     for kind, items in sorted(grouped.items(), key=lambda kv: short(kv[0])):
         effects, via, status = merge(snap, items)
-        cpath = KNOWN_PATHS.get(kind)
+        cpath, mode = KNOWN_PATHS.get(kind), "-"
         if cpath:
-            parent = max((x["Destination"] for x in snap.mounts if cpath.startswith(x["Destination"])), key=len, default=None)
-            hpath = f"{host_backing(snap, parent)}{cpath[len(parent):]}" if parent else CONTAINER_ONLY
+            parent = max((x for x in snap.mounts if cpath.startswith(x["Destination"])), key=lambda x: len(x["Destination"]), default=None)
+            hpath = f"{host_backing(snap, parent['Destination'])}{cpath[len(parent['Destination']):]}" if parent else CONTAINER_ONLY
+            mode = ("rw" if parent["RW"] else "ro") if parent else "-"
         else:
-            # Remote resources are reported in the remote table; the rest live in the container.
-            cpath, hpath = "in container", CONTAINER_ONLY
-        rows.append((short(kind), cpath, hpath, effects, via, status, gates.get(kind, "-")))
+            cpath, hpath = "-", CONTAINER_ONLY
+        endpoints = [m.value(c, AR.nativeEndpointKind) for c, _, _ in items]
+        rows.append((short(kind), location(cpath, mode, hpath), effects, via, status, gate(snap, [], kind, *endpoints)))
     return rows
 
 

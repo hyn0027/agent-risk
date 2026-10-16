@@ -32,10 +32,10 @@ def read_tool_lists(nanoclaw: Path) -> dict[str, list[str]]:
 def tool_status(lists: dict[str, list[str]], name: str) -> tuple[bool, str]:
     """(enabled, reason) for one provider tool name."""
     if name in lists["disallowed"]:
-        return False, "disabled (SDK_DISALLOWED_TOOLS)"
+        return False, "SDK_DISALLOWED_TOOLS"
     if name in lists["allowlist"]:
-        return True, "enabled (TOOL_ALLOWLIST)"
-    return False, "not in TOOL_ALLOWLIST"
+        return True, "TOOL_ALLOWLIST"
+    return False, "absent from TOOL_ALLOWLIST"
 
 
 def tool_name(model: Graph, kind: URIRef) -> str | None:

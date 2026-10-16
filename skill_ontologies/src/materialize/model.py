@@ -20,6 +20,34 @@ def load_model() -> Graph:
     return model
 
 
+def skill_modules() -> dict[str, Path]:
+    """Support-module id (ar:ontologyModuleId) -> graph file, for modules kept with the skills."""
+    found = {}
+    for path in sorted(SKILLS_DIR.glob("*.trig")):
+        match = re.search(r'ar:ontologyModuleId "([^"]+)"', path.read_text())
+        if match:
+            found[match.group(1)] = path
+    return found
+
+
+def add_skill_graphs(model: Graph, installed: list[str]) -> list[str]:
+    """Merge the graphs of installed skills that have one, plus the support modules
+    they require (transitively) from the skills folder. Returns the loaded skill names."""
+    skills, modules = skill_directories(), skill_modules()
+    todo = [skills[name] for name in installed if name in skills]
+    loaded: set[Path] = set()
+    while todo:
+        path = todo.pop()
+        if path in loaded:
+            continue
+        loaded.add(path)
+        for graph in Dataset().parse(path, format="trig").graphs():
+            for triple in graph:
+                model.add(triple)
+        todo.extend(modules[m] for m in re.findall(r'"([^"]+)"', " ".join(re.findall(r'ar:requiresOntologyModule ([^;.]+)', path.read_text()))) if m in modules)
+    return sorted(name for name in installed if name in skills)
+
+
 def pinned_source(model: Graph) -> tuple[Path | None, str]:
     """NanoClaw checkout and revision the model is pinned to (nanoclaw-core)."""
     repo = next(model.objects(AR.NanoClawCoreModule, AR.sourceRepositoryPath), None)

@@ -17,22 +17,23 @@ from .remote import remote_rows
 
 def record(snap: Snapshot, inside: list[tuple], outside: list[tuple], remote: list[tuple]) -> None:
     """Store every row as an obs:ModificationAssessment on its side."""
-    for i, (res, cpath, hpath, effects, via, status, scope) in enumerate(inside):
-        snap.add(snap.node(f"modification_in_{i}"), OBS.ModificationAssessment, OBSERVED, f"{res.strip(' └')} @ {cpath}", resource=res.strip(" └"), onSide=AR.NanoClawAgentContainer, containerPath=cpath, hostPath=hpath, effects=effects, via=via, status=status, gate=scope)
-    for i, (res, hloc, effects, via, status, gate) in enumerate(outside):
-        snap.add(snap.node(f"modification_out_{i}"), OBS.ModificationAssessment, OBSERVED, f"{res} @ {hloc}", resource=res, onSide=AR.NanoClawHostProcess, hostPath=hloc, effects=effects, via=via, status=status, gate=gate)
-    for i, (res, rloc, effects, path, status, gate) in enumerate(remote):
-        snap.add(snap.node(f"modification_remote_{i}"), OBS.ModificationAssessment, OBSERVED, f"{res} @ {rloc}", resource=res, onSide=AR.ExternalNetwork, remoteLocation=rloc, effects=effects, via=path, status=status, gate=gate)
+    for side, prefix, rows in ((AR.NanoClawAgentContainer, "in", inside), (AR.NanoClawHostProcess, "out", outside), (AR.ExternalNetwork, "remote", remote)):
+        for i, (res, loc, effects, via, status, gate) in enumerate(rows):
+            snap.add(snap.node(f"modification_{prefix}_{i}"), OBS.ModificationAssessment, OBSERVED, f"{res.strip(' └')} @ {loc.splitlines()[0]}",
+                     resource=res.strip(" └"), onSide=side, location=loc, effects=effects, via=via, status=status, gate=gate)
 
 
-def assess_modifications(snap: Snapshot) -> tuple[list[tuple], list[tuple], list[tuple]]:
-    """(inside, outside, remote) rows; call after ``assess_capabilities``."""
-    inside = inside_rows(snap)
+def assess_modifications(snap: Snapshot, operations: tuple[list[tuple], list[tuple], list[tuple]] = ([], [], [])) -> tuple[list[tuple], list[tuple], list[tuple]]:
+    """(inside, outside, remote) rows: native capabilities first, then the skill
+    operations' effects (``operations``, same layouts); call after ``assess_capabilities``.
+
+    Rows for the same resource at the same location are merged, native and skill
+    rows separately, so a skill effect always stays attributable to its operation.
+    """
+    op_inside, op_outside, op_remote = operations
     outside, remote_via_host = host_rows(snap)
-    remote = remote_rows(snap, remote_via_host)
-    # Same resource at the same location with the same status → one row.
-    inside = merge_rows(inside, 3, effects=3, via=4, gate=6)
-    outside = merge_rows(outside, 2, effects=2, via=3, gate=5)
-    remote = merge_rows(remote, 2, effects=2, via=3, gate=5)
+    inside = merge_rows(inside_rows(snap), 2, effects=2, via=3, gate=5) + merge_rows(op_inside, 2, effects=2, via=3, gate=5)
+    outside = merge_rows(outside, 2, effects=2, via=3, gate=5) + merge_rows(op_outside, 2, effects=2, via=3, gate=5)
+    remote = merge_rows(remote_rows(snap, remote_via_host), 2, effects=2, via=3, gate=5) + merge_rows(op_remote, 2, effects=2, via=3, gate=5)
     record(snap, inside, outside, remote)
     return inside, outside, remote

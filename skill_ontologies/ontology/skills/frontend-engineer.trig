@@ -56,8 +56,8 @@ ar:g_frontend_engineer {
     ar:sourceStatus ar:SkillText ;
     ar:sourceNote "Read package.json and existing components, then create or edit source files." ;
     ar:hasPotentialEffect [ a ar:PotentialEffect ; ar:effectType ar:Read ; ar:affectsKind ar:FrontendProject ],
-      [ a ar:PotentialEffect ; ar:effectType ar:Create ; ar:affectsKind ar:LocalFile ],
-      [ a ar:PotentialEffect ; ar:effectType ar:Update ; ar:affectsKind ar:LocalFile ] .
+      [ a ar:PotentialEffect ; ar:effectType ar:Create ; ar:affectsKind ar:FrontendProject ],
+      [ a ar:PotentialEffect ; ar:effectType ar:Update ; ar:affectsKind ar:FrontendProject ] .
 
   ar:op_frontend_install a ar:Operation ; ar:invokedThroughKind ar:PackageManagerCLI ;
     ar:targetsKind ar:InstalledPackageTree ;

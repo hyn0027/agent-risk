@@ -6,7 +6,7 @@ from rdflib.namespace import XSD
 from ..common.namespaces import AR, OBS
 from ..common.rdf import short
 from .constants import FROM_CONFIG, OBSERVED
-from .gateway_policy import applicable_rules, effective_mode, invalid_policies, rule_label
+from .gateway_policy import applicable_rules, effective_mode, rule_label
 from .model import mount_kind
 from .snapshot import Snapshot
 
@@ -48,14 +48,14 @@ def add_messaging(snap: Snapshot, grp: URIRef, session: URIRef) -> dict | None:
     granted = {d["local_name"] for d in f["grants"]}
     for d in f["projected"]:
         if d["name"] not in granted:
-            snap.findings.append(f"Projected destination '{d['name']}' has no central grant (stale projection; it authorizes nothing).")
+            snap.findings.append(f"destination {d['name']}: projected=yes; central_grant=absent")
     return origin
 
 
 def add_container(snap: Snapshot, session: URIRef) -> URIRef:
     f = snap.facts
     inspect, host = f["inspect"], f["inspect"]["HostConfig"]
-    container = snap.add(snap.node(f"container_{f['container_name']}"), AR.NanoClawAgentContainer, OBSERVED, f["container_name"], servesSession=session, image=inspect["Config"]["Image"], runsAsUser=inspect["Config"].get("User") or "image default", readOnlyRootFs=bool(host.get("ReadonlyRootfs")))
+    container = snap.add(snap.node(f"container_{f['container_name']}"), AR.NanoClawAgentContainer, OBSERVED, f["container_name"], servesSession=session, image=inspect["Config"]["Image"], runsAsUser=inspect["Config"].get("User") or None, readOnlyRootFs=bool(host.get("ReadonlyRootfs")))
     snap.add(snap.node("image"), AR.NanoClawAgentImage, OBSERVED, inspect["Config"]["Image"], usedBy=container, perGroupImage=bool(f["config"].get("image_tag")))
     snap.graph.add((container, OBS.onSide, AR.NanoClawAgentContainer))
     return container
@@ -68,12 +68,12 @@ def add_mount(snap: Snapshot, m: dict, container: URIRef) -> None:
     kind = mount_kind(snap.model, dest, rw)
     if kind is None:
         kind = AR.NanoClawMount
-        snap.findings.append(f"Mount {dest} matches no modeled mount kind.")
+        snap.findings.append(f"mount {dest}: modeled_kind=none")
     mode = AR.ReadWriteMountMode if rw else AR.ReadOnlyMountMode
     mount = snap.add(snap.node(f"mount{dest}"), kind, OBSERVED, dest, containerPath=dest, hostPath=snap.host_path(source), accessMode=mode, mountedIn=container)
     modeled = set(snap.model.objects(kind, AR.mountAccessMode))
     if modeled and mode not in modeled:
-        snap.findings.append(f"Mount {dest} is {short(mode)} but {short(kind)} is modeled as {', '.join(short(x) for x in modeled)}.")
+        snap.findings.append(f"mount {dest}: observed_mode={short(mode)}; {short(kind)}.mountAccessMode={', '.join(short(x) for x in modeled)}")
     exposed_kinds = list(snap.model.objects(kind, AR.mountExposesKind))
     if kind == AR.OneCLIFileMount:
         exposed_kinds = [AR.OneCLICACertificate if "-ca" in dest or dest.endswith(".pem") else AR.OneCLICredentialStub]
@@ -125,16 +125,12 @@ def add_gateway(snap: Snapshot, grp: URIRef) -> None:
         snap.add(snap.node(f"secret_{s['name']}"), AR.Credential, OBSERVED, s["name"], hostPattern=s.get("hostPattern"), pathPattern=s.get("pathPattern"), secretType=s.get("type"), grantedBy=s.get("grant"), injectableFor=identity)
     policy = f["gateway_policy"]
     rules = applicable_rules(policy, agent["id"])
-    mode, why = effective_mode(policy)
-    control = snap.add(snap.node("control_gateway_policy"), AR.OneCLIGatewayPolicy, OBSERVED, "gateway policy", engine="cedar", ruleCount=len(rules), mode=mode, strict=bool(policy and policy.get("strict")), reason=why, appliesTo=identity)
+    mode, _ = effective_mode(policy)
+    control = snap.add(snap.node("control_gateway_policy"), AR.OneCLIGatewayPolicy, OBSERVED, "gateway policy", engine="cedar", ruleCount=len(rules), mode=mode, strict=bool(policy and policy.get("strict")), appliesTo=identity)
     for p in rules:
         sc = p["scope"]
-        rule = snap.add(snap.node(f"gateway_rule_{p['name']}"), AR.OneCLIPolicyRule, OBSERVED, p["name"], action=sc["effect"], matches=rule_label(p), methods=sc["methods"], hostPattern=sc["host"], pathPattern=sc["path"], requiresApproval=sc["approval"] or None, rateLimit=sc["rate_limit"], conditional=sc["conditional"], policyText=p["text"], description=p.get("description"))
+        rule = snap.add(snap.node(f"gateway_rule_{p['name']}"), AR.OneCLIPolicyRule, OBSERVED, p["name"], action=sc["effect"], matches=rule_label(p), group=p.get("group"), groupSource=p.get("groupSource"), methods=sc["methods"], hostPattern=sc["host"], pathPattern=sc["path"], requiresApproval=sc["approval"] or None, rateLimit=sc["rate_limit"], conditional=sc["conditional"], policyText=p["text"], description=p.get("description"))
         snap.graph.add((control, OBS.hasRule, rule))
-    if not any(p["scope"]["effect"] == "permit" for p in rules):
-        snap.findings.append("No enabled Cedar permit policy applies to this agent: the gateway blocks every request, the model API included.")
-    for name in invalid_policies(policy, agent["id"]):
-        snap.findings.append(f"Cedar policy '{name}' could not be read; if the gateway cannot parse it either, it denies every request.")
 
 
 def add_mcp_servers(snap: Snapshot, grp: URIRef) -> None:

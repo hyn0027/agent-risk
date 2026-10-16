@@ -42,4 +42,4 @@ SUBPATHS = {
     AR.ClaudeSkillDefinition: {AR.NanoClawProviderStateDirectory: "skills/", AR.NanoClawSharedSkillsDirectory: "<skill>/"},
 }
 
-CONTAINER_ONLY = "— (container only)"
+CONTAINER_ONLY = "-"

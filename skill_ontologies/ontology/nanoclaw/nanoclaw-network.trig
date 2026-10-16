@@ -138,6 +138,7 @@ ar:g_nanoclaw_network {
   ar:OneCLICACertificate ar:locatedOn ar:NanoClawAgentContainer .
   ar:OneCLICredentialStub ar:locatedOn ar:NanoClawAgentContainer .
   ar:NanoClawContainerNetworkRequest ar:executesOn ar:NanoClawAgentContainer .
+  ar:NanoClawContainerShellExecution ar:routesToKind ar:NanoClawProxyAwareHTTPRequest, ar:NanoClawDirectNetworkRequest .
   ar:NanoClawProviderWebFetchTool ar:executesOn ar:NanoClawAgentContainer .
   ar:NanoClawLocalStdioMCPTool ar:executesOn ar:NanoClawAgentContainer .
   ar:NanoClawLocalMCPServerInvocation ar:executesOn ar:NanoClawAgentContainer .
