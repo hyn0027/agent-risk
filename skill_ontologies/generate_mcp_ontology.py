@@ -9,11 +9,15 @@ server's documentation. Everything in the generated graph comes from it:
 - one ar:Operation per tool, invoked through the server's tool endpoint kind
   (a specialization of NanoClaw's remote-HTTP or local-stdio MCP tool), with
   ar:mcpToolName and its toolsets;
-- one resource kind per documented toolset ("<Prefix><Toolset>Data") and one
-  for tools no toolset lists ("<Prefix>Data");
-- effects from the MCP ToolAnnotations with the specification's defaults
-  (readOnlyHint false, destructiveHint true): read-only tools Read; other tools
-  Transmit plus Create, and Update and Delete unless destructiveHint is false;
+- effects on the environment entities of the server's environment module, from
+  ontology/mcp/sources/<id>-entities.json when it exists (per tool and, for tools
+  bundling several actions, per method value; ar:MCPToolSchema); non-read-only
+  tools also Transmit their arguments;
+- otherwise (no mapping for the tool) one resource kind per documented toolset
+  ("<Prefix><Toolset>Data", or "<Prefix>Data" for tools no toolset lists) with
+  effects from the MCP ToolAnnotations under the specification's defaults
+  (ar:MCPToolAnnotation): read-only tools Read; other tools Transmit plus Create,
+  and Update and Delete unless destructiveHint is false;
 - one ar:PotentialInternetCall per tool, to the server's call endpoint;
 - a credential requirement for the endpoint host (ar:requiresCredentialForHost)
   for a remote server.
@@ -68,7 +72,10 @@ def effects(annotations: dict) -> list[str]:
 def generate(server_id: str) -> str:
     source = SOURCES / f"{server_id}.json"
     snap = json.loads(source.read_text())
+    mapping_file = SOURCES / f"{server_id}-entities.json"
+    mapping = json.loads(mapping_file.read_text()) if mapping_file.exists() else {"tools": {}}
     digest = hashlib.sha256(source.read_bytes()).hexdigest()
+    modules = REQUIRED_MODULES + ([mapping["environmentModule"]] if mapping.get("environmentModule") else [])
     prefix = snap.get("kindPrefix") or camel(server_id)
     sid = local(server_id)
     remote = snap["transport"] == "streamable-http"
@@ -98,7 +105,9 @@ def generate(server_id: str) -> str:
         f"    ar:mcpEndpointPattern {lit(snap['endpointPattern'])} ;",
         f"    ar:sourcePath {lit(str(source.relative_to(ROOT)))} ;",
         f"    ar:sourceSha256 {lit(digest)} ;",
-        f"    ar:requiresOntologyModule {', '.join(lit(m) for m in REQUIRED_MODULES)} ;",
+        *([f"    ar:entityMappingPath {lit(str(mapping_file.relative_to(ROOT)))} ;",
+           f"    ar:entityMappingSha256 {lit(hashlib.sha256(mapping_file.read_bytes()).hexdigest())} ;"] if mapping_file.exists() else []),
+        f"    ar:requiresOntologyModule {', '.join(lit(m) for m in modules)} ;",
         "    ar:subjectToControlKind ar:OneCLIGatewayPolicy, ar:RemoteServiceAuthorizationControl,",
         "      ar:NanoClawEgressLockdownControl, ar:NanoClawProviderToolPolicyControl ;",
         f"    rdfs:label {lit(title)} ;",
@@ -113,7 +122,11 @@ def generate(server_id: str) -> str:
         "    ar:specializesKind ar:PublicInternetEndpoint ;",
         f"    rdfs:comment {lit(f'The {title} MCP endpoint ' + (snap['callEndpoint'] if remote else '(local process)') + '.')} .",
     ]
+    unmapped = [t for t in snap["tools"] if t["name"] not in mapping["tools"]]
+    used_toolsets = {ts for t in unmapped for ts in t["toolsets"]}
     for toolset, description in sorted(snap["toolsets"].items()):
+        if toolset not in used_toolsets:
+            continue
         out += [
             f"  {data_kind(toolset)} a ar:WorldSurfaceKind ;",
             "    ar:specializesKind ar:RemoteService ;",
@@ -121,7 +134,7 @@ def generate(server_id: str) -> str:
             f"    ar:mcpToolset {lit(toolset)} ;",
             f"    rdfs:comment {lit(f'{title}, {toolset} toolset: {description}')} .",
         ]
-    if any(not t["toolsets"] for t in snap["tools"]):
+    if any(not t["toolsets"] for t in unmapped):
         out += [
             f"  {fallback_kind} a ar:WorldSurfaceKind ;",
             "    ar:specializesKind ar:RemoteService ;",
@@ -137,11 +150,25 @@ def generate(server_id: str) -> str:
     out.append("")
     for op, tool in zip(ops, snap["tools"]):
         name = tool["name"]
-        kinds = [data_kind(ts) for ts in tool["toolsets"]] or [fallback_kind]
+        read_only = bool(tool["annotations"].get("readOnlyHint", False))
+        entries = mapping["tools"].get(name)
+        if entries:
+            kinds = list(dict.fromkeys(f"ar:{k}" for entry in entries for k in entry["kinds"]))
+            effect_nodes = []
+            for entry in entries:
+                effs = sorted(set(entry["effects"]) | (set() if read_only else {"Transmit"}))
+                methods = entry.get("methods") or [None]
+                for method in methods:
+                    tag = f" ; ar:mcpToolMethod {lit(method)}" if method else ""
+                    effect_nodes += [f"[ a ar:PotentialEffect ; ar:effectType ar:{eff} ; ar:affectsKind ar:{k}{tag} ]" for k in entry["kinds"] for eff in effs]
+            status = "ar:MCPToolSchema"
+        else:
+            kinds = [data_kind(ts) for ts in tool["toolsets"]] or [fallback_kind]
+            effect_nodes = [f"[ a ar:PotentialEffect ; ar:effectType ar:{e} ; ar:affectsKind {k} ]" for k in kinds for e in effects(tool["annotations"])]
+            status = "ar:MCPToolAnnotation"
         call = f"ar:call_mcp_{sid}_{local(name)}"
         note = (tool.get("title") + ": " if tool.get("title") else "") + first_sentence(tool.get("description", ""))
         reqs = ([cond] if remote else []) + ["ar:cond_network_route_permitted"]
-        effect_nodes = [f"[ a ar:PotentialEffect ; ar:effectType ar:{e} ; ar:affectsKind {k} ]" for k in kinds for e in effects(tool["annotations"])]
         out += [
             f"  {op} a ar:Operation ; ar:invokedThroughKind {tool_kind} ;",
             f"    ar:mcpToolName {lit(name)} ;",
@@ -149,7 +176,7 @@ def generate(server_id: str) -> str:
             f"    ar:targetsKind {', '.join(kinds)} ;",
             f"    ar:requires {', '.join(reqs)} ;",
             *( [f"    ar:mayInitiateInternetCall {call} ;"] if remote else [] ),
-            "    ar:sourceStatus ar:MCPToolAnnotation ;",
+            f"    ar:sourceStatus {status} ;",
             f"    ar:sourceNote {lit(note)} ;",
             "    ar:hasPotentialEffect " + ",\n      ".join(effect_nodes) + " .",
         ]

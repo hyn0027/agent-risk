@@ -54,10 +54,15 @@ def add_mcp_graphs(model: Graph, mcp_servers: dict) -> dict[str, str]:
     """Merge the graph of each configured MCP server whose URL matches a graph's
     ar:mcpEndpointPattern. Returns {configured server name: graph's mcpServerId}."""
     matched: dict[str, str] = {}
+    graphs = {}
     for path in sorted(MCP_DIR.glob("*.trig")):
         graph = Graph()
         for g in Dataset().parse(path, format="trig").graphs():
             graph += g
+        graphs[path] = graph
+    # Support modules kept with the MCP graphs (e.g. github-environment), by module ID.
+    modules = {str(mid): g for g in graphs.values() for mid in g.objects(None, AR.ontologyModuleId)}
+    for graph in graphs.values():
         for server in graph.subjects(RDF.type, AR.MCPServer):
             patterns = [str(p) for p in graph.objects(server, AR.mcpEndpointPattern)]
             server_id = str(graph.value(server, AR.mcpServerId))
@@ -67,6 +72,9 @@ def add_mcp_graphs(model: Graph, mcp_servers: dict) -> dict[str, str]:
                     matched[name] = server_id
             if server_id in matched.values():
                 model += graph
+                for required in graph.objects(server, AR.requiresOntologyModule):
+                    if str(required) in modules:
+                        model += modules[str(required)]
     return matched
 
 

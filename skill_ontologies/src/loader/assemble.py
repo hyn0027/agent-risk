@@ -22,6 +22,11 @@ def check_skill_source(ontology_id: str, entry: CatalogEntry) -> None:
     expected_hash = required_literal(graph, node, AR.sourceSha256)
     if hashlib.sha256(source.read_bytes()).hexdigest() != expected_hash:
         raise SystemExit(f"Ontology for {ontology_id} is stale: source skill changed")
+    mapping = graph.value(node, AR.entityMappingPath)
+    if mapping is not None:
+        mapping_path = Path(str(mapping)) if Path(str(mapping)).is_absolute() else ROOT / str(mapping)
+        if hashlib.sha256(mapping_path.read_bytes()).hexdigest() != str(graph.value(node, AR.entityMappingSha256)):
+            raise SystemExit(f"Ontology for {ontology_id} is stale: entity mapping changed; rerun generate_mcp_ontology.py")
 
 
 def check_module(ontology_id: str, entry: CatalogEntry) -> None:

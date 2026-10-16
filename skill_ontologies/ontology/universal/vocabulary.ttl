@@ -58,8 +58,14 @@ ar:mcpServerId a rdf:Property ; rdfs:domain ar:MCPServer ; rdfs:range xsd:string
   rdfs:comment "Ontology ID of an MCP server graph (manifest key)." .
 ar:mcpEndpointPattern a rdf:Property ; rdfs:domain ar:MCPServer ; rdfs:range xsd:string ;
   rdfs:comment "URL pattern (* wildcard) a configured MCP server's URL must match for this graph to apply to it." .
+ar:entityMappingPath a rdf:Property ; rdfs:domain ar:MCPServer ; rdfs:range xsd:string ;
+  rdfs:comment "Authored tool-to-entity mapping an MCP server graph was generated from (relative to the repository)." .
+ar:entityMappingSha256 a rdf:Property ; rdfs:domain ar:MCPServer ; rdfs:range xsd:string ;
+  rdfs:comment "SHA-256 of the entity mapping; the graph is stale when it differs." .
 ar:mcpToolName a rdf:Property ; rdfs:domain ar:Operation ; rdfs:range xsd:string ;
   rdfs:comment "Name of the MCP tool an operation is (the params.name of its tools/call request)." .
+ar:mcpToolMethod a rdf:Property ; rdfs:domain ar:PotentialEffect ; rdfs:range xsd:string ;
+  rdfs:comment "Value of the MCP tool's method (or action) argument under which this effect occurs, for tools that bundle several actions." .
 ar:mcpToolset a rdf:Property ; rdfs:range xsd:string ;
   rdfs:comment "Toolset an MCP tool (operation) or a resource kind belongs to, as the server's documentation names it." .
 ar:ontologyModuleId a rdf:Property ; rdfs:domain ar:OntologyModule ; rdfs:range xsd:string .
@@ -151,9 +157,17 @@ ar:affectsKind a rdf:Property ; rdfs:domain ar:PotentialEffect ; rdfs:range ar:W
 ar:conditionalOn a rdf:Property ; rdfs:domain ar:PotentialEffect ; rdfs:range ar:Requirement .
 ar:mayEnable a rdf:Property ; rdfs:domain ar:Operation ; rdfs:range ar:Operation .
 ar:containsKind a rdf:Property ; rdfs:domain ar:WorldSurfaceKind ; rdfs:range ar:WorldSurfaceKind .
+ar:referencesKind a rdf:Property ; rdfs:domain ar:WorldSurfaceKind ; rdfs:range ar:WorldSurfaceKind ;
+  rdfs:comment "Possible association between resource kinds that is not containment: an instance may point to instances of the other kind (an issue to its labels, a pull request to its branches). Deleting the referring instance does not delete the referenced one." .
+ar:authoredByKind a rdf:Property ; rdfs:subPropertyOf ar:referencesKind ; rdfs:domain ar:WorldSurfaceKind ; rdfs:range ar:WorldSurfaceKind ;
+  rdfs:comment "An instance may be authored by (created and attributed to) an instance of the other kind." .
+ar:assignedToKind a rdf:Property ; rdfs:subPropertyOf ar:referencesKind ; rdfs:domain ar:WorldSurfaceKind ; rdfs:range ar:WorldSurfaceKind ;
+  rdfs:comment "An instance may be assigned to, or have as a member or reviewer, an instance of the other kind." .
 ar:concreteExampleOnly a rdf:Property ; rdfs:range xsd:boolean .
 
 ar:SkillText a ar:EvidenceStatus ; rdfs:label "asserted by skill text" .
+ar:MCPToolSchema a ar:EvidenceStatus ; rdfs:label "mapped from the MCP tool's description and input schema" ;
+  rdfs:comment "Effects on environment entities authored from the tool's description and input schema (method enums), in ontology/mcp/sources/<id>-entities.json; non-read-only tools also Transmit their arguments." .
 ar:MCPToolAnnotation a ar:EvidenceStatus ; rdfs:label "derived from the MCP server's tools/list annotations" ;
   rdfs:comment "Effects follow the MCP ToolAnnotations defaults: readOnlyHint (default false) true gives Read; otherwise destructiveHint (default true) true gives Create, Update, Delete, and false gives Create (additive only); every non-read-only tool also Transmits its arguments." .
 ar:ScriptInspected a ar:EvidenceStatus ; rdfs:label "supported by inspected bundled script" .

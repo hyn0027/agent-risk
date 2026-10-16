@@ -8,7 +8,9 @@ ar:g_mcp_github {
     ar:mcpEndpointPattern "https://api.githubcopilot.com/mcp*" ;
     ar:sourcePath "ontology/mcp/sources/github.json" ;
     ar:sourceSha256 "bde9d323d8d350b3236d740444a665f93717e6230e1ebbb9a5e0dfab0c6197c7" ;
-    ar:requiresOntologyModule "tool-endpoints", "freeform-internet", "nanoclaw-core", "nanoclaw-runtime", "nanoclaw-network" ;
+    ar:entityMappingPath "ontology/mcp/sources/github-entities.json" ;
+    ar:entityMappingSha256 "3a5211a0fab61aad220349bcf5d2c9965a200fb2ef356b12c457c62d17f22c1e" ;
+    ar:requiresOntologyModule "tool-endpoints", "freeform-internet", "nanoclaw-core", "nanoclaw-runtime", "nanoclaw-network", "github-environment" ;
     ar:subjectToControlKind ar:OneCLIGatewayPolicy, ar:RemoteServiceAuthorizationControl,
       ar:NanoClawEgressLockdownControl, ar:NanoClawProviderToolPolicyControl ;
     rdfs:label "GitHub MCP Server" ;
@@ -123,130 +125,6 @@ ar:g_mcp_github {
   ar:GitHubMCPEndpoint a ar:WorldSurfaceKind, ar:PublicInternetEndpointKind ;
     ar:specializesKind ar:PublicInternetEndpoint ;
     rdfs:comment "The GitHub MCP Server MCP endpoint https://api.githubcopilot.com/mcp/." .
-  ar:GitHubActionsData a ar:WorldSurfaceKind ;
-    ar:specializesKind ar:RemoteService ;
-    ar:protectedByKind ar:RemoteServiceAuthorizationControl ;
-    ar:mcpToolset "actions" ;
-    rdfs:comment "GitHub MCP Server, actions toolset: GitHub Actions workflows and CI/CD operations" .
-  ar:GitHubCodeQualityData a ar:WorldSurfaceKind ;
-    ar:specializesKind ar:RemoteService ;
-    ar:protectedByKind ar:RemoteServiceAuthorizationControl ;
-    ar:mcpToolset "code_quality" ;
-    rdfs:comment "GitHub MCP Server, code_quality toolset: GitHub Code Quality related tools" .
-  ar:GitHubCodeSecurityData a ar:WorldSurfaceKind ;
-    ar:specializesKind ar:RemoteService ;
-    ar:protectedByKind ar:RemoteServiceAuthorizationControl ;
-    ar:mcpToolset "code_security" ;
-    rdfs:comment "GitHub MCP Server, code_security toolset: Code security related tools, such as GitHub Code Scanning" .
-  ar:GitHubContextData a ar:WorldSurfaceKind ;
-    ar:specializesKind ar:RemoteService ;
-    ar:protectedByKind ar:RemoteServiceAuthorizationControl ;
-    ar:mcpToolset "context" ;
-    rdfs:comment "GitHub MCP Server, context toolset: Strongly recommended: Tools that provide context about the current user and GitHub context you are operating in" .
-  ar:GitHubCopilotData a ar:WorldSurfaceKind ;
-    ar:specializesKind ar:RemoteService ;
-    ar:protectedByKind ar:RemoteServiceAuthorizationControl ;
-    ar:mcpToolset "copilot" ;
-    rdfs:comment "GitHub MCP Server, copilot toolset: Copilot related tools" .
-  ar:GitHubCopilotIssueIntentsData a ar:WorldSurfaceKind ;
-    ar:specializesKind ar:RemoteService ;
-    ar:protectedByKind ar:RemoteServiceAuthorizationControl ;
-    ar:mcpToolset "copilot_issue_intents" ;
-    rdfs:comment "GitHub MCP Server, copilot_issue_intents toolset: Opt-in Copilot issue assignment tools that carry intent metadata (rationale, confidence, suggestion)" .
-  ar:GitHubCopilotSpacesData a ar:WorldSurfaceKind ;
-    ar:specializesKind ar:RemoteService ;
-    ar:protectedByKind ar:RemoteServiceAuthorizationControl ;
-    ar:mcpToolset "copilot_spaces" ;
-    rdfs:comment "GitHub MCP Server, copilot_spaces toolset: Copilot Spaces tools" .
-  ar:GitHubDependabotData a ar:WorldSurfaceKind ;
-    ar:specializesKind ar:RemoteService ;
-    ar:protectedByKind ar:RemoteServiceAuthorizationControl ;
-    ar:mcpToolset "dependabot" ;
-    rdfs:comment "GitHub MCP Server, dependabot toolset: Dependabot tools" .
-  ar:GitHubDiscussionsData a ar:WorldSurfaceKind ;
-    ar:specializesKind ar:RemoteService ;
-    ar:protectedByKind ar:RemoteServiceAuthorizationControl ;
-    ar:mcpToolset "discussions" ;
-    rdfs:comment "GitHub MCP Server, discussions toolset: GitHub Discussions related tools" .
-  ar:GitHubGistsData a ar:WorldSurfaceKind ;
-    ar:specializesKind ar:RemoteService ;
-    ar:protectedByKind ar:RemoteServiceAuthorizationControl ;
-    ar:mcpToolset "gists" ;
-    rdfs:comment "GitHub MCP Server, gists toolset: GitHub Gist related tools" .
-  ar:GitHubGitData a ar:WorldSurfaceKind ;
-    ar:specializesKind ar:RemoteService ;
-    ar:protectedByKind ar:RemoteServiceAuthorizationControl ;
-    ar:mcpToolset "git" ;
-    rdfs:comment "GitHub MCP Server, git toolset: GitHub Git API related tools for low-level Git operations" .
-  ar:GitHubGithubSupportDocsSearchData a ar:WorldSurfaceKind ;
-    ar:specializesKind ar:RemoteService ;
-    ar:protectedByKind ar:RemoteServiceAuthorizationControl ;
-    ar:mcpToolset "github_support_docs_search" ;
-    rdfs:comment "GitHub MCP Server, github_support_docs_search toolset: Retrieve documentation to answer GitHub product and support questions. Topics include: GitHub Actions Workflows, Authentication, ..." .
-  ar:GitHubGovernanceData a ar:WorldSurfaceKind ;
-    ar:specializesKind ar:RemoteService ;
-    ar:protectedByKind ar:RemoteServiceAuthorizationControl ;
-    ar:mcpToolset "governance" ;
-    rdfs:comment "GitHub MCP Server, governance toolset: Repository governance tools for managing rulesets and custom properties at the repository, organization, and enterprise levels" .
-  ar:GitHubIssuesData a ar:WorldSurfaceKind ;
-    ar:specializesKind ar:RemoteService ;
-    ar:protectedByKind ar:RemoteServiceAuthorizationControl ;
-    ar:mcpToolset "issues" ;
-    rdfs:comment "GitHub MCP Server, issues toolset: GitHub Issues related tools" .
-  ar:GitHubLabelsData a ar:WorldSurfaceKind ;
-    ar:specializesKind ar:RemoteService ;
-    ar:protectedByKind ar:RemoteServiceAuthorizationControl ;
-    ar:mcpToolset "labels" ;
-    rdfs:comment "GitHub MCP Server, labels toolset: GitHub Labels related tools" .
-  ar:GitHubNotificationsData a ar:WorldSurfaceKind ;
-    ar:specializesKind ar:RemoteService ;
-    ar:protectedByKind ar:RemoteServiceAuthorizationControl ;
-    ar:mcpToolset "notifications" ;
-    rdfs:comment "GitHub MCP Server, notifications toolset: GitHub Notifications related tools" .
-  ar:GitHubOrgsData a ar:WorldSurfaceKind ;
-    ar:specializesKind ar:RemoteService ;
-    ar:protectedByKind ar:RemoteServiceAuthorizationControl ;
-    ar:mcpToolset "orgs" ;
-    rdfs:comment "GitHub MCP Server, orgs toolset: GitHub Organization related tools" .
-  ar:GitHubProjectsData a ar:WorldSurfaceKind ;
-    ar:specializesKind ar:RemoteService ;
-    ar:protectedByKind ar:RemoteServiceAuthorizationControl ;
-    ar:mcpToolset "projects" ;
-    rdfs:comment "GitHub MCP Server, projects toolset: GitHub Projects related tools" .
-  ar:GitHubPullRequestsData a ar:WorldSurfaceKind ;
-    ar:specializesKind ar:RemoteService ;
-    ar:protectedByKind ar:RemoteServiceAuthorizationControl ;
-    ar:mcpToolset "pull_requests" ;
-    rdfs:comment "GitHub MCP Server, pull_requests toolset: GitHub Pull Request related tools" .
-  ar:GitHubReposData a ar:WorldSurfaceKind ;
-    ar:specializesKind ar:RemoteService ;
-    ar:protectedByKind ar:RemoteServiceAuthorizationControl ;
-    ar:mcpToolset "repos" ;
-    rdfs:comment "GitHub MCP Server, repos toolset: GitHub Repository related tools" .
-  ar:GitHubSecretProtectionData a ar:WorldSurfaceKind ;
-    ar:specializesKind ar:RemoteService ;
-    ar:protectedByKind ar:RemoteServiceAuthorizationControl ;
-    ar:mcpToolset "secret_protection" ;
-    rdfs:comment "GitHub MCP Server, secret_protection toolset: Secret protection related tools, such as GitHub Secret Scanning" .
-  ar:GitHubSecurityAdvisoriesData a ar:WorldSurfaceKind ;
-    ar:specializesKind ar:RemoteService ;
-    ar:protectedByKind ar:RemoteServiceAuthorizationControl ;
-    ar:mcpToolset "security_advisories" ;
-    rdfs:comment "GitHub MCP Server, security_advisories toolset: Security advisories related tools" .
-  ar:GitHubStargazersData a ar:WorldSurfaceKind ;
-    ar:specializesKind ar:RemoteService ;
-    ar:protectedByKind ar:RemoteServiceAuthorizationControl ;
-    ar:mcpToolset "stargazers" ;
-    rdfs:comment "GitHub MCP Server, stargazers toolset: GitHub Stargazers related tools" .
-  ar:GitHubUsersData a ar:WorldSurfaceKind ;
-    ar:specializesKind ar:RemoteService ;
-    ar:protectedByKind ar:RemoteServiceAuthorizationControl ;
-    ar:mcpToolset "users" ;
-    rdfs:comment "GitHub MCP Server, users toolset: GitHub User related tools" .
-  ar:GitHubData a ar:WorldSurfaceKind ;
-    ar:specializesKind ar:RemoteService ;
-    ar:protectedByKind ar:RemoteServiceAuthorizationControl ;
-    rdfs:comment "GitHub MCP Server data reached by tools the documentation lists in no toolset." .
   ar:cond_mcp_github_credential a ar:Requirement ;
     ar:requiresCredentialForHost "api.githubcopilot.com" ;
     rdfs:comment "The gateway holds a credential for api.githubcopilot.com granted to the agent, injected into the MCP requests." .
@@ -254,12 +132,17 @@ ar:g_mcp_github {
   ar:op_mcp_github_actions_get a ar:Operation ; ar:invokedThroughKind ar:GitHubMCPTool ;
     ar:mcpToolName "actions_get" ;
     ar:mcpToolset "actions" ;
-    ar:targetsKind ar:GitHubActionsData ;
+    ar:targetsKind ar:GitHubWorkflow, ar:GitHubWorkflowRun, ar:GitHubWorkflowJob, ar:GitHubWorkflowArtifact ;
     ar:requires ar:cond_mcp_github_credential, ar:cond_network_route_permitted ;
     ar:mayInitiateInternetCall ar:call_mcp_github_actions_get ;
-    ar:sourceStatus ar:MCPToolAnnotation ;
+    ar:sourceStatus ar:MCPToolSchema ;
     ar:sourceNote "Get details of GitHub Actions resources (workflows, workflow runs, jobs, and artifacts): Get details about specific GitHub Actions resources." ;
-    ar:hasPotentialEffect [ a ar:PotentialEffect ; ar:effectType ar:Read ; ar:affectsKind ar:GitHubActionsData ] .
+    ar:hasPotentialEffect [ a ar:PotentialEffect ; ar:effectType ar:Read ; ar:affectsKind ar:GitHubWorkflow ; ar:mcpToolMethod "get_workflow" ],
+      [ a ar:PotentialEffect ; ar:effectType ar:Read ; ar:affectsKind ar:GitHubWorkflowRun ; ar:mcpToolMethod "get_workflow_run" ],
+      [ a ar:PotentialEffect ; ar:effectType ar:Read ; ar:affectsKind ar:GitHubWorkflowRun ; ar:mcpToolMethod "get_workflow_run_usage" ],
+      [ a ar:PotentialEffect ; ar:effectType ar:Read ; ar:affectsKind ar:GitHubWorkflowJob ; ar:mcpToolMethod "get_workflow_job" ],
+      [ a ar:PotentialEffect ; ar:effectType ar:Read ; ar:affectsKind ar:GitHubWorkflowJob ; ar:mcpToolMethod "get_workflow_run_logs_url" ],
+      [ a ar:PotentialEffect ; ar:effectType ar:Read ; ar:affectsKind ar:GitHubWorkflowArtifact ; ar:mcpToolMethod "download_workflow_run_artifact" ] .
   ar:call_mcp_github_actions_get a ar:PotentialInternetCall ;
     ar:callInitiatorKind ar:NanoClawAgentContainer ;
     ar:callViaKind ar:GitHubMCPTool, ar:RemoteHTTPMCPTransport ;
@@ -270,12 +153,15 @@ ar:g_mcp_github {
   ar:op_mcp_github_actions_list a ar:Operation ; ar:invokedThroughKind ar:GitHubMCPTool ;
     ar:mcpToolName "actions_list" ;
     ar:mcpToolset "actions" ;
-    ar:targetsKind ar:GitHubActionsData ;
+    ar:targetsKind ar:GitHubWorkflow, ar:GitHubWorkflowRun, ar:GitHubWorkflowJob, ar:GitHubWorkflowArtifact ;
     ar:requires ar:cond_mcp_github_credential, ar:cond_network_route_permitted ;
     ar:mayInitiateInternetCall ar:call_mcp_github_actions_list ;
-    ar:sourceStatus ar:MCPToolAnnotation ;
+    ar:sourceStatus ar:MCPToolSchema ;
     ar:sourceNote "List GitHub Actions workflows in a repository: Tools for listing GitHub Actions resources." ;
-    ar:hasPotentialEffect [ a ar:PotentialEffect ; ar:effectType ar:Read ; ar:affectsKind ar:GitHubActionsData ] .
+    ar:hasPotentialEffect [ a ar:PotentialEffect ; ar:effectType ar:Read ; ar:affectsKind ar:GitHubWorkflow ; ar:mcpToolMethod "list_workflows" ],
+      [ a ar:PotentialEffect ; ar:effectType ar:Read ; ar:affectsKind ar:GitHubWorkflowRun ; ar:mcpToolMethod "list_workflow_runs" ],
+      [ a ar:PotentialEffect ; ar:effectType ar:Read ; ar:affectsKind ar:GitHubWorkflowJob ; ar:mcpToolMethod "list_workflow_jobs" ],
+      [ a ar:PotentialEffect ; ar:effectType ar:Read ; ar:affectsKind ar:GitHubWorkflowArtifact ; ar:mcpToolMethod "list_workflow_run_artifacts" ] .
   ar:call_mcp_github_actions_list a ar:PotentialInternetCall ;
     ar:callInitiatorKind ar:NanoClawAgentContainer ;
     ar:callViaKind ar:GitHubMCPTool, ar:RemoteHTTPMCPTransport ;
@@ -286,15 +172,24 @@ ar:g_mcp_github {
   ar:op_mcp_github_actions_run_trigger a ar:Operation ; ar:invokedThroughKind ar:GitHubMCPTool ;
     ar:mcpToolName "actions_run_trigger" ;
     ar:mcpToolset "actions" ;
-    ar:targetsKind ar:GitHubActionsData ;
+    ar:targetsKind ar:GitHubWorkflowRun, ar:GitHubWorkflowJob ;
     ar:requires ar:cond_mcp_github_credential, ar:cond_network_route_permitted ;
     ar:mayInitiateInternetCall ar:call_mcp_github_actions_run_trigger ;
-    ar:sourceStatus ar:MCPToolAnnotation ;
+    ar:sourceStatus ar:MCPToolSchema ;
     ar:sourceNote "Trigger GitHub Actions workflow actions: Trigger GitHub Actions workflow operations, including running, re-running, cancelling workflow runs, and deleting workflow run logs." ;
-    ar:hasPotentialEffect [ a ar:PotentialEffect ; ar:effectType ar:Create ; ar:affectsKind ar:GitHubActionsData ],
-      [ a ar:PotentialEffect ; ar:effectType ar:Delete ; ar:affectsKind ar:GitHubActionsData ],
-      [ a ar:PotentialEffect ; ar:effectType ar:Transmit ; ar:affectsKind ar:GitHubActionsData ],
-      [ a ar:PotentialEffect ; ar:effectType ar:Update ; ar:affectsKind ar:GitHubActionsData ] .
+    ar:hasPotentialEffect [ a ar:PotentialEffect ; ar:effectType ar:Create ; ar:affectsKind ar:GitHubWorkflowRun ; ar:mcpToolMethod "run_workflow" ],
+      [ a ar:PotentialEffect ; ar:effectType ar:Execute ; ar:affectsKind ar:GitHubWorkflowRun ; ar:mcpToolMethod "run_workflow" ],
+      [ a ar:PotentialEffect ; ar:effectType ar:Transmit ; ar:affectsKind ar:GitHubWorkflowRun ; ar:mcpToolMethod "run_workflow" ],
+      [ a ar:PotentialEffect ; ar:effectType ar:Execute ; ar:affectsKind ar:GitHubWorkflowRun ; ar:mcpToolMethod "rerun_workflow_run" ],
+      [ a ar:PotentialEffect ; ar:effectType ar:Transmit ; ar:affectsKind ar:GitHubWorkflowRun ; ar:mcpToolMethod "rerun_workflow_run" ],
+      [ a ar:PotentialEffect ; ar:effectType ar:Update ; ar:affectsKind ar:GitHubWorkflowRun ; ar:mcpToolMethod "rerun_workflow_run" ],
+      [ a ar:PotentialEffect ; ar:effectType ar:Execute ; ar:affectsKind ar:GitHubWorkflowRun ; ar:mcpToolMethod "rerun_failed_jobs" ],
+      [ a ar:PotentialEffect ; ar:effectType ar:Transmit ; ar:affectsKind ar:GitHubWorkflowRun ; ar:mcpToolMethod "rerun_failed_jobs" ],
+      [ a ar:PotentialEffect ; ar:effectType ar:Update ; ar:affectsKind ar:GitHubWorkflowRun ; ar:mcpToolMethod "rerun_failed_jobs" ],
+      [ a ar:PotentialEffect ; ar:effectType ar:Transmit ; ar:affectsKind ar:GitHubWorkflowRun ; ar:mcpToolMethod "cancel_workflow_run" ],
+      [ a ar:PotentialEffect ; ar:effectType ar:Update ; ar:affectsKind ar:GitHubWorkflowRun ; ar:mcpToolMethod "cancel_workflow_run" ],
+      [ a ar:PotentialEffect ; ar:effectType ar:Delete ; ar:affectsKind ar:GitHubWorkflowJob ; ar:mcpToolMethod "delete_workflow_run_logs" ],
+      [ a ar:PotentialEffect ; ar:effectType ar:Transmit ; ar:affectsKind ar:GitHubWorkflowJob ; ar:mcpToolMethod "delete_workflow_run_logs" ] .
   ar:call_mcp_github_actions_run_trigger a ar:PotentialInternetCall ;
     ar:callInitiatorKind ar:NanoClawAgentContainer ;
     ar:callViaKind ar:GitHubMCPTool, ar:RemoteHTTPMCPTransport ;
@@ -305,15 +200,15 @@ ar:g_mcp_github {
   ar:op_mcp_github_add_comment_to_pending_review a ar:Operation ; ar:invokedThroughKind ar:GitHubMCPTool ;
     ar:mcpToolName "add_comment_to_pending_review" ;
     ar:mcpToolset "pull_requests" ;
-    ar:targetsKind ar:GitHubPullRequestsData ;
+    ar:targetsKind ar:GitHubReviewComment, ar:GitHubPullRequestReview ;
     ar:requires ar:cond_mcp_github_credential, ar:cond_network_route_permitted ;
     ar:mayInitiateInternetCall ar:call_mcp_github_add_comment_to_pending_review ;
-    ar:sourceStatus ar:MCPToolAnnotation ;
+    ar:sourceStatus ar:MCPToolSchema ;
     ar:sourceNote "Add review comment to the requester's latest pending pull request review: Add review comment to the requester's latest pending pull request review." ;
-    ar:hasPotentialEffect [ a ar:PotentialEffect ; ar:effectType ar:Create ; ar:affectsKind ar:GitHubPullRequestsData ],
-      [ a ar:PotentialEffect ; ar:effectType ar:Delete ; ar:affectsKind ar:GitHubPullRequestsData ],
-      [ a ar:PotentialEffect ; ar:effectType ar:Transmit ; ar:affectsKind ar:GitHubPullRequestsData ],
-      [ a ar:PotentialEffect ; ar:effectType ar:Update ; ar:affectsKind ar:GitHubPullRequestsData ] .
+    ar:hasPotentialEffect [ a ar:PotentialEffect ; ar:effectType ar:Create ; ar:affectsKind ar:GitHubReviewComment ],
+      [ a ar:PotentialEffect ; ar:effectType ar:Transmit ; ar:affectsKind ar:GitHubReviewComment ],
+      [ a ar:PotentialEffect ; ar:effectType ar:Transmit ; ar:affectsKind ar:GitHubPullRequestReview ],
+      [ a ar:PotentialEffect ; ar:effectType ar:Update ; ar:affectsKind ar:GitHubPullRequestReview ] .
   ar:call_mcp_github_add_comment_to_pending_review a ar:PotentialInternetCall ;
     ar:callInitiatorKind ar:NanoClawAgentContainer ;
     ar:callViaKind ar:GitHubMCPTool, ar:RemoteHTTPMCPTransport ;
@@ -324,15 +219,15 @@ ar:g_mcp_github {
   ar:op_mcp_github_add_issue_comment a ar:Operation ; ar:invokedThroughKind ar:GitHubMCPTool ;
     ar:mcpToolName "add_issue_comment" ;
     ar:mcpToolset "issues" ;
-    ar:targetsKind ar:GitHubIssuesData ;
+    ar:targetsKind ar:GitHubIssueComment, ar:GitHubReaction ;
     ar:requires ar:cond_mcp_github_credential, ar:cond_network_route_permitted ;
     ar:mayInitiateInternetCall ar:call_mcp_github_add_issue_comment ;
-    ar:sourceStatus ar:MCPToolAnnotation ;
+    ar:sourceStatus ar:MCPToolSchema ;
     ar:sourceNote "Add comment to issue or pull request: Add a comment and/or reaction to a specific issue or issue comment in a GitHub repository." ;
-    ar:hasPotentialEffect [ a ar:PotentialEffect ; ar:effectType ar:Create ; ar:affectsKind ar:GitHubIssuesData ],
-      [ a ar:PotentialEffect ; ar:effectType ar:Delete ; ar:affectsKind ar:GitHubIssuesData ],
-      [ a ar:PotentialEffect ; ar:effectType ar:Transmit ; ar:affectsKind ar:GitHubIssuesData ],
-      [ a ar:PotentialEffect ; ar:effectType ar:Update ; ar:affectsKind ar:GitHubIssuesData ] .
+    ar:hasPotentialEffect [ a ar:PotentialEffect ; ar:effectType ar:Create ; ar:affectsKind ar:GitHubIssueComment ],
+      [ a ar:PotentialEffect ; ar:effectType ar:Transmit ; ar:affectsKind ar:GitHubIssueComment ],
+      [ a ar:PotentialEffect ; ar:effectType ar:Create ; ar:affectsKind ar:GitHubReaction ],
+      [ a ar:PotentialEffect ; ar:effectType ar:Transmit ; ar:affectsKind ar:GitHubReaction ] .
   ar:call_mcp_github_add_issue_comment a ar:PotentialInternetCall ;
     ar:callInitiatorKind ar:NanoClawAgentContainer ;
     ar:callViaKind ar:GitHubMCPTool, ar:RemoteHTTPMCPTransport ;
@@ -343,15 +238,15 @@ ar:g_mcp_github {
   ar:op_mcp_github_add_reply_to_pull_request_comment a ar:Operation ; ar:invokedThroughKind ar:GitHubMCPTool ;
     ar:mcpToolName "add_reply_to_pull_request_comment" ;
     ar:mcpToolset "pull_requests" ;
-    ar:targetsKind ar:GitHubPullRequestsData ;
+    ar:targetsKind ar:GitHubReviewComment, ar:GitHubReaction ;
     ar:requires ar:cond_mcp_github_credential, ar:cond_network_route_permitted ;
     ar:mayInitiateInternetCall ar:call_mcp_github_add_reply_to_pull_request_comment ;
-    ar:sourceStatus ar:MCPToolAnnotation ;
+    ar:sourceStatus ar:MCPToolSchema ;
     ar:sourceNote "Add reply to pull request comment: Add a reply and/or reaction to an existing pull request comment." ;
-    ar:hasPotentialEffect [ a ar:PotentialEffect ; ar:effectType ar:Create ; ar:affectsKind ar:GitHubPullRequestsData ],
-      [ a ar:PotentialEffect ; ar:effectType ar:Delete ; ar:affectsKind ar:GitHubPullRequestsData ],
-      [ a ar:PotentialEffect ; ar:effectType ar:Transmit ; ar:affectsKind ar:GitHubPullRequestsData ],
-      [ a ar:PotentialEffect ; ar:effectType ar:Update ; ar:affectsKind ar:GitHubPullRequestsData ] .
+    ar:hasPotentialEffect [ a ar:PotentialEffect ; ar:effectType ar:Create ; ar:affectsKind ar:GitHubReviewComment ],
+      [ a ar:PotentialEffect ; ar:effectType ar:Transmit ; ar:affectsKind ar:GitHubReviewComment ],
+      [ a ar:PotentialEffect ; ar:effectType ar:Create ; ar:affectsKind ar:GitHubReaction ],
+      [ a ar:PotentialEffect ; ar:effectType ar:Transmit ; ar:affectsKind ar:GitHubReaction ] .
   ar:call_mcp_github_add_reply_to_pull_request_comment a ar:PotentialInternetCall ;
     ar:callInitiatorKind ar:NanoClawAgentContainer ;
     ar:callViaKind ar:GitHubMCPTool, ar:RemoteHTTPMCPTransport ;
@@ -362,15 +257,22 @@ ar:g_mcp_github {
   ar:op_mcp_github_assign_copilot_to_issue a ar:Operation ; ar:invokedThroughKind ar:GitHubMCPTool ;
     ar:mcpToolName "assign_copilot_to_issue" ;
     ar:mcpToolset "copilot" ;
-    ar:targetsKind ar:GitHubCopilotData ;
+    ar:targetsKind ar:GitHubCopilotTask, ar:GitHubIssue, ar:GitHubPullRequest, ar:GitHubBranch, ar:GitHubCommit ;
     ar:requires ar:cond_mcp_github_credential, ar:cond_network_route_permitted ;
     ar:mayInitiateInternetCall ar:call_mcp_github_assign_copilot_to_issue ;
-    ar:sourceStatus ar:MCPToolAnnotation ;
+    ar:sourceStatus ar:MCPToolSchema ;
     ar:sourceNote "Assign Copilot to issue: Assign Copilot to a specific issue in a GitHub repository." ;
-    ar:hasPotentialEffect [ a ar:PotentialEffect ; ar:effectType ar:Create ; ar:affectsKind ar:GitHubCopilotData ],
-      [ a ar:PotentialEffect ; ar:effectType ar:Delete ; ar:affectsKind ar:GitHubCopilotData ],
-      [ a ar:PotentialEffect ; ar:effectType ar:Transmit ; ar:affectsKind ar:GitHubCopilotData ],
-      [ a ar:PotentialEffect ; ar:effectType ar:Update ; ar:affectsKind ar:GitHubCopilotData ] .
+    ar:hasPotentialEffect [ a ar:PotentialEffect ; ar:effectType ar:Create ; ar:affectsKind ar:GitHubCopilotTask ],
+      [ a ar:PotentialEffect ; ar:effectType ar:Delegate ; ar:affectsKind ar:GitHubCopilotTask ],
+      [ a ar:PotentialEffect ; ar:effectType ar:Transmit ; ar:affectsKind ar:GitHubCopilotTask ],
+      [ a ar:PotentialEffect ; ar:effectType ar:Transmit ; ar:affectsKind ar:GitHubIssue ],
+      [ a ar:PotentialEffect ; ar:effectType ar:Update ; ar:affectsKind ar:GitHubIssue ],
+      [ a ar:PotentialEffect ; ar:effectType ar:Create ; ar:affectsKind ar:GitHubPullRequest ],
+      [ a ar:PotentialEffect ; ar:effectType ar:Transmit ; ar:affectsKind ar:GitHubPullRequest ],
+      [ a ar:PotentialEffect ; ar:effectType ar:Create ; ar:affectsKind ar:GitHubBranch ],
+      [ a ar:PotentialEffect ; ar:effectType ar:Transmit ; ar:affectsKind ar:GitHubBranch ],
+      [ a ar:PotentialEffect ; ar:effectType ar:Create ; ar:affectsKind ar:GitHubCommit ],
+      [ a ar:PotentialEffect ; ar:effectType ar:Transmit ; ar:affectsKind ar:GitHubCommit ] .
   ar:call_mcp_github_assign_copilot_to_issue a ar:PotentialInternetCall ;
     ar:callInitiatorKind ar:NanoClawAgentContainer ;
     ar:callViaKind ar:GitHubMCPTool, ar:RemoteHTTPMCPTransport ;
@@ -381,15 +283,22 @@ ar:g_mcp_github {
   ar:op_mcp_github_assign_copilot_to_issue_with_intent a ar:Operation ; ar:invokedThroughKind ar:GitHubMCPTool ;
     ar:mcpToolName "assign_copilot_to_issue_with_intent" ;
     ar:mcpToolset "copilot_issue_intents" ;
-    ar:targetsKind ar:GitHubCopilotIssueIntentsData ;
+    ar:targetsKind ar:GitHubCopilotTask, ar:GitHubIssue, ar:GitHubPullRequest, ar:GitHubBranch, ar:GitHubCommit ;
     ar:requires ar:cond_mcp_github_credential, ar:cond_network_route_permitted ;
     ar:mayInitiateInternetCall ar:call_mcp_github_assign_copilot_to_issue_with_intent ;
-    ar:sourceStatus ar:MCPToolAnnotation ;
+    ar:sourceStatus ar:MCPToolSchema ;
     ar:sourceNote "Assign Copilot to issue with intent: Assign Copilot to a specific issue in a GitHub repository." ;
-    ar:hasPotentialEffect [ a ar:PotentialEffect ; ar:effectType ar:Create ; ar:affectsKind ar:GitHubCopilotIssueIntentsData ],
-      [ a ar:PotentialEffect ; ar:effectType ar:Delete ; ar:affectsKind ar:GitHubCopilotIssueIntentsData ],
-      [ a ar:PotentialEffect ; ar:effectType ar:Transmit ; ar:affectsKind ar:GitHubCopilotIssueIntentsData ],
-      [ a ar:PotentialEffect ; ar:effectType ar:Update ; ar:affectsKind ar:GitHubCopilotIssueIntentsData ] .
+    ar:hasPotentialEffect [ a ar:PotentialEffect ; ar:effectType ar:Create ; ar:affectsKind ar:GitHubCopilotTask ],
+      [ a ar:PotentialEffect ; ar:effectType ar:Delegate ; ar:affectsKind ar:GitHubCopilotTask ],
+      [ a ar:PotentialEffect ; ar:effectType ar:Transmit ; ar:affectsKind ar:GitHubCopilotTask ],
+      [ a ar:PotentialEffect ; ar:effectType ar:Transmit ; ar:affectsKind ar:GitHubIssue ],
+      [ a ar:PotentialEffect ; ar:effectType ar:Update ; ar:affectsKind ar:GitHubIssue ],
+      [ a ar:PotentialEffect ; ar:effectType ar:Create ; ar:affectsKind ar:GitHubPullRequest ],
+      [ a ar:PotentialEffect ; ar:effectType ar:Transmit ; ar:affectsKind ar:GitHubPullRequest ],
+      [ a ar:PotentialEffect ; ar:effectType ar:Create ; ar:affectsKind ar:GitHubBranch ],
+      [ a ar:PotentialEffect ; ar:effectType ar:Transmit ; ar:affectsKind ar:GitHubBranch ],
+      [ a ar:PotentialEffect ; ar:effectType ar:Create ; ar:affectsKind ar:GitHubCommit ],
+      [ a ar:PotentialEffect ; ar:effectType ar:Transmit ; ar:affectsKind ar:GitHubCommit ] .
   ar:call_mcp_github_assign_copilot_to_issue_with_intent a ar:PotentialInternetCall ;
     ar:callInitiatorKind ar:NanoClawAgentContainer ;
     ar:callViaKind ar:GitHubMCPTool, ar:RemoteHTTPMCPTransport ;
@@ -400,12 +309,12 @@ ar:g_mcp_github {
   ar:op_mcp_github_check_dependency_vulnerabilities a ar:Operation ; ar:invokedThroughKind ar:GitHubMCPTool ;
     ar:mcpToolName "check_dependency_vulnerabilities" ;
     ar:mcpToolset "dependabot" ;
-    ar:targetsKind ar:GitHubDependabotData ;
+    ar:targetsKind ar:GitHubSecurityAdvisory ;
     ar:requires ar:cond_mcp_github_credential, ar:cond_network_route_permitted ;
     ar:mayInitiateInternetCall ar:call_mcp_github_check_dependency_vulnerabilities ;
-    ar:sourceStatus ar:MCPToolAnnotation ;
+    ar:sourceStatus ar:MCPToolSchema ;
     ar:sourceNote "Check Dependency Vulnerabilities: Check a list of dependencies for known vulnerabilities using the GitHub Security Advisory Database." ;
-    ar:hasPotentialEffect [ a ar:PotentialEffect ; ar:effectType ar:Read ; ar:affectsKind ar:GitHubDependabotData ] .
+    ar:hasPotentialEffect [ a ar:PotentialEffect ; ar:effectType ar:Read ; ar:affectsKind ar:GitHubSecurityAdvisory ] .
   ar:call_mcp_github_check_dependency_vulnerabilities a ar:PotentialInternetCall ;
     ar:callInitiatorKind ar:NanoClawAgentContainer ;
     ar:callViaKind ar:GitHubMCPTool, ar:RemoteHTTPMCPTransport ;
@@ -416,15 +325,13 @@ ar:g_mcp_github {
   ar:op_mcp_github_create_branch a ar:Operation ; ar:invokedThroughKind ar:GitHubMCPTool ;
     ar:mcpToolName "create_branch" ;
     ar:mcpToolset "repos" ;
-    ar:targetsKind ar:GitHubReposData ;
+    ar:targetsKind ar:GitHubBranch ;
     ar:requires ar:cond_mcp_github_credential, ar:cond_network_route_permitted ;
     ar:mayInitiateInternetCall ar:call_mcp_github_create_branch ;
-    ar:sourceStatus ar:MCPToolAnnotation ;
+    ar:sourceStatus ar:MCPToolSchema ;
     ar:sourceNote "Create branch: Create a new branch in a GitHub repository" ;
-    ar:hasPotentialEffect [ a ar:PotentialEffect ; ar:effectType ar:Create ; ar:affectsKind ar:GitHubReposData ],
-      [ a ar:PotentialEffect ; ar:effectType ar:Delete ; ar:affectsKind ar:GitHubReposData ],
-      [ a ar:PotentialEffect ; ar:effectType ar:Transmit ; ar:affectsKind ar:GitHubReposData ],
-      [ a ar:PotentialEffect ; ar:effectType ar:Update ; ar:affectsKind ar:GitHubReposData ] .
+    ar:hasPotentialEffect [ a ar:PotentialEffect ; ar:effectType ar:Create ; ar:affectsKind ar:GitHubBranch ],
+      [ a ar:PotentialEffect ; ar:effectType ar:Transmit ; ar:affectsKind ar:GitHubBranch ] .
   ar:call_mcp_github_create_branch a ar:PotentialInternetCall ;
     ar:callInitiatorKind ar:NanoClawAgentContainer ;
     ar:callViaKind ar:GitHubMCPTool, ar:RemoteHTTPMCPTransport ;
@@ -435,15 +342,13 @@ ar:g_mcp_github {
   ar:op_mcp_github_create_gist a ar:Operation ; ar:invokedThroughKind ar:GitHubMCPTool ;
     ar:mcpToolName "create_gist" ;
     ar:mcpToolset "gists" ;
-    ar:targetsKind ar:GitHubGistsData ;
+    ar:targetsKind ar:GitHubGist ;
     ar:requires ar:cond_mcp_github_credential, ar:cond_network_route_permitted ;
     ar:mayInitiateInternetCall ar:call_mcp_github_create_gist ;
-    ar:sourceStatus ar:MCPToolAnnotation ;
+    ar:sourceStatus ar:MCPToolSchema ;
     ar:sourceNote "Create Gist: Create a new gist" ;
-    ar:hasPotentialEffect [ a ar:PotentialEffect ; ar:effectType ar:Create ; ar:affectsKind ar:GitHubGistsData ],
-      [ a ar:PotentialEffect ; ar:effectType ar:Delete ; ar:affectsKind ar:GitHubGistsData ],
-      [ a ar:PotentialEffect ; ar:effectType ar:Transmit ; ar:affectsKind ar:GitHubGistsData ],
-      [ a ar:PotentialEffect ; ar:effectType ar:Update ; ar:affectsKind ar:GitHubGistsData ] .
+    ar:hasPotentialEffect [ a ar:PotentialEffect ; ar:effectType ar:Create ; ar:affectsKind ar:GitHubGist ],
+      [ a ar:PotentialEffect ; ar:effectType ar:Transmit ; ar:affectsKind ar:GitHubGist ] .
   ar:call_mcp_github_create_gist a ar:PotentialInternetCall ;
     ar:callInitiatorKind ar:NanoClawAgentContainer ;
     ar:callViaKind ar:GitHubMCPTool, ar:RemoteHTTPMCPTransport ;
@@ -454,15 +359,18 @@ ar:g_mcp_github {
   ar:op_mcp_github_create_or_update_file a ar:Operation ; ar:invokedThroughKind ar:GitHubMCPTool ;
     ar:mcpToolName "create_or_update_file" ;
     ar:mcpToolset "repos" ;
-    ar:targetsKind ar:GitHubReposData ;
+    ar:targetsKind ar:GitHubRepositoryFile, ar:GitHubCommit, ar:GitHubBranch ;
     ar:requires ar:cond_mcp_github_credential, ar:cond_network_route_permitted ;
     ar:mayInitiateInternetCall ar:call_mcp_github_create_or_update_file ;
-    ar:sourceStatus ar:MCPToolAnnotation ;
+    ar:sourceStatus ar:MCPToolSchema ;
     ar:sourceNote "Create or update file: Create or update a single file in a GitHub repository." ;
-    ar:hasPotentialEffect [ a ar:PotentialEffect ; ar:effectType ar:Create ; ar:affectsKind ar:GitHubReposData ],
-      [ a ar:PotentialEffect ; ar:effectType ar:Delete ; ar:affectsKind ar:GitHubReposData ],
-      [ a ar:PotentialEffect ; ar:effectType ar:Transmit ; ar:affectsKind ar:GitHubReposData ],
-      [ a ar:PotentialEffect ; ar:effectType ar:Update ; ar:affectsKind ar:GitHubReposData ] .
+    ar:hasPotentialEffect [ a ar:PotentialEffect ; ar:effectType ar:Create ; ar:affectsKind ar:GitHubRepositoryFile ],
+      [ a ar:PotentialEffect ; ar:effectType ar:Transmit ; ar:affectsKind ar:GitHubRepositoryFile ],
+      [ a ar:PotentialEffect ; ar:effectType ar:Update ; ar:affectsKind ar:GitHubRepositoryFile ],
+      [ a ar:PotentialEffect ; ar:effectType ar:Create ; ar:affectsKind ar:GitHubCommit ],
+      [ a ar:PotentialEffect ; ar:effectType ar:Transmit ; ar:affectsKind ar:GitHubCommit ],
+      [ a ar:PotentialEffect ; ar:effectType ar:Transmit ; ar:affectsKind ar:GitHubBranch ],
+      [ a ar:PotentialEffect ; ar:effectType ar:Update ; ar:affectsKind ar:GitHubBranch ] .
   ar:call_mcp_github_create_or_update_file a ar:PotentialInternetCall ;
     ar:callInitiatorKind ar:NanoClawAgentContainer ;
     ar:callViaKind ar:GitHubMCPTool, ar:RemoteHTTPMCPTransport ;
@@ -473,15 +381,13 @@ ar:g_mcp_github {
   ar:op_mcp_github_create_pull_request a ar:Operation ; ar:invokedThroughKind ar:GitHubMCPTool ;
     ar:mcpToolName "create_pull_request" ;
     ar:mcpToolset "pull_requests" ;
-    ar:targetsKind ar:GitHubPullRequestsData ;
+    ar:targetsKind ar:GitHubPullRequest ;
     ar:requires ar:cond_mcp_github_credential, ar:cond_network_route_permitted ;
     ar:mayInitiateInternetCall ar:call_mcp_github_create_pull_request ;
-    ar:sourceStatus ar:MCPToolAnnotation ;
+    ar:sourceStatus ar:MCPToolSchema ;
     ar:sourceNote "Open new pull request: Create a new pull request in a GitHub repository." ;
-    ar:hasPotentialEffect [ a ar:PotentialEffect ; ar:effectType ar:Create ; ar:affectsKind ar:GitHubPullRequestsData ],
-      [ a ar:PotentialEffect ; ar:effectType ar:Delete ; ar:affectsKind ar:GitHubPullRequestsData ],
-      [ a ar:PotentialEffect ; ar:effectType ar:Transmit ; ar:affectsKind ar:GitHubPullRequestsData ],
-      [ a ar:PotentialEffect ; ar:effectType ar:Update ; ar:affectsKind ar:GitHubPullRequestsData ] .
+    ar:hasPotentialEffect [ a ar:PotentialEffect ; ar:effectType ar:Create ; ar:affectsKind ar:GitHubPullRequest ],
+      [ a ar:PotentialEffect ; ar:effectType ar:Transmit ; ar:affectsKind ar:GitHubPullRequest ] .
   ar:call_mcp_github_create_pull_request a ar:PotentialInternetCall ;
     ar:callInitiatorKind ar:NanoClawAgentContainer ;
     ar:callViaKind ar:GitHubMCPTool, ar:RemoteHTTPMCPTransport ;
@@ -492,15 +398,20 @@ ar:g_mcp_github {
   ar:op_mcp_github_create_pull_request_with_copilot a ar:Operation ; ar:invokedThroughKind ar:GitHubMCPTool ;
     ar:mcpToolName "create_pull_request_with_copilot" ;
     ar:mcpToolset "copilot" ;
-    ar:targetsKind ar:GitHubCopilotData ;
+    ar:targetsKind ar:GitHubCopilotTask, ar:GitHubPullRequest, ar:GitHubBranch, ar:GitHubCommit ;
     ar:requires ar:cond_mcp_github_credential, ar:cond_network_route_permitted ;
     ar:mayInitiateInternetCall ar:call_mcp_github_create_pull_request_with_copilot ;
-    ar:sourceStatus ar:MCPToolAnnotation ;
+    ar:sourceStatus ar:MCPToolSchema ;
     ar:sourceNote "Perform task with GitHub Copilot coding agent: Delegate a task to GitHub Copilot coding agent to perform in the background." ;
-    ar:hasPotentialEffect [ a ar:PotentialEffect ; ar:effectType ar:Create ; ar:affectsKind ar:GitHubCopilotData ],
-      [ a ar:PotentialEffect ; ar:effectType ar:Delete ; ar:affectsKind ar:GitHubCopilotData ],
-      [ a ar:PotentialEffect ; ar:effectType ar:Transmit ; ar:affectsKind ar:GitHubCopilotData ],
-      [ a ar:PotentialEffect ; ar:effectType ar:Update ; ar:affectsKind ar:GitHubCopilotData ] .
+    ar:hasPotentialEffect [ a ar:PotentialEffect ; ar:effectType ar:Create ; ar:affectsKind ar:GitHubCopilotTask ],
+      [ a ar:PotentialEffect ; ar:effectType ar:Delegate ; ar:affectsKind ar:GitHubCopilotTask ],
+      [ a ar:PotentialEffect ; ar:effectType ar:Transmit ; ar:affectsKind ar:GitHubCopilotTask ],
+      [ a ar:PotentialEffect ; ar:effectType ar:Create ; ar:affectsKind ar:GitHubPullRequest ],
+      [ a ar:PotentialEffect ; ar:effectType ar:Transmit ; ar:affectsKind ar:GitHubPullRequest ],
+      [ a ar:PotentialEffect ; ar:effectType ar:Create ; ar:affectsKind ar:GitHubBranch ],
+      [ a ar:PotentialEffect ; ar:effectType ar:Transmit ; ar:affectsKind ar:GitHubBranch ],
+      [ a ar:PotentialEffect ; ar:effectType ar:Create ; ar:affectsKind ar:GitHubCommit ],
+      [ a ar:PotentialEffect ; ar:effectType ar:Transmit ; ar:affectsKind ar:GitHubCommit ] .
   ar:call_mcp_github_create_pull_request_with_copilot a ar:PotentialInternetCall ;
     ar:callInitiatorKind ar:NanoClawAgentContainer ;
     ar:callViaKind ar:GitHubMCPTool, ar:RemoteHTTPMCPTransport ;
@@ -511,15 +422,13 @@ ar:g_mcp_github {
   ar:op_mcp_github_create_repository a ar:Operation ; ar:invokedThroughKind ar:GitHubMCPTool ;
     ar:mcpToolName "create_repository" ;
     ar:mcpToolset "repos" ;
-    ar:targetsKind ar:GitHubReposData ;
+    ar:targetsKind ar:GitHubRepository ;
     ar:requires ar:cond_mcp_github_credential, ar:cond_network_route_permitted ;
     ar:mayInitiateInternetCall ar:call_mcp_github_create_repository ;
-    ar:sourceStatus ar:MCPToolAnnotation ;
+    ar:sourceStatus ar:MCPToolSchema ;
     ar:sourceNote "Create repository: Create a new GitHub repository in your account or specified organization" ;
-    ar:hasPotentialEffect [ a ar:PotentialEffect ; ar:effectType ar:Create ; ar:affectsKind ar:GitHubReposData ],
-      [ a ar:PotentialEffect ; ar:effectType ar:Delete ; ar:affectsKind ar:GitHubReposData ],
-      [ a ar:PotentialEffect ; ar:effectType ar:Transmit ; ar:affectsKind ar:GitHubReposData ],
-      [ a ar:PotentialEffect ; ar:effectType ar:Update ; ar:affectsKind ar:GitHubReposData ] .
+    ar:hasPotentialEffect [ a ar:PotentialEffect ; ar:effectType ar:Create ; ar:affectsKind ar:GitHubRepository ],
+      [ a ar:PotentialEffect ; ar:effectType ar:Transmit ; ar:affectsKind ar:GitHubRepository ] .
   ar:call_mcp_github_create_repository a ar:PotentialInternetCall ;
     ar:callInitiatorKind ar:NanoClawAgentContainer ;
     ar:callViaKind ar:GitHubMCPTool, ar:RemoteHTTPMCPTransport ;
@@ -530,15 +439,14 @@ ar:g_mcp_github {
   ar:op_mcp_github_create_repository_ruleset a ar:Operation ; ar:invokedThroughKind ar:GitHubMCPTool ;
     ar:mcpToolName "create_repository_ruleset" ;
     ar:mcpToolset "governance" ;
-    ar:targetsKind ar:GitHubGovernanceData ;
+    ar:targetsKind ar:GitHubRuleset ;
     ar:requires ar:cond_mcp_github_credential, ar:cond_network_route_permitted ;
     ar:mayInitiateInternetCall ar:call_mcp_github_create_repository_ruleset ;
-    ar:sourceStatus ar:MCPToolAnnotation ;
+    ar:sourceStatus ar:MCPToolSchema ;
     ar:sourceNote "Create repository ruleset: Create a new ruleset at the repository, organization, or enterprise level" ;
-    ar:hasPotentialEffect [ a ar:PotentialEffect ; ar:effectType ar:Create ; ar:affectsKind ar:GitHubGovernanceData ],
-      [ a ar:PotentialEffect ; ar:effectType ar:Delete ; ar:affectsKind ar:GitHubGovernanceData ],
-      [ a ar:PotentialEffect ; ar:effectType ar:Transmit ; ar:affectsKind ar:GitHubGovernanceData ],
-      [ a ar:PotentialEffect ; ar:effectType ar:Update ; ar:affectsKind ar:GitHubGovernanceData ] .
+    ar:hasPotentialEffect [ a ar:PotentialEffect ; ar:effectType ar:Configure ; ar:affectsKind ar:GitHubRuleset ],
+      [ a ar:PotentialEffect ; ar:effectType ar:Create ; ar:affectsKind ar:GitHubRuleset ],
+      [ a ar:PotentialEffect ; ar:effectType ar:Transmit ; ar:affectsKind ar:GitHubRuleset ] .
   ar:call_mcp_github_create_repository_ruleset a ar:PotentialInternetCall ;
     ar:callInitiatorKind ar:NanoClawAgentContainer ;
     ar:callViaKind ar:GitHubMCPTool, ar:RemoteHTTPMCPTransport ;
@@ -549,12 +457,12 @@ ar:g_mcp_github {
   ar:op_mcp_github_custom_properties_read a ar:Operation ; ar:invokedThroughKind ar:GitHubMCPTool ;
     ar:mcpToolName "custom_properties_read" ;
     ar:mcpToolset "governance" ;
-    ar:targetsKind ar:GitHubGovernanceData ;
+    ar:targetsKind ar:GitHubCustomProperty ;
     ar:requires ar:cond_mcp_github_credential, ar:cond_network_route_permitted ;
     ar:mayInitiateInternetCall ar:call_mcp_github_custom_properties_read ;
-    ar:sourceStatus ar:MCPToolAnnotation ;
+    ar:sourceStatus ar:MCPToolSchema ;
     ar:sourceNote "Read custom properties: Read custom properties at the repository, organization, or enterprise level." ;
-    ar:hasPotentialEffect [ a ar:PotentialEffect ; ar:effectType ar:Read ; ar:affectsKind ar:GitHubGovernanceData ] .
+    ar:hasPotentialEffect [ a ar:PotentialEffect ; ar:effectType ar:Read ; ar:affectsKind ar:GitHubCustomProperty ] .
   ar:call_mcp_github_custom_properties_read a ar:PotentialInternetCall ;
     ar:callInitiatorKind ar:NanoClawAgentContainer ;
     ar:callViaKind ar:GitHubMCPTool, ar:RemoteHTTPMCPTransport ;
@@ -565,15 +473,15 @@ ar:g_mcp_github {
   ar:op_mcp_github_custom_properties_write a ar:Operation ; ar:invokedThroughKind ar:GitHubMCPTool ;
     ar:mcpToolName "custom_properties_write" ;
     ar:mcpToolset "governance" ;
-    ar:targetsKind ar:GitHubGovernanceData ;
+    ar:targetsKind ar:GitHubCustomProperty ;
     ar:requires ar:cond_mcp_github_credential, ar:cond_network_route_permitted ;
     ar:mayInitiateInternetCall ar:call_mcp_github_custom_properties_write ;
-    ar:sourceStatus ar:MCPToolAnnotation ;
+    ar:sourceStatus ar:MCPToolSchema ;
     ar:sourceNote "Set custom properties: Create or update custom properties at the repository, organization, or enterprise level." ;
-    ar:hasPotentialEffect [ a ar:PotentialEffect ; ar:effectType ar:Create ; ar:affectsKind ar:GitHubGovernanceData ],
-      [ a ar:PotentialEffect ; ar:effectType ar:Delete ; ar:affectsKind ar:GitHubGovernanceData ],
-      [ a ar:PotentialEffect ; ar:effectType ar:Transmit ; ar:affectsKind ar:GitHubGovernanceData ],
-      [ a ar:PotentialEffect ; ar:effectType ar:Update ; ar:affectsKind ar:GitHubGovernanceData ] .
+    ar:hasPotentialEffect [ a ar:PotentialEffect ; ar:effectType ar:Configure ; ar:affectsKind ar:GitHubCustomProperty ],
+      [ a ar:PotentialEffect ; ar:effectType ar:Create ; ar:affectsKind ar:GitHubCustomProperty ],
+      [ a ar:PotentialEffect ; ar:effectType ar:Transmit ; ar:affectsKind ar:GitHubCustomProperty ],
+      [ a ar:PotentialEffect ; ar:effectType ar:Update ; ar:affectsKind ar:GitHubCustomProperty ] .
   ar:call_mcp_github_custom_properties_write a ar:PotentialInternetCall ;
     ar:callInitiatorKind ar:NanoClawAgentContainer ;
     ar:callViaKind ar:GitHubMCPTool, ar:RemoteHTTPMCPTransport ;
@@ -584,15 +492,17 @@ ar:g_mcp_github {
   ar:op_mcp_github_delete_file a ar:Operation ; ar:invokedThroughKind ar:GitHubMCPTool ;
     ar:mcpToolName "delete_file" ;
     ar:mcpToolset "repos" ;
-    ar:targetsKind ar:GitHubReposData ;
+    ar:targetsKind ar:GitHubRepositoryFile, ar:GitHubCommit, ar:GitHubBranch ;
     ar:requires ar:cond_mcp_github_credential, ar:cond_network_route_permitted ;
     ar:mayInitiateInternetCall ar:call_mcp_github_delete_file ;
-    ar:sourceStatus ar:MCPToolAnnotation ;
+    ar:sourceStatus ar:MCPToolSchema ;
     ar:sourceNote "Delete file: Delete a file from a GitHub repository" ;
-    ar:hasPotentialEffect [ a ar:PotentialEffect ; ar:effectType ar:Create ; ar:affectsKind ar:GitHubReposData ],
-      [ a ar:PotentialEffect ; ar:effectType ar:Delete ; ar:affectsKind ar:GitHubReposData ],
-      [ a ar:PotentialEffect ; ar:effectType ar:Transmit ; ar:affectsKind ar:GitHubReposData ],
-      [ a ar:PotentialEffect ; ar:effectType ar:Update ; ar:affectsKind ar:GitHubReposData ] .
+    ar:hasPotentialEffect [ a ar:PotentialEffect ; ar:effectType ar:Delete ; ar:affectsKind ar:GitHubRepositoryFile ],
+      [ a ar:PotentialEffect ; ar:effectType ar:Transmit ; ar:affectsKind ar:GitHubRepositoryFile ],
+      [ a ar:PotentialEffect ; ar:effectType ar:Create ; ar:affectsKind ar:GitHubCommit ],
+      [ a ar:PotentialEffect ; ar:effectType ar:Transmit ; ar:affectsKind ar:GitHubCommit ],
+      [ a ar:PotentialEffect ; ar:effectType ar:Transmit ; ar:affectsKind ar:GitHubBranch ],
+      [ a ar:PotentialEffect ; ar:effectType ar:Update ; ar:affectsKind ar:GitHubBranch ] .
   ar:call_mcp_github_delete_file a ar:PotentialInternetCall ;
     ar:callInitiatorKind ar:NanoClawAgentContainer ;
     ar:callViaKind ar:GitHubMCPTool, ar:RemoteHTTPMCPTransport ;
@@ -603,15 +513,27 @@ ar:g_mcp_github {
   ar:op_mcp_github_discussion_comment_write a ar:Operation ; ar:invokedThroughKind ar:GitHubMCPTool ;
     ar:mcpToolName "discussion_comment_write" ;
     ar:mcpToolset "discussions" ;
-    ar:targetsKind ar:GitHubDiscussionsData ;
+    ar:targetsKind ar:GitHubDiscussionComment, ar:GitHubDiscussion ;
     ar:requires ar:cond_mcp_github_credential, ar:cond_network_route_permitted ;
     ar:mayInitiateInternetCall ar:call_mcp_github_discussion_comment_write ;
-    ar:sourceStatus ar:MCPToolAnnotation ;
+    ar:sourceStatus ar:MCPToolSchema ;
     ar:sourceNote "Manage discussion comments: Write operations for discussion comments." ;
-    ar:hasPotentialEffect [ a ar:PotentialEffect ; ar:effectType ar:Create ; ar:affectsKind ar:GitHubDiscussionsData ],
-      [ a ar:PotentialEffect ; ar:effectType ar:Delete ; ar:affectsKind ar:GitHubDiscussionsData ],
-      [ a ar:PotentialEffect ; ar:effectType ar:Transmit ; ar:affectsKind ar:GitHubDiscussionsData ],
-      [ a ar:PotentialEffect ; ar:effectType ar:Update ; ar:affectsKind ar:GitHubDiscussionsData ] .
+    ar:hasPotentialEffect [ a ar:PotentialEffect ; ar:effectType ar:Create ; ar:affectsKind ar:GitHubDiscussionComment ; ar:mcpToolMethod "add" ],
+      [ a ar:PotentialEffect ; ar:effectType ar:Transmit ; ar:affectsKind ar:GitHubDiscussionComment ; ar:mcpToolMethod "add" ],
+      [ a ar:PotentialEffect ; ar:effectType ar:Create ; ar:affectsKind ar:GitHubDiscussionComment ; ar:mcpToolMethod "reply" ],
+      [ a ar:PotentialEffect ; ar:effectType ar:Transmit ; ar:affectsKind ar:GitHubDiscussionComment ; ar:mcpToolMethod "reply" ],
+      [ a ar:PotentialEffect ; ar:effectType ar:Transmit ; ar:affectsKind ar:GitHubDiscussionComment ; ar:mcpToolMethod "update" ],
+      [ a ar:PotentialEffect ; ar:effectType ar:Update ; ar:affectsKind ar:GitHubDiscussionComment ; ar:mcpToolMethod "update" ],
+      [ a ar:PotentialEffect ; ar:effectType ar:Delete ; ar:affectsKind ar:GitHubDiscussionComment ; ar:mcpToolMethod "delete" ],
+      [ a ar:PotentialEffect ; ar:effectType ar:Transmit ; ar:affectsKind ar:GitHubDiscussionComment ; ar:mcpToolMethod "delete" ],
+      [ a ar:PotentialEffect ; ar:effectType ar:Transmit ; ar:affectsKind ar:GitHubDiscussionComment ; ar:mcpToolMethod "mark_answer" ],
+      [ a ar:PotentialEffect ; ar:effectType ar:Update ; ar:affectsKind ar:GitHubDiscussionComment ; ar:mcpToolMethod "mark_answer" ],
+      [ a ar:PotentialEffect ; ar:effectType ar:Transmit ; ar:affectsKind ar:GitHubDiscussion ; ar:mcpToolMethod "mark_answer" ],
+      [ a ar:PotentialEffect ; ar:effectType ar:Update ; ar:affectsKind ar:GitHubDiscussion ; ar:mcpToolMethod "mark_answer" ],
+      [ a ar:PotentialEffect ; ar:effectType ar:Transmit ; ar:affectsKind ar:GitHubDiscussionComment ; ar:mcpToolMethod "unmark_answer" ],
+      [ a ar:PotentialEffect ; ar:effectType ar:Update ; ar:affectsKind ar:GitHubDiscussionComment ; ar:mcpToolMethod "unmark_answer" ],
+      [ a ar:PotentialEffect ; ar:effectType ar:Transmit ; ar:affectsKind ar:GitHubDiscussion ; ar:mcpToolMethod "unmark_answer" ],
+      [ a ar:PotentialEffect ; ar:effectType ar:Update ; ar:affectsKind ar:GitHubDiscussion ; ar:mcpToolMethod "unmark_answer" ] .
   ar:call_mcp_github_discussion_comment_write a ar:PotentialInternetCall ;
     ar:callInitiatorKind ar:NanoClawAgentContainer ;
     ar:callViaKind ar:GitHubMCPTool, ar:RemoteHTTPMCPTransport ;
@@ -622,15 +544,13 @@ ar:g_mcp_github {
   ar:op_mcp_github_dismiss_notification a ar:Operation ; ar:invokedThroughKind ar:GitHubMCPTool ;
     ar:mcpToolName "dismiss_notification" ;
     ar:mcpToolset "notifications" ;
-    ar:targetsKind ar:GitHubNotificationsData ;
+    ar:targetsKind ar:GitHubNotification ;
     ar:requires ar:cond_mcp_github_credential, ar:cond_network_route_permitted ;
     ar:mayInitiateInternetCall ar:call_mcp_github_dismiss_notification ;
-    ar:sourceStatus ar:MCPToolAnnotation ;
+    ar:sourceStatus ar:MCPToolSchema ;
     ar:sourceNote "Dismiss notification: Dismiss a notification by marking it as read or done" ;
-    ar:hasPotentialEffect [ a ar:PotentialEffect ; ar:effectType ar:Create ; ar:affectsKind ar:GitHubNotificationsData ],
-      [ a ar:PotentialEffect ; ar:effectType ar:Delete ; ar:affectsKind ar:GitHubNotificationsData ],
-      [ a ar:PotentialEffect ; ar:effectType ar:Transmit ; ar:affectsKind ar:GitHubNotificationsData ],
-      [ a ar:PotentialEffect ; ar:effectType ar:Update ; ar:affectsKind ar:GitHubNotificationsData ] .
+    ar:hasPotentialEffect [ a ar:PotentialEffect ; ar:effectType ar:Transmit ; ar:affectsKind ar:GitHubNotification ],
+      [ a ar:PotentialEffect ; ar:effectType ar:Update ; ar:affectsKind ar:GitHubNotification ] .
   ar:call_mcp_github_dismiss_notification a ar:PotentialInternetCall ;
     ar:callInitiatorKind ar:NanoClawAgentContainer ;
     ar:callViaKind ar:GitHubMCPTool, ar:RemoteHTTPMCPTransport ;
@@ -641,15 +561,13 @@ ar:g_mcp_github {
   ar:op_mcp_github_fork_repository a ar:Operation ; ar:invokedThroughKind ar:GitHubMCPTool ;
     ar:mcpToolName "fork_repository" ;
     ar:mcpToolset "repos" ;
-    ar:targetsKind ar:GitHubReposData ;
+    ar:targetsKind ar:GitHubRepository ;
     ar:requires ar:cond_mcp_github_credential, ar:cond_network_route_permitted ;
     ar:mayInitiateInternetCall ar:call_mcp_github_fork_repository ;
-    ar:sourceStatus ar:MCPToolAnnotation ;
+    ar:sourceStatus ar:MCPToolSchema ;
     ar:sourceNote "Fork repository: Fork a GitHub repository to your account or specified organization" ;
-    ar:hasPotentialEffect [ a ar:PotentialEffect ; ar:effectType ar:Create ; ar:affectsKind ar:GitHubReposData ],
-      [ a ar:PotentialEffect ; ar:effectType ar:Delete ; ar:affectsKind ar:GitHubReposData ],
-      [ a ar:PotentialEffect ; ar:effectType ar:Transmit ; ar:affectsKind ar:GitHubReposData ],
-      [ a ar:PotentialEffect ; ar:effectType ar:Update ; ar:affectsKind ar:GitHubReposData ] .
+    ar:hasPotentialEffect [ a ar:PotentialEffect ; ar:effectType ar:Create ; ar:affectsKind ar:GitHubRepository ],
+      [ a ar:PotentialEffect ; ar:effectType ar:Transmit ; ar:affectsKind ar:GitHubRepository ] .
   ar:call_mcp_github_fork_repository a ar:PotentialInternetCall ;
     ar:callInitiatorKind ar:NanoClawAgentContainer ;
     ar:callViaKind ar:GitHubMCPTool, ar:RemoteHTTPMCPTransport ;
@@ -660,12 +578,12 @@ ar:g_mcp_github {
   ar:op_mcp_github_get_code_quality_finding a ar:Operation ; ar:invokedThroughKind ar:GitHubMCPTool ;
     ar:mcpToolName "get_code_quality_finding" ;
     ar:mcpToolset "code_quality" ;
-    ar:targetsKind ar:GitHubCodeQualityData ;
+    ar:targetsKind ar:GitHubCodeQualityFinding ;
     ar:requires ar:cond_mcp_github_credential, ar:cond_network_route_permitted ;
     ar:mayInitiateInternetCall ar:call_mcp_github_get_code_quality_finding ;
-    ar:sourceStatus ar:MCPToolAnnotation ;
+    ar:sourceStatus ar:MCPToolSchema ;
     ar:sourceNote "Get code quality finding: Get details of a specific code quality finding in a GitHub repository." ;
-    ar:hasPotentialEffect [ a ar:PotentialEffect ; ar:effectType ar:Read ; ar:affectsKind ar:GitHubCodeQualityData ] .
+    ar:hasPotentialEffect [ a ar:PotentialEffect ; ar:effectType ar:Read ; ar:affectsKind ar:GitHubCodeQualityFinding ] .
   ar:call_mcp_github_get_code_quality_finding a ar:PotentialInternetCall ;
     ar:callInitiatorKind ar:NanoClawAgentContainer ;
     ar:callViaKind ar:GitHubMCPTool, ar:RemoteHTTPMCPTransport ;
@@ -676,12 +594,12 @@ ar:g_mcp_github {
   ar:op_mcp_github_get_code_scanning_alert a ar:Operation ; ar:invokedThroughKind ar:GitHubMCPTool ;
     ar:mcpToolName "get_code_scanning_alert" ;
     ar:mcpToolset "code_security" ;
-    ar:targetsKind ar:GitHubCodeSecurityData ;
+    ar:targetsKind ar:GitHubCodeScanningAlert ;
     ar:requires ar:cond_mcp_github_credential, ar:cond_network_route_permitted ;
     ar:mayInitiateInternetCall ar:call_mcp_github_get_code_scanning_alert ;
-    ar:sourceStatus ar:MCPToolAnnotation ;
+    ar:sourceStatus ar:MCPToolSchema ;
     ar:sourceNote "Get code scanning alert: Get details of a specific code scanning alert in a GitHub repository." ;
-    ar:hasPotentialEffect [ a ar:PotentialEffect ; ar:effectType ar:Read ; ar:affectsKind ar:GitHubCodeSecurityData ] .
+    ar:hasPotentialEffect [ a ar:PotentialEffect ; ar:effectType ar:Read ; ar:affectsKind ar:GitHubCodeScanningAlert ] .
   ar:call_mcp_github_get_code_scanning_alert a ar:PotentialInternetCall ;
     ar:callInitiatorKind ar:NanoClawAgentContainer ;
     ar:callViaKind ar:GitHubMCPTool, ar:RemoteHTTPMCPTransport ;
@@ -692,12 +610,13 @@ ar:g_mcp_github {
   ar:op_mcp_github_get_commit a ar:Operation ; ar:invokedThroughKind ar:GitHubMCPTool ;
     ar:mcpToolName "get_commit" ;
     ar:mcpToolset "repos" ;
-    ar:targetsKind ar:GitHubReposData ;
+    ar:targetsKind ar:GitHubCommit, ar:GitHubRepositoryFile ;
     ar:requires ar:cond_mcp_github_credential, ar:cond_network_route_permitted ;
     ar:mayInitiateInternetCall ar:call_mcp_github_get_commit ;
-    ar:sourceStatus ar:MCPToolAnnotation ;
+    ar:sourceStatus ar:MCPToolSchema ;
     ar:sourceNote "Get commit details: Get details for a commit from a GitHub repository" ;
-    ar:hasPotentialEffect [ a ar:PotentialEffect ; ar:effectType ar:Read ; ar:affectsKind ar:GitHubReposData ] .
+    ar:hasPotentialEffect [ a ar:PotentialEffect ; ar:effectType ar:Read ; ar:affectsKind ar:GitHubCommit ],
+      [ a ar:PotentialEffect ; ar:effectType ar:Read ; ar:affectsKind ar:GitHubRepositoryFile ] .
   ar:call_mcp_github_get_commit a ar:PotentialInternetCall ;
     ar:callInitiatorKind ar:NanoClawAgentContainer ;
     ar:callViaKind ar:GitHubMCPTool, ar:RemoteHTTPMCPTransport ;
@@ -708,12 +627,13 @@ ar:g_mcp_github {
   ar:op_mcp_github_get_copilot_job_status a ar:Operation ; ar:invokedThroughKind ar:GitHubMCPTool ;
     ar:mcpToolName "get_copilot_job_status" ;
     ar:mcpToolset "copilot" ;
-    ar:targetsKind ar:GitHubCopilotData ;
+    ar:targetsKind ar:GitHubCopilotTask, ar:GitHubPullRequest ;
     ar:requires ar:cond_mcp_github_credential, ar:cond_network_route_permitted ;
     ar:mayInitiateInternetCall ar:call_mcp_github_get_copilot_job_status ;
-    ar:sourceStatus ar:MCPToolAnnotation ;
+    ar:sourceStatus ar:MCPToolSchema ;
     ar:sourceNote "Get Copilot coding agent job status: Get the status of a GitHub Copilot coding agent job." ;
-    ar:hasPotentialEffect [ a ar:PotentialEffect ; ar:effectType ar:Read ; ar:affectsKind ar:GitHubCopilotData ] .
+    ar:hasPotentialEffect [ a ar:PotentialEffect ; ar:effectType ar:Read ; ar:affectsKind ar:GitHubCopilotTask ],
+      [ a ar:PotentialEffect ; ar:effectType ar:Read ; ar:affectsKind ar:GitHubPullRequest ] .
   ar:call_mcp_github_get_copilot_job_status a ar:PotentialInternetCall ;
     ar:callInitiatorKind ar:NanoClawAgentContainer ;
     ar:callViaKind ar:GitHubMCPTool, ar:RemoteHTTPMCPTransport ;
@@ -724,12 +644,12 @@ ar:g_mcp_github {
   ar:op_mcp_github_get_copilot_space a ar:Operation ; ar:invokedThroughKind ar:GitHubMCPTool ;
     ar:mcpToolName "get_copilot_space" ;
     ar:mcpToolset "copilot_spaces" ;
-    ar:targetsKind ar:GitHubCopilotSpacesData ;
+    ar:targetsKind ar:GitHubCopilotSpace ;
     ar:requires ar:cond_mcp_github_credential, ar:cond_network_route_permitted ;
     ar:mayInitiateInternetCall ar:call_mcp_github_get_copilot_space ;
-    ar:sourceStatus ar:MCPToolAnnotation ;
+    ar:sourceStatus ar:MCPToolSchema ;
     ar:sourceNote "Get Copilot Space: This tool can be used to provide additional context to the chat from a specific Copilot space." ;
-    ar:hasPotentialEffect [ a ar:PotentialEffect ; ar:effectType ar:Read ; ar:affectsKind ar:GitHubCopilotSpacesData ] .
+    ar:hasPotentialEffect [ a ar:PotentialEffect ; ar:effectType ar:Read ; ar:affectsKind ar:GitHubCopilotSpace ] .
   ar:call_mcp_github_get_copilot_space a ar:PotentialInternetCall ;
     ar:callInitiatorKind ar:NanoClawAgentContainer ;
     ar:callViaKind ar:GitHubMCPTool, ar:RemoteHTTPMCPTransport ;
@@ -740,12 +660,12 @@ ar:g_mcp_github {
   ar:op_mcp_github_get_dependabot_alert a ar:Operation ; ar:invokedThroughKind ar:GitHubMCPTool ;
     ar:mcpToolName "get_dependabot_alert" ;
     ar:mcpToolset "dependabot" ;
-    ar:targetsKind ar:GitHubDependabotData ;
+    ar:targetsKind ar:GitHubDependabotAlert ;
     ar:requires ar:cond_mcp_github_credential, ar:cond_network_route_permitted ;
     ar:mayInitiateInternetCall ar:call_mcp_github_get_dependabot_alert ;
-    ar:sourceStatus ar:MCPToolAnnotation ;
+    ar:sourceStatus ar:MCPToolSchema ;
     ar:sourceNote "Get dependabot alert: Get details of a specific dependabot alert in a GitHub repository." ;
-    ar:hasPotentialEffect [ a ar:PotentialEffect ; ar:effectType ar:Read ; ar:affectsKind ar:GitHubDependabotData ] .
+    ar:hasPotentialEffect [ a ar:PotentialEffect ; ar:effectType ar:Read ; ar:affectsKind ar:GitHubDependabotAlert ] .
   ar:call_mcp_github_get_dependabot_alert a ar:PotentialInternetCall ;
     ar:callInitiatorKind ar:NanoClawAgentContainer ;
     ar:callViaKind ar:GitHubMCPTool, ar:RemoteHTTPMCPTransport ;
@@ -756,12 +676,12 @@ ar:g_mcp_github {
   ar:op_mcp_github_get_discussion a ar:Operation ; ar:invokedThroughKind ar:GitHubMCPTool ;
     ar:mcpToolName "get_discussion" ;
     ar:mcpToolset "discussions" ;
-    ar:targetsKind ar:GitHubDiscussionsData ;
+    ar:targetsKind ar:GitHubDiscussion ;
     ar:requires ar:cond_mcp_github_credential, ar:cond_network_route_permitted ;
     ar:mayInitiateInternetCall ar:call_mcp_github_get_discussion ;
-    ar:sourceStatus ar:MCPToolAnnotation ;
+    ar:sourceStatus ar:MCPToolSchema ;
     ar:sourceNote "Get discussion: Get a specific discussion by ID" ;
-    ar:hasPotentialEffect [ a ar:PotentialEffect ; ar:effectType ar:Read ; ar:affectsKind ar:GitHubDiscussionsData ] .
+    ar:hasPotentialEffect [ a ar:PotentialEffect ; ar:effectType ar:Read ; ar:affectsKind ar:GitHubDiscussion ] .
   ar:call_mcp_github_get_discussion a ar:PotentialInternetCall ;
     ar:callInitiatorKind ar:NanoClawAgentContainer ;
     ar:callViaKind ar:GitHubMCPTool, ar:RemoteHTTPMCPTransport ;
@@ -772,12 +692,12 @@ ar:g_mcp_github {
   ar:op_mcp_github_get_discussion_comments a ar:Operation ; ar:invokedThroughKind ar:GitHubMCPTool ;
     ar:mcpToolName "get_discussion_comments" ;
     ar:mcpToolset "discussions" ;
-    ar:targetsKind ar:GitHubDiscussionsData ;
+    ar:targetsKind ar:GitHubDiscussionComment ;
     ar:requires ar:cond_mcp_github_credential, ar:cond_network_route_permitted ;
     ar:mayInitiateInternetCall ar:call_mcp_github_get_discussion_comments ;
-    ar:sourceStatus ar:MCPToolAnnotation ;
+    ar:sourceStatus ar:MCPToolSchema ;
     ar:sourceNote "Get discussion comments: Get comments from a discussion" ;
-    ar:hasPotentialEffect [ a ar:PotentialEffect ; ar:effectType ar:Read ; ar:affectsKind ar:GitHubDiscussionsData ] .
+    ar:hasPotentialEffect [ a ar:PotentialEffect ; ar:effectType ar:Read ; ar:affectsKind ar:GitHubDiscussionComment ] .
   ar:call_mcp_github_get_discussion_comments a ar:PotentialInternetCall ;
     ar:callInitiatorKind ar:NanoClawAgentContainer ;
     ar:callViaKind ar:GitHubMCPTool, ar:RemoteHTTPMCPTransport ;
@@ -788,12 +708,13 @@ ar:g_mcp_github {
   ar:op_mcp_github_get_file_blame a ar:Operation ; ar:invokedThroughKind ar:GitHubMCPTool ;
     ar:mcpToolName "get_file_blame" ;
     ar:mcpToolset "repos" ;
-    ar:targetsKind ar:GitHubReposData ;
+    ar:targetsKind ar:GitHubRepositoryFile, ar:GitHubCommit ;
     ar:requires ar:cond_mcp_github_credential, ar:cond_network_route_permitted ;
     ar:mayInitiateInternetCall ar:call_mcp_github_get_file_blame ;
-    ar:sourceStatus ar:MCPToolAnnotation ;
+    ar:sourceStatus ar:MCPToolSchema ;
     ar:sourceNote "Get file blame information: Get git blame information for a file, showing the commit that last modified each line." ;
-    ar:hasPotentialEffect [ a ar:PotentialEffect ; ar:effectType ar:Read ; ar:affectsKind ar:GitHubReposData ] .
+    ar:hasPotentialEffect [ a ar:PotentialEffect ; ar:effectType ar:Read ; ar:affectsKind ar:GitHubRepositoryFile ],
+      [ a ar:PotentialEffect ; ar:effectType ar:Read ; ar:affectsKind ar:GitHubCommit ] .
   ar:call_mcp_github_get_file_blame a ar:PotentialInternetCall ;
     ar:callInitiatorKind ar:NanoClawAgentContainer ;
     ar:callViaKind ar:GitHubMCPTool, ar:RemoteHTTPMCPTransport ;
@@ -804,12 +725,12 @@ ar:g_mcp_github {
   ar:op_mcp_github_get_file_contents a ar:Operation ; ar:invokedThroughKind ar:GitHubMCPTool ;
     ar:mcpToolName "get_file_contents" ;
     ar:mcpToolset "repos" ;
-    ar:targetsKind ar:GitHubReposData ;
+    ar:targetsKind ar:GitHubRepositoryFile ;
     ar:requires ar:cond_mcp_github_credential, ar:cond_network_route_permitted ;
     ar:mayInitiateInternetCall ar:call_mcp_github_get_file_contents ;
-    ar:sourceStatus ar:MCPToolAnnotation ;
+    ar:sourceStatus ar:MCPToolSchema ;
     ar:sourceNote "Get file or directory contents: Get the contents of a file or directory from a GitHub repository" ;
-    ar:hasPotentialEffect [ a ar:PotentialEffect ; ar:effectType ar:Read ; ar:affectsKind ar:GitHubReposData ] .
+    ar:hasPotentialEffect [ a ar:PotentialEffect ; ar:effectType ar:Read ; ar:affectsKind ar:GitHubRepositoryFile ] .
   ar:call_mcp_github_get_file_contents a ar:PotentialInternetCall ;
     ar:callInitiatorKind ar:NanoClawAgentContainer ;
     ar:callViaKind ar:GitHubMCPTool, ar:RemoteHTTPMCPTransport ;
@@ -820,12 +741,12 @@ ar:g_mcp_github {
   ar:op_mcp_github_get_gist a ar:Operation ; ar:invokedThroughKind ar:GitHubMCPTool ;
     ar:mcpToolName "get_gist" ;
     ar:mcpToolset "gists" ;
-    ar:targetsKind ar:GitHubGistsData ;
+    ar:targetsKind ar:GitHubGist ;
     ar:requires ar:cond_mcp_github_credential, ar:cond_network_route_permitted ;
     ar:mayInitiateInternetCall ar:call_mcp_github_get_gist ;
-    ar:sourceStatus ar:MCPToolAnnotation ;
+    ar:sourceStatus ar:MCPToolSchema ;
     ar:sourceNote "Get Gist Content: Get gist content of a particular gist, by gist ID" ;
-    ar:hasPotentialEffect [ a ar:PotentialEffect ; ar:effectType ar:Read ; ar:affectsKind ar:GitHubGistsData ] .
+    ar:hasPotentialEffect [ a ar:PotentialEffect ; ar:effectType ar:Read ; ar:affectsKind ar:GitHubGist ] .
   ar:call_mcp_github_get_gist a ar:PotentialInternetCall ;
     ar:callInitiatorKind ar:NanoClawAgentContainer ;
     ar:callViaKind ar:GitHubMCPTool, ar:RemoteHTTPMCPTransport ;
@@ -836,12 +757,12 @@ ar:g_mcp_github {
   ar:op_mcp_github_get_global_security_advisory a ar:Operation ; ar:invokedThroughKind ar:GitHubMCPTool ;
     ar:mcpToolName "get_global_security_advisory" ;
     ar:mcpToolset "security_advisories" ;
-    ar:targetsKind ar:GitHubSecurityAdvisoriesData ;
+    ar:targetsKind ar:GitHubSecurityAdvisory ;
     ar:requires ar:cond_mcp_github_credential, ar:cond_network_route_permitted ;
     ar:mayInitiateInternetCall ar:call_mcp_github_get_global_security_advisory ;
-    ar:sourceStatus ar:MCPToolAnnotation ;
+    ar:sourceStatus ar:MCPToolSchema ;
     ar:sourceNote "Get a global security advisory: Get a global security advisory" ;
-    ar:hasPotentialEffect [ a ar:PotentialEffect ; ar:effectType ar:Read ; ar:affectsKind ar:GitHubSecurityAdvisoriesData ] .
+    ar:hasPotentialEffect [ a ar:PotentialEffect ; ar:effectType ar:Read ; ar:affectsKind ar:GitHubSecurityAdvisory ] .
   ar:call_mcp_github_get_global_security_advisory a ar:PotentialInternetCall ;
     ar:callInitiatorKind ar:NanoClawAgentContainer ;
     ar:callViaKind ar:GitHubMCPTool, ar:RemoteHTTPMCPTransport ;
@@ -852,12 +773,12 @@ ar:g_mcp_github {
   ar:op_mcp_github_get_job_logs a ar:Operation ; ar:invokedThroughKind ar:GitHubMCPTool ;
     ar:mcpToolName "get_job_logs" ;
     ar:mcpToolset "actions" ;
-    ar:targetsKind ar:GitHubActionsData ;
+    ar:targetsKind ar:GitHubWorkflowJob ;
     ar:requires ar:cond_mcp_github_credential, ar:cond_network_route_permitted ;
     ar:mayInitiateInternetCall ar:call_mcp_github_get_job_logs ;
-    ar:sourceStatus ar:MCPToolAnnotation ;
+    ar:sourceStatus ar:MCPToolSchema ;
     ar:sourceNote "Get GitHub Actions workflow job logs: Get logs for GitHub Actions workflow jobs." ;
-    ar:hasPotentialEffect [ a ar:PotentialEffect ; ar:effectType ar:Read ; ar:affectsKind ar:GitHubActionsData ] .
+    ar:hasPotentialEffect [ a ar:PotentialEffect ; ar:effectType ar:Read ; ar:affectsKind ar:GitHubWorkflowJob ] .
   ar:call_mcp_github_get_job_logs a ar:PotentialInternetCall ;
     ar:callInitiatorKind ar:NanoClawAgentContainer ;
     ar:callViaKind ar:GitHubMCPTool, ar:RemoteHTTPMCPTransport ;
@@ -868,13 +789,12 @@ ar:g_mcp_github {
   ar:op_mcp_github_get_label a ar:Operation ; ar:invokedThroughKind ar:GitHubMCPTool ;
     ar:mcpToolName "get_label" ;
     ar:mcpToolset "issues", "labels" ;
-    ar:targetsKind ar:GitHubIssuesData, ar:GitHubLabelsData ;
+    ar:targetsKind ar:GitHubLabel ;
     ar:requires ar:cond_mcp_github_credential, ar:cond_network_route_permitted ;
     ar:mayInitiateInternetCall ar:call_mcp_github_get_label ;
-    ar:sourceStatus ar:MCPToolAnnotation ;
+    ar:sourceStatus ar:MCPToolSchema ;
     ar:sourceNote "Get a specific label from a repository: Get a specific label from a repository." ;
-    ar:hasPotentialEffect [ a ar:PotentialEffect ; ar:effectType ar:Read ; ar:affectsKind ar:GitHubIssuesData ],
-      [ a ar:PotentialEffect ; ar:effectType ar:Read ; ar:affectsKind ar:GitHubLabelsData ] .
+    ar:hasPotentialEffect [ a ar:PotentialEffect ; ar:effectType ar:Read ; ar:affectsKind ar:GitHubLabel ] .
   ar:call_mcp_github_get_label a ar:PotentialInternetCall ;
     ar:callInitiatorKind ar:NanoClawAgentContainer ;
     ar:callViaKind ar:GitHubMCPTool, ar:RemoteHTTPMCPTransport ;
@@ -885,12 +805,12 @@ ar:g_mcp_github {
   ar:op_mcp_github_get_latest_release a ar:Operation ; ar:invokedThroughKind ar:GitHubMCPTool ;
     ar:mcpToolName "get_latest_release" ;
     ar:mcpToolset "repos" ;
-    ar:targetsKind ar:GitHubReposData ;
+    ar:targetsKind ar:GitHubRelease ;
     ar:requires ar:cond_mcp_github_credential, ar:cond_network_route_permitted ;
     ar:mayInitiateInternetCall ar:call_mcp_github_get_latest_release ;
-    ar:sourceStatus ar:MCPToolAnnotation ;
+    ar:sourceStatus ar:MCPToolSchema ;
     ar:sourceNote "Get latest release: Get the latest release in a GitHub repository" ;
-    ar:hasPotentialEffect [ a ar:PotentialEffect ; ar:effectType ar:Read ; ar:affectsKind ar:GitHubReposData ] .
+    ar:hasPotentialEffect [ a ar:PotentialEffect ; ar:effectType ar:Read ; ar:affectsKind ar:GitHubRelease ] .
   ar:call_mcp_github_get_latest_release a ar:PotentialInternetCall ;
     ar:callInitiatorKind ar:NanoClawAgentContainer ;
     ar:callViaKind ar:GitHubMCPTool, ar:RemoteHTTPMCPTransport ;
@@ -901,12 +821,12 @@ ar:g_mcp_github {
   ar:op_mcp_github_get_me a ar:Operation ; ar:invokedThroughKind ar:GitHubMCPTool ;
     ar:mcpToolName "get_me" ;
     ar:mcpToolset "context" ;
-    ar:targetsKind ar:GitHubContextData ;
+    ar:targetsKind ar:GitHubUser ;
     ar:requires ar:cond_mcp_github_credential, ar:cond_network_route_permitted ;
     ar:mayInitiateInternetCall ar:call_mcp_github_get_me ;
-    ar:sourceStatus ar:MCPToolAnnotation ;
+    ar:sourceStatus ar:MCPToolSchema ;
     ar:sourceNote "Get my user profile: Get details of the authenticated GitHub user." ;
-    ar:hasPotentialEffect [ a ar:PotentialEffect ; ar:effectType ar:Read ; ar:affectsKind ar:GitHubContextData ] .
+    ar:hasPotentialEffect [ a ar:PotentialEffect ; ar:effectType ar:Read ; ar:affectsKind ar:GitHubUser ] .
   ar:call_mcp_github_get_me a ar:PotentialInternetCall ;
     ar:callInitiatorKind ar:NanoClawAgentContainer ;
     ar:callViaKind ar:GitHubMCPTool, ar:RemoteHTTPMCPTransport ;
@@ -917,12 +837,12 @@ ar:g_mcp_github {
   ar:op_mcp_github_get_notification_details a ar:Operation ; ar:invokedThroughKind ar:GitHubMCPTool ;
     ar:mcpToolName "get_notification_details" ;
     ar:mcpToolset "notifications" ;
-    ar:targetsKind ar:GitHubNotificationsData ;
+    ar:targetsKind ar:GitHubNotification ;
     ar:requires ar:cond_mcp_github_credential, ar:cond_network_route_permitted ;
     ar:mayInitiateInternetCall ar:call_mcp_github_get_notification_details ;
-    ar:sourceStatus ar:MCPToolAnnotation ;
+    ar:sourceStatus ar:MCPToolSchema ;
     ar:sourceNote "Get notification details: Get detailed information for a specific GitHub notification, always call this tool when the user asks for details about a specific notification, if you don't know the ID list notifications first." ;
-    ar:hasPotentialEffect [ a ar:PotentialEffect ; ar:effectType ar:Read ; ar:affectsKind ar:GitHubNotificationsData ] .
+    ar:hasPotentialEffect [ a ar:PotentialEffect ; ar:effectType ar:Read ; ar:affectsKind ar:GitHubNotification ] .
   ar:call_mcp_github_get_notification_details a ar:PotentialInternetCall ;
     ar:callInitiatorKind ar:NanoClawAgentContainer ;
     ar:callViaKind ar:GitHubMCPTool, ar:RemoteHTTPMCPTransport ;
@@ -933,12 +853,13 @@ ar:g_mcp_github {
   ar:op_mcp_github_get_release_by_tag a ar:Operation ; ar:invokedThroughKind ar:GitHubMCPTool ;
     ar:mcpToolName "get_release_by_tag" ;
     ar:mcpToolset "repos" ;
-    ar:targetsKind ar:GitHubReposData ;
+    ar:targetsKind ar:GitHubRelease, ar:GitHubTag ;
     ar:requires ar:cond_mcp_github_credential, ar:cond_network_route_permitted ;
     ar:mayInitiateInternetCall ar:call_mcp_github_get_release_by_tag ;
-    ar:sourceStatus ar:MCPToolAnnotation ;
+    ar:sourceStatus ar:MCPToolSchema ;
     ar:sourceNote "Get a release by tag name: Get a specific release by its tag name in a GitHub repository" ;
-    ar:hasPotentialEffect [ a ar:PotentialEffect ; ar:effectType ar:Read ; ar:affectsKind ar:GitHubReposData ] .
+    ar:hasPotentialEffect [ a ar:PotentialEffect ; ar:effectType ar:Read ; ar:affectsKind ar:GitHubRelease ],
+      [ a ar:PotentialEffect ; ar:effectType ar:Read ; ar:affectsKind ar:GitHubTag ] .
   ar:call_mcp_github_get_release_by_tag a ar:PotentialInternetCall ;
     ar:callInitiatorKind ar:NanoClawAgentContainer ;
     ar:callViaKind ar:GitHubMCPTool, ar:RemoteHTTPMCPTransport ;
@@ -949,12 +870,12 @@ ar:g_mcp_github {
   ar:op_mcp_github_get_repository_tree a ar:Operation ; ar:invokedThroughKind ar:GitHubMCPTool ;
     ar:mcpToolName "get_repository_tree" ;
     ar:mcpToolset "git" ;
-    ar:targetsKind ar:GitHubGitData ;
+    ar:targetsKind ar:GitHubRepositoryFile ;
     ar:requires ar:cond_mcp_github_credential, ar:cond_network_route_permitted ;
     ar:mayInitiateInternetCall ar:call_mcp_github_get_repository_tree ;
-    ar:sourceStatus ar:MCPToolAnnotation ;
+    ar:sourceStatus ar:MCPToolSchema ;
     ar:sourceNote "Get repository tree: Get the tree structure (files and directories) of a GitHub repository at a specific ref or SHA" ;
-    ar:hasPotentialEffect [ a ar:PotentialEffect ; ar:effectType ar:Read ; ar:affectsKind ar:GitHubGitData ] .
+    ar:hasPotentialEffect [ a ar:PotentialEffect ; ar:effectType ar:Read ; ar:affectsKind ar:GitHubRepositoryFile ] .
   ar:call_mcp_github_get_repository_tree a ar:PotentialInternetCall ;
     ar:callInitiatorKind ar:NanoClawAgentContainer ;
     ar:callViaKind ar:GitHubMCPTool, ar:RemoteHTTPMCPTransport ;
@@ -965,12 +886,12 @@ ar:g_mcp_github {
   ar:op_mcp_github_get_secret_scanning_alert a ar:Operation ; ar:invokedThroughKind ar:GitHubMCPTool ;
     ar:mcpToolName "get_secret_scanning_alert" ;
     ar:mcpToolset "secret_protection" ;
-    ar:targetsKind ar:GitHubSecretProtectionData ;
+    ar:targetsKind ar:GitHubSecretScanningAlert ;
     ar:requires ar:cond_mcp_github_credential, ar:cond_network_route_permitted ;
     ar:mayInitiateInternetCall ar:call_mcp_github_get_secret_scanning_alert ;
-    ar:sourceStatus ar:MCPToolAnnotation ;
+    ar:sourceStatus ar:MCPToolSchema ;
     ar:sourceNote "Get secret scanning alert: Get details of a specific secret scanning alert in a GitHub repository." ;
-    ar:hasPotentialEffect [ a ar:PotentialEffect ; ar:effectType ar:Read ; ar:affectsKind ar:GitHubSecretProtectionData ] .
+    ar:hasPotentialEffect [ a ar:PotentialEffect ; ar:effectType ar:Read ; ar:affectsKind ar:GitHubSecretScanningAlert ] .
   ar:call_mcp_github_get_secret_scanning_alert a ar:PotentialInternetCall ;
     ar:callInitiatorKind ar:NanoClawAgentContainer ;
     ar:callViaKind ar:GitHubMCPTool, ar:RemoteHTTPMCPTransport ;
@@ -981,12 +902,12 @@ ar:g_mcp_github {
   ar:op_mcp_github_get_tag a ar:Operation ; ar:invokedThroughKind ar:GitHubMCPTool ;
     ar:mcpToolName "get_tag" ;
     ar:mcpToolset "repos" ;
-    ar:targetsKind ar:GitHubReposData ;
+    ar:targetsKind ar:GitHubTag ;
     ar:requires ar:cond_mcp_github_credential, ar:cond_network_route_permitted ;
     ar:mayInitiateInternetCall ar:call_mcp_github_get_tag ;
-    ar:sourceStatus ar:MCPToolAnnotation ;
+    ar:sourceStatus ar:MCPToolSchema ;
     ar:sourceNote "Get tag details: Get details about a specific git tag in a GitHub repository" ;
-    ar:hasPotentialEffect [ a ar:PotentialEffect ; ar:effectType ar:Read ; ar:affectsKind ar:GitHubReposData ] .
+    ar:hasPotentialEffect [ a ar:PotentialEffect ; ar:effectType ar:Read ; ar:affectsKind ar:GitHubTag ] .
   ar:call_mcp_github_get_tag a ar:PotentialInternetCall ;
     ar:callInitiatorKind ar:NanoClawAgentContainer ;
     ar:callViaKind ar:GitHubMCPTool, ar:RemoteHTTPMCPTransport ;
@@ -997,12 +918,13 @@ ar:g_mcp_github {
   ar:op_mcp_github_get_team_members a ar:Operation ; ar:invokedThroughKind ar:GitHubMCPTool ;
     ar:mcpToolName "get_team_members" ;
     ar:mcpToolset "context" ;
-    ar:targetsKind ar:GitHubContextData ;
+    ar:targetsKind ar:GitHubTeam, ar:GitHubUser ;
     ar:requires ar:cond_mcp_github_credential, ar:cond_network_route_permitted ;
     ar:mayInitiateInternetCall ar:call_mcp_github_get_team_members ;
-    ar:sourceStatus ar:MCPToolAnnotation ;
+    ar:sourceStatus ar:MCPToolSchema ;
     ar:sourceNote "Get team members: Get member usernames of a specific team in an organization." ;
-    ar:hasPotentialEffect [ a ar:PotentialEffect ; ar:effectType ar:Read ; ar:affectsKind ar:GitHubContextData ] .
+    ar:hasPotentialEffect [ a ar:PotentialEffect ; ar:effectType ar:Read ; ar:affectsKind ar:GitHubTeam ],
+      [ a ar:PotentialEffect ; ar:effectType ar:Read ; ar:affectsKind ar:GitHubUser ] .
   ar:call_mcp_github_get_team_members a ar:PotentialInternetCall ;
     ar:callInitiatorKind ar:NanoClawAgentContainer ;
     ar:callViaKind ar:GitHubMCPTool, ar:RemoteHTTPMCPTransport ;
@@ -1013,12 +935,12 @@ ar:g_mcp_github {
   ar:op_mcp_github_get_teams a ar:Operation ; ar:invokedThroughKind ar:GitHubMCPTool ;
     ar:mcpToolName "get_teams" ;
     ar:mcpToolset "context" ;
-    ar:targetsKind ar:GitHubContextData ;
+    ar:targetsKind ar:GitHubTeam ;
     ar:requires ar:cond_mcp_github_credential, ar:cond_network_route_permitted ;
     ar:mayInitiateInternetCall ar:call_mcp_github_get_teams ;
-    ar:sourceStatus ar:MCPToolAnnotation ;
+    ar:sourceStatus ar:MCPToolSchema ;
     ar:sourceNote "Get teams: Get details of the teams the user is a member of." ;
-    ar:hasPotentialEffect [ a ar:PotentialEffect ; ar:effectType ar:Read ; ar:affectsKind ar:GitHubContextData ] .
+    ar:hasPotentialEffect [ a ar:PotentialEffect ; ar:effectType ar:Read ; ar:affectsKind ar:GitHubTeam ] .
   ar:call_mcp_github_get_teams a ar:PotentialInternetCall ;
     ar:callInitiatorKind ar:NanoClawAgentContainer ;
     ar:callViaKind ar:GitHubMCPTool, ar:RemoteHTTPMCPTransport ;
@@ -1029,12 +951,12 @@ ar:g_mcp_github {
   ar:op_mcp_github_github_support_docs_search a ar:Operation ; ar:invokedThroughKind ar:GitHubMCPTool ;
     ar:mcpToolName "github_support_docs_search" ;
     ar:mcpToolset "github_support_docs_search" ;
-    ar:targetsKind ar:GitHubGithubSupportDocsSearchData ;
+    ar:targetsKind ar:GitHubDocumentation ;
     ar:requires ar:cond_mcp_github_credential, ar:cond_network_route_permitted ;
     ar:mayInitiateInternetCall ar:call_mcp_github_github_support_docs_search ;
-    ar:sourceStatus ar:MCPToolAnnotation ;
+    ar:sourceStatus ar:MCPToolSchema ;
     ar:sourceNote "GitHub Support Docs Search: Retrieve documentation relevant to answer GitHub product and support questions." ;
-    ar:hasPotentialEffect [ a ar:PotentialEffect ; ar:effectType ar:Read ; ar:affectsKind ar:GitHubGithubSupportDocsSearchData ] .
+    ar:hasPotentialEffect [ a ar:PotentialEffect ; ar:effectType ar:Read ; ar:affectsKind ar:GitHubDocumentation ] .
   ar:call_mcp_github_github_support_docs_search a ar:PotentialInternetCall ;
     ar:callInitiatorKind ar:NanoClawAgentContainer ;
     ar:callViaKind ar:GitHubMCPTool, ar:RemoteHTTPMCPTransport ;
@@ -1045,12 +967,12 @@ ar:g_mcp_github {
   ar:op_mcp_github_issue_dependency_read a ar:Operation ; ar:invokedThroughKind ar:GitHubMCPTool ;
     ar:mcpToolName "issue_dependency_read" ;
     ar:mcpToolset "issues" ;
-    ar:targetsKind ar:GitHubIssuesData ;
+    ar:targetsKind ar:GitHubIssue ;
     ar:requires ar:cond_mcp_github_credential, ar:cond_network_route_permitted ;
     ar:mayInitiateInternetCall ar:call_mcp_github_issue_dependency_read ;
-    ar:sourceStatus ar:MCPToolAnnotation ;
+    ar:sourceStatus ar:MCPToolSchema ;
     ar:sourceNote "Read issue dependencies: Read an issue's dependency relationships in a GitHub repository: the issues that block it (blocked_by) or the issues it blocks (blocking)." ;
-    ar:hasPotentialEffect [ a ar:PotentialEffect ; ar:effectType ar:Read ; ar:affectsKind ar:GitHubIssuesData ] .
+    ar:hasPotentialEffect [ a ar:PotentialEffect ; ar:effectType ar:Read ; ar:affectsKind ar:GitHubIssue ] .
   ar:call_mcp_github_issue_dependency_read a ar:PotentialInternetCall ;
     ar:callInitiatorKind ar:NanoClawAgentContainer ;
     ar:callViaKind ar:GitHubMCPTool, ar:RemoteHTTPMCPTransport ;
@@ -1061,15 +983,15 @@ ar:g_mcp_github {
   ar:op_mcp_github_issue_dependency_write a ar:Operation ; ar:invokedThroughKind ar:GitHubMCPTool ;
     ar:mcpToolName "issue_dependency_write" ;
     ar:mcpToolset "issues" ;
-    ar:targetsKind ar:GitHubIssuesData ;
+    ar:targetsKind ar:GitHubIssue ;
     ar:requires ar:cond_mcp_github_credential, ar:cond_network_route_permitted ;
     ar:mayInitiateInternetCall ar:call_mcp_github_issue_dependency_write ;
-    ar:sourceStatus ar:MCPToolAnnotation ;
+    ar:sourceStatus ar:MCPToolSchema ;
     ar:sourceNote "Change issue dependency: Add or remove an issue dependency relationship in a GitHub repository." ;
-    ar:hasPotentialEffect [ a ar:PotentialEffect ; ar:effectType ar:Create ; ar:affectsKind ar:GitHubIssuesData ],
-      [ a ar:PotentialEffect ; ar:effectType ar:Delete ; ar:affectsKind ar:GitHubIssuesData ],
-      [ a ar:PotentialEffect ; ar:effectType ar:Transmit ; ar:affectsKind ar:GitHubIssuesData ],
-      [ a ar:PotentialEffect ; ar:effectType ar:Update ; ar:affectsKind ar:GitHubIssuesData ] .
+    ar:hasPotentialEffect [ a ar:PotentialEffect ; ar:effectType ar:Transmit ; ar:affectsKind ar:GitHubIssue ; ar:mcpToolMethod "add" ],
+      [ a ar:PotentialEffect ; ar:effectType ar:Update ; ar:affectsKind ar:GitHubIssue ; ar:mcpToolMethod "add" ],
+      [ a ar:PotentialEffect ; ar:effectType ar:Transmit ; ar:affectsKind ar:GitHubIssue ; ar:mcpToolMethod "remove" ],
+      [ a ar:PotentialEffect ; ar:effectType ar:Update ; ar:affectsKind ar:GitHubIssue ; ar:mcpToolMethod "remove" ] .
   ar:call_mcp_github_issue_dependency_write a ar:PotentialInternetCall ;
     ar:callInitiatorKind ar:NanoClawAgentContainer ;
     ar:callViaKind ar:GitHubMCPTool, ar:RemoteHTTPMCPTransport ;
@@ -1080,12 +1002,16 @@ ar:g_mcp_github {
   ar:op_mcp_github_issue_read a ar:Operation ; ar:invokedThroughKind ar:GitHubMCPTool ;
     ar:mcpToolName "issue_read" ;
     ar:mcpToolset "issues" ;
-    ar:targetsKind ar:GitHubIssuesData ;
+    ar:targetsKind ar:GitHubIssue, ar:GitHubIssueComment, ar:GitHubLabel ;
     ar:requires ar:cond_mcp_github_credential, ar:cond_network_route_permitted ;
     ar:mayInitiateInternetCall ar:call_mcp_github_issue_read ;
-    ar:sourceStatus ar:MCPToolAnnotation ;
+    ar:sourceStatus ar:MCPToolSchema ;
     ar:sourceNote "Get issue details: Get information about a specific issue in a GitHub repository." ;
-    ar:hasPotentialEffect [ a ar:PotentialEffect ; ar:effectType ar:Read ; ar:affectsKind ar:GitHubIssuesData ] .
+    ar:hasPotentialEffect [ a ar:PotentialEffect ; ar:effectType ar:Read ; ar:affectsKind ar:GitHubIssue ; ar:mcpToolMethod "get" ],
+      [ a ar:PotentialEffect ; ar:effectType ar:Read ; ar:affectsKind ar:GitHubIssue ; ar:mcpToolMethod "get_sub_issues" ],
+      [ a ar:PotentialEffect ; ar:effectType ar:Read ; ar:affectsKind ar:GitHubIssue ; ar:mcpToolMethod "get_parent" ],
+      [ a ar:PotentialEffect ; ar:effectType ar:Read ; ar:affectsKind ar:GitHubIssueComment ; ar:mcpToolMethod "get_comments" ],
+      [ a ar:PotentialEffect ; ar:effectType ar:Read ; ar:affectsKind ar:GitHubLabel ; ar:mcpToolMethod "get_labels" ] .
   ar:call_mcp_github_issue_read a ar:PotentialInternetCall ;
     ar:callInitiatorKind ar:NanoClawAgentContainer ;
     ar:callViaKind ar:GitHubMCPTool, ar:RemoteHTTPMCPTransport ;
@@ -1096,15 +1022,15 @@ ar:g_mcp_github {
   ar:op_mcp_github_issue_write a ar:Operation ; ar:invokedThroughKind ar:GitHubMCPTool ;
     ar:mcpToolName "issue_write" ;
     ar:mcpToolset "issues" ;
-    ar:targetsKind ar:GitHubIssuesData ;
+    ar:targetsKind ar:GitHubIssue ;
     ar:requires ar:cond_mcp_github_credential, ar:cond_network_route_permitted ;
     ar:mayInitiateInternetCall ar:call_mcp_github_issue_write ;
-    ar:sourceStatus ar:MCPToolAnnotation ;
+    ar:sourceStatus ar:MCPToolSchema ;
     ar:sourceNote "Create or update issue/pull request: Create a new or update an existing issue in a GitHub repository." ;
-    ar:hasPotentialEffect [ a ar:PotentialEffect ; ar:effectType ar:Create ; ar:affectsKind ar:GitHubIssuesData ],
-      [ a ar:PotentialEffect ; ar:effectType ar:Delete ; ar:affectsKind ar:GitHubIssuesData ],
-      [ a ar:PotentialEffect ; ar:effectType ar:Transmit ; ar:affectsKind ar:GitHubIssuesData ],
-      [ a ar:PotentialEffect ; ar:effectType ar:Update ; ar:affectsKind ar:GitHubIssuesData ] .
+    ar:hasPotentialEffect [ a ar:PotentialEffect ; ar:effectType ar:Create ; ar:affectsKind ar:GitHubIssue ; ar:mcpToolMethod "create" ],
+      [ a ar:PotentialEffect ; ar:effectType ar:Transmit ; ar:affectsKind ar:GitHubIssue ; ar:mcpToolMethod "create" ],
+      [ a ar:PotentialEffect ; ar:effectType ar:Transmit ; ar:affectsKind ar:GitHubIssue ; ar:mcpToolMethod "update" ],
+      [ a ar:PotentialEffect ; ar:effectType ar:Update ; ar:affectsKind ar:GitHubIssue ; ar:mcpToolMethod "update" ] .
   ar:call_mcp_github_issue_write a ar:PotentialInternetCall ;
     ar:callInitiatorKind ar:NanoClawAgentContainer ;
     ar:callViaKind ar:GitHubMCPTool, ar:RemoteHTTPMCPTransport ;
@@ -1115,15 +1041,17 @@ ar:g_mcp_github {
   ar:op_mcp_github_label_write a ar:Operation ; ar:invokedThroughKind ar:GitHubMCPTool ;
     ar:mcpToolName "label_write" ;
     ar:mcpToolset "labels" ;
-    ar:targetsKind ar:GitHubLabelsData ;
+    ar:targetsKind ar:GitHubLabel ;
     ar:requires ar:cond_mcp_github_credential, ar:cond_network_route_permitted ;
     ar:mayInitiateInternetCall ar:call_mcp_github_label_write ;
-    ar:sourceStatus ar:MCPToolAnnotation ;
+    ar:sourceStatus ar:MCPToolSchema ;
     ar:sourceNote "Write operations on repository labels: Perform write operations on repository labels." ;
-    ar:hasPotentialEffect [ a ar:PotentialEffect ; ar:effectType ar:Create ; ar:affectsKind ar:GitHubLabelsData ],
-      [ a ar:PotentialEffect ; ar:effectType ar:Delete ; ar:affectsKind ar:GitHubLabelsData ],
-      [ a ar:PotentialEffect ; ar:effectType ar:Transmit ; ar:affectsKind ar:GitHubLabelsData ],
-      [ a ar:PotentialEffect ; ar:effectType ar:Update ; ar:affectsKind ar:GitHubLabelsData ] .
+    ar:hasPotentialEffect [ a ar:PotentialEffect ; ar:effectType ar:Create ; ar:affectsKind ar:GitHubLabel ; ar:mcpToolMethod "create" ],
+      [ a ar:PotentialEffect ; ar:effectType ar:Transmit ; ar:affectsKind ar:GitHubLabel ; ar:mcpToolMethod "create" ],
+      [ a ar:PotentialEffect ; ar:effectType ar:Transmit ; ar:affectsKind ar:GitHubLabel ; ar:mcpToolMethod "update" ],
+      [ a ar:PotentialEffect ; ar:effectType ar:Update ; ar:affectsKind ar:GitHubLabel ; ar:mcpToolMethod "update" ],
+      [ a ar:PotentialEffect ; ar:effectType ar:Delete ; ar:affectsKind ar:GitHubLabel ; ar:mcpToolMethod "delete" ],
+      [ a ar:PotentialEffect ; ar:effectType ar:Transmit ; ar:affectsKind ar:GitHubLabel ; ar:mcpToolMethod "delete" ] .
   ar:call_mcp_github_label_write a ar:PotentialInternetCall ;
     ar:callInitiatorKind ar:NanoClawAgentContainer ;
     ar:callViaKind ar:GitHubMCPTool, ar:RemoteHTTPMCPTransport ;
@@ -1134,12 +1062,12 @@ ar:g_mcp_github {
   ar:op_mcp_github_list_branches a ar:Operation ; ar:invokedThroughKind ar:GitHubMCPTool ;
     ar:mcpToolName "list_branches" ;
     ar:mcpToolset "repos" ;
-    ar:targetsKind ar:GitHubReposData ;
+    ar:targetsKind ar:GitHubBranch ;
     ar:requires ar:cond_mcp_github_credential, ar:cond_network_route_permitted ;
     ar:mayInitiateInternetCall ar:call_mcp_github_list_branches ;
-    ar:sourceStatus ar:MCPToolAnnotation ;
+    ar:sourceStatus ar:MCPToolSchema ;
     ar:sourceNote "List branches: List branches in a GitHub repository" ;
-    ar:hasPotentialEffect [ a ar:PotentialEffect ; ar:effectType ar:Read ; ar:affectsKind ar:GitHubReposData ] .
+    ar:hasPotentialEffect [ a ar:PotentialEffect ; ar:effectType ar:Read ; ar:affectsKind ar:GitHubBranch ] .
   ar:call_mcp_github_list_branches a ar:PotentialInternetCall ;
     ar:callInitiatorKind ar:NanoClawAgentContainer ;
     ar:callViaKind ar:GitHubMCPTool, ar:RemoteHTTPMCPTransport ;
@@ -1150,12 +1078,12 @@ ar:g_mcp_github {
   ar:op_mcp_github_list_code_scanning_alerts a ar:Operation ; ar:invokedThroughKind ar:GitHubMCPTool ;
     ar:mcpToolName "list_code_scanning_alerts" ;
     ar:mcpToolset "code_security" ;
-    ar:targetsKind ar:GitHubCodeSecurityData ;
+    ar:targetsKind ar:GitHubCodeScanningAlert ;
     ar:requires ar:cond_mcp_github_credential, ar:cond_network_route_permitted ;
     ar:mayInitiateInternetCall ar:call_mcp_github_list_code_scanning_alerts ;
-    ar:sourceStatus ar:MCPToolAnnotation ;
+    ar:sourceStatus ar:MCPToolSchema ;
     ar:sourceNote "List code scanning alerts: List code scanning alerts in a GitHub repository." ;
-    ar:hasPotentialEffect [ a ar:PotentialEffect ; ar:effectType ar:Read ; ar:affectsKind ar:GitHubCodeSecurityData ] .
+    ar:hasPotentialEffect [ a ar:PotentialEffect ; ar:effectType ar:Read ; ar:affectsKind ar:GitHubCodeScanningAlert ] .
   ar:call_mcp_github_list_code_scanning_alerts a ar:PotentialInternetCall ;
     ar:callInitiatorKind ar:NanoClawAgentContainer ;
     ar:callViaKind ar:GitHubMCPTool, ar:RemoteHTTPMCPTransport ;
@@ -1166,12 +1094,12 @@ ar:g_mcp_github {
   ar:op_mcp_github_list_commits a ar:Operation ; ar:invokedThroughKind ar:GitHubMCPTool ;
     ar:mcpToolName "list_commits" ;
     ar:mcpToolset "repos" ;
-    ar:targetsKind ar:GitHubReposData ;
+    ar:targetsKind ar:GitHubCommit ;
     ar:requires ar:cond_mcp_github_credential, ar:cond_network_route_permitted ;
     ar:mayInitiateInternetCall ar:call_mcp_github_list_commits ;
-    ar:sourceStatus ar:MCPToolAnnotation ;
+    ar:sourceStatus ar:MCPToolSchema ;
     ar:sourceNote "List commits: Get list of commits of a branch in a GitHub repository." ;
-    ar:hasPotentialEffect [ a ar:PotentialEffect ; ar:effectType ar:Read ; ar:affectsKind ar:GitHubReposData ] .
+    ar:hasPotentialEffect [ a ar:PotentialEffect ; ar:effectType ar:Read ; ar:affectsKind ar:GitHubCommit ] .
   ar:call_mcp_github_list_commits a ar:PotentialInternetCall ;
     ar:callInitiatorKind ar:NanoClawAgentContainer ;
     ar:callViaKind ar:GitHubMCPTool, ar:RemoteHTTPMCPTransport ;
@@ -1182,12 +1110,12 @@ ar:g_mcp_github {
   ar:op_mcp_github_list_copilot_spaces a ar:Operation ; ar:invokedThroughKind ar:GitHubMCPTool ;
     ar:mcpToolName "list_copilot_spaces" ;
     ar:mcpToolset "copilot_spaces" ;
-    ar:targetsKind ar:GitHubCopilotSpacesData ;
+    ar:targetsKind ar:GitHubCopilotSpace ;
     ar:requires ar:cond_mcp_github_credential, ar:cond_network_route_permitted ;
     ar:mayInitiateInternetCall ar:call_mcp_github_list_copilot_spaces ;
-    ar:sourceStatus ar:MCPToolAnnotation ;
+    ar:sourceStatus ar:MCPToolSchema ;
     ar:sourceNote "List Copilot Spaces: Retrieves the list of Copilot Spaces accessible to the user, including their names and owners." ;
-    ar:hasPotentialEffect [ a ar:PotentialEffect ; ar:effectType ar:Read ; ar:affectsKind ar:GitHubCopilotSpacesData ] .
+    ar:hasPotentialEffect [ a ar:PotentialEffect ; ar:effectType ar:Read ; ar:affectsKind ar:GitHubCopilotSpace ] .
   ar:call_mcp_github_list_copilot_spaces a ar:PotentialInternetCall ;
     ar:callInitiatorKind ar:NanoClawAgentContainer ;
     ar:callViaKind ar:GitHubMCPTool, ar:RemoteHTTPMCPTransport ;
@@ -1198,12 +1126,12 @@ ar:g_mcp_github {
   ar:op_mcp_github_list_dependabot_alerts a ar:Operation ; ar:invokedThroughKind ar:GitHubMCPTool ;
     ar:mcpToolName "list_dependabot_alerts" ;
     ar:mcpToolset "dependabot" ;
-    ar:targetsKind ar:GitHubDependabotData ;
+    ar:targetsKind ar:GitHubDependabotAlert ;
     ar:requires ar:cond_mcp_github_credential, ar:cond_network_route_permitted ;
     ar:mayInitiateInternetCall ar:call_mcp_github_list_dependabot_alerts ;
-    ar:sourceStatus ar:MCPToolAnnotation ;
+    ar:sourceStatus ar:MCPToolSchema ;
     ar:sourceNote "List dependabot alerts: List dependabot alerts in a GitHub repository." ;
-    ar:hasPotentialEffect [ a ar:PotentialEffect ; ar:effectType ar:Read ; ar:affectsKind ar:GitHubDependabotData ] .
+    ar:hasPotentialEffect [ a ar:PotentialEffect ; ar:effectType ar:Read ; ar:affectsKind ar:GitHubDependabotAlert ] .
   ar:call_mcp_github_list_dependabot_alerts a ar:PotentialInternetCall ;
     ar:callInitiatorKind ar:NanoClawAgentContainer ;
     ar:callViaKind ar:GitHubMCPTool, ar:RemoteHTTPMCPTransport ;
@@ -1214,12 +1142,12 @@ ar:g_mcp_github {
   ar:op_mcp_github_list_discussion_categories a ar:Operation ; ar:invokedThroughKind ar:GitHubMCPTool ;
     ar:mcpToolName "list_discussion_categories" ;
     ar:mcpToolset "discussions" ;
-    ar:targetsKind ar:GitHubDiscussionsData ;
+    ar:targetsKind ar:GitHubDiscussionCategory ;
     ar:requires ar:cond_mcp_github_credential, ar:cond_network_route_permitted ;
     ar:mayInitiateInternetCall ar:call_mcp_github_list_discussion_categories ;
-    ar:sourceStatus ar:MCPToolAnnotation ;
+    ar:sourceStatus ar:MCPToolSchema ;
     ar:sourceNote "List discussion categories: List discussion categories with their id and name, for a repository or organisation." ;
-    ar:hasPotentialEffect [ a ar:PotentialEffect ; ar:effectType ar:Read ; ar:affectsKind ar:GitHubDiscussionsData ] .
+    ar:hasPotentialEffect [ a ar:PotentialEffect ; ar:effectType ar:Read ; ar:affectsKind ar:GitHubDiscussionCategory ] .
   ar:call_mcp_github_list_discussion_categories a ar:PotentialInternetCall ;
     ar:callInitiatorKind ar:NanoClawAgentContainer ;
     ar:callViaKind ar:GitHubMCPTool, ar:RemoteHTTPMCPTransport ;
@@ -1230,12 +1158,12 @@ ar:g_mcp_github {
   ar:op_mcp_github_list_discussions a ar:Operation ; ar:invokedThroughKind ar:GitHubMCPTool ;
     ar:mcpToolName "list_discussions" ;
     ar:mcpToolset "discussions" ;
-    ar:targetsKind ar:GitHubDiscussionsData ;
+    ar:targetsKind ar:GitHubDiscussion ;
     ar:requires ar:cond_mcp_github_credential, ar:cond_network_route_permitted ;
     ar:mayInitiateInternetCall ar:call_mcp_github_list_discussions ;
-    ar:sourceStatus ar:MCPToolAnnotation ;
+    ar:sourceStatus ar:MCPToolSchema ;
     ar:sourceNote "List discussions: List discussions for a repository or organisation." ;
-    ar:hasPotentialEffect [ a ar:PotentialEffect ; ar:effectType ar:Read ; ar:affectsKind ar:GitHubDiscussionsData ] .
+    ar:hasPotentialEffect [ a ar:PotentialEffect ; ar:effectType ar:Read ; ar:affectsKind ar:GitHubDiscussion ] .
   ar:call_mcp_github_list_discussions a ar:PotentialInternetCall ;
     ar:callInitiatorKind ar:NanoClawAgentContainer ;
     ar:callViaKind ar:GitHubMCPTool, ar:RemoteHTTPMCPTransport ;
@@ -1246,12 +1174,12 @@ ar:g_mcp_github {
   ar:op_mcp_github_list_gists a ar:Operation ; ar:invokedThroughKind ar:GitHubMCPTool ;
     ar:mcpToolName "list_gists" ;
     ar:mcpToolset "gists" ;
-    ar:targetsKind ar:GitHubGistsData ;
+    ar:targetsKind ar:GitHubGist ;
     ar:requires ar:cond_mcp_github_credential, ar:cond_network_route_permitted ;
     ar:mayInitiateInternetCall ar:call_mcp_github_list_gists ;
-    ar:sourceStatus ar:MCPToolAnnotation ;
+    ar:sourceStatus ar:MCPToolSchema ;
     ar:sourceNote "List Gists: List gists for a user" ;
-    ar:hasPotentialEffect [ a ar:PotentialEffect ; ar:effectType ar:Read ; ar:affectsKind ar:GitHubGistsData ] .
+    ar:hasPotentialEffect [ a ar:PotentialEffect ; ar:effectType ar:Read ; ar:affectsKind ar:GitHubGist ] .
   ar:call_mcp_github_list_gists a ar:PotentialInternetCall ;
     ar:callInitiatorKind ar:NanoClawAgentContainer ;
     ar:callViaKind ar:GitHubMCPTool, ar:RemoteHTTPMCPTransport ;
@@ -1262,12 +1190,12 @@ ar:g_mcp_github {
   ar:op_mcp_github_list_global_security_advisories a ar:Operation ; ar:invokedThroughKind ar:GitHubMCPTool ;
     ar:mcpToolName "list_global_security_advisories" ;
     ar:mcpToolset "security_advisories" ;
-    ar:targetsKind ar:GitHubSecurityAdvisoriesData ;
+    ar:targetsKind ar:GitHubSecurityAdvisory ;
     ar:requires ar:cond_mcp_github_credential, ar:cond_network_route_permitted ;
     ar:mayInitiateInternetCall ar:call_mcp_github_list_global_security_advisories ;
-    ar:sourceStatus ar:MCPToolAnnotation ;
+    ar:sourceStatus ar:MCPToolSchema ;
     ar:sourceNote "List global security advisories: List global security advisories from GitHub." ;
-    ar:hasPotentialEffect [ a ar:PotentialEffect ; ar:effectType ar:Read ; ar:affectsKind ar:GitHubSecurityAdvisoriesData ] .
+    ar:hasPotentialEffect [ a ar:PotentialEffect ; ar:effectType ar:Read ; ar:affectsKind ar:GitHubSecurityAdvisory ] .
   ar:call_mcp_github_list_global_security_advisories a ar:PotentialInternetCall ;
     ar:callInitiatorKind ar:NanoClawAgentContainer ;
     ar:callViaKind ar:GitHubMCPTool, ar:RemoteHTTPMCPTransport ;
@@ -1278,12 +1206,12 @@ ar:g_mcp_github {
   ar:op_mcp_github_list_issue_fields a ar:Operation ; ar:invokedThroughKind ar:GitHubMCPTool ;
     ar:mcpToolName "list_issue_fields" ;
     ar:mcpToolset "issues" ;
-    ar:targetsKind ar:GitHubIssuesData ;
+    ar:targetsKind ar:GitHubIssueTypeOrField ;
     ar:requires ar:cond_mcp_github_credential, ar:cond_network_route_permitted ;
     ar:mayInitiateInternetCall ar:call_mcp_github_list_issue_fields ;
-    ar:sourceStatus ar:MCPToolAnnotation ;
+    ar:sourceStatus ar:MCPToolSchema ;
     ar:sourceNote "List issue fields: List issue fields for a repository or organization." ;
-    ar:hasPotentialEffect [ a ar:PotentialEffect ; ar:effectType ar:Read ; ar:affectsKind ar:GitHubIssuesData ] .
+    ar:hasPotentialEffect [ a ar:PotentialEffect ; ar:effectType ar:Read ; ar:affectsKind ar:GitHubIssueTypeOrField ] .
   ar:call_mcp_github_list_issue_fields a ar:PotentialInternetCall ;
     ar:callInitiatorKind ar:NanoClawAgentContainer ;
     ar:callViaKind ar:GitHubMCPTool, ar:RemoteHTTPMCPTransport ;
@@ -1294,12 +1222,12 @@ ar:g_mcp_github {
   ar:op_mcp_github_list_issue_types a ar:Operation ; ar:invokedThroughKind ar:GitHubMCPTool ;
     ar:mcpToolName "list_issue_types" ;
     ar:mcpToolset "issues" ;
-    ar:targetsKind ar:GitHubIssuesData ;
+    ar:targetsKind ar:GitHubIssueTypeOrField ;
     ar:requires ar:cond_mcp_github_credential, ar:cond_network_route_permitted ;
     ar:mayInitiateInternetCall ar:call_mcp_github_list_issue_types ;
-    ar:sourceStatus ar:MCPToolAnnotation ;
+    ar:sourceStatus ar:MCPToolSchema ;
     ar:sourceNote "List available issue types: List supported issue types for a repository or its owner organization." ;
-    ar:hasPotentialEffect [ a ar:PotentialEffect ; ar:effectType ar:Read ; ar:affectsKind ar:GitHubIssuesData ] .
+    ar:hasPotentialEffect [ a ar:PotentialEffect ; ar:effectType ar:Read ; ar:affectsKind ar:GitHubIssueTypeOrField ] .
   ar:call_mcp_github_list_issue_types a ar:PotentialInternetCall ;
     ar:callInitiatorKind ar:NanoClawAgentContainer ;
     ar:callViaKind ar:GitHubMCPTool, ar:RemoteHTTPMCPTransport ;
@@ -1310,12 +1238,12 @@ ar:g_mcp_github {
   ar:op_mcp_github_list_issues a ar:Operation ; ar:invokedThroughKind ar:GitHubMCPTool ;
     ar:mcpToolName "list_issues" ;
     ar:mcpToolset "issues" ;
-    ar:targetsKind ar:GitHubIssuesData ;
+    ar:targetsKind ar:GitHubIssue ;
     ar:requires ar:cond_mcp_github_credential, ar:cond_network_route_permitted ;
     ar:mayInitiateInternetCall ar:call_mcp_github_list_issues ;
-    ar:sourceStatus ar:MCPToolAnnotation ;
+    ar:sourceStatus ar:MCPToolSchema ;
     ar:sourceNote "List issues: List issues in a GitHub repository." ;
-    ar:hasPotentialEffect [ a ar:PotentialEffect ; ar:effectType ar:Read ; ar:affectsKind ar:GitHubIssuesData ] .
+    ar:hasPotentialEffect [ a ar:PotentialEffect ; ar:effectType ar:Read ; ar:affectsKind ar:GitHubIssue ] .
   ar:call_mcp_github_list_issues a ar:PotentialInternetCall ;
     ar:callInitiatorKind ar:NanoClawAgentContainer ;
     ar:callViaKind ar:GitHubMCPTool, ar:RemoteHTTPMCPTransport ;
@@ -1326,12 +1254,12 @@ ar:g_mcp_github {
   ar:op_mcp_github_list_label a ar:Operation ; ar:invokedThroughKind ar:GitHubMCPTool ;
     ar:mcpToolName "list_label" ;
     ar:mcpToolset "labels" ;
-    ar:targetsKind ar:GitHubLabelsData ;
+    ar:targetsKind ar:GitHubLabel ;
     ar:requires ar:cond_mcp_github_credential, ar:cond_network_route_permitted ;
     ar:mayInitiateInternetCall ar:call_mcp_github_list_label ;
-    ar:sourceStatus ar:MCPToolAnnotation ;
+    ar:sourceStatus ar:MCPToolSchema ;
     ar:sourceNote "List labels from a repository: List labels from a repository, ordered by issue count (descending) so the most-used labels are returned first" ;
-    ar:hasPotentialEffect [ a ar:PotentialEffect ; ar:effectType ar:Read ; ar:affectsKind ar:GitHubLabelsData ] .
+    ar:hasPotentialEffect [ a ar:PotentialEffect ; ar:effectType ar:Read ; ar:affectsKind ar:GitHubLabel ] .
   ar:call_mcp_github_list_label a ar:PotentialInternetCall ;
     ar:callInitiatorKind ar:NanoClawAgentContainer ;
     ar:callViaKind ar:GitHubMCPTool, ar:RemoteHTTPMCPTransport ;
@@ -1342,12 +1270,12 @@ ar:g_mcp_github {
   ar:op_mcp_github_list_notifications a ar:Operation ; ar:invokedThroughKind ar:GitHubMCPTool ;
     ar:mcpToolName "list_notifications" ;
     ar:mcpToolset "notifications" ;
-    ar:targetsKind ar:GitHubNotificationsData ;
+    ar:targetsKind ar:GitHubNotification ;
     ar:requires ar:cond_mcp_github_credential, ar:cond_network_route_permitted ;
     ar:mayInitiateInternetCall ar:call_mcp_github_list_notifications ;
-    ar:sourceStatus ar:MCPToolAnnotation ;
+    ar:sourceStatus ar:MCPToolSchema ;
     ar:sourceNote "List notifications: Lists all GitHub notifications for the authenticated user, including unread notifications, mentions, review requests, assignments, and updates on issues or pull requests." ;
-    ar:hasPotentialEffect [ a ar:PotentialEffect ; ar:effectType ar:Read ; ar:affectsKind ar:GitHubNotificationsData ] .
+    ar:hasPotentialEffect [ a ar:PotentialEffect ; ar:effectType ar:Read ; ar:affectsKind ar:GitHubNotification ] .
   ar:call_mcp_github_list_notifications a ar:PotentialInternetCall ;
     ar:callInitiatorKind ar:NanoClawAgentContainer ;
     ar:callViaKind ar:GitHubMCPTool, ar:RemoteHTTPMCPTransport ;
@@ -1358,12 +1286,12 @@ ar:g_mcp_github {
   ar:op_mcp_github_list_org_repository_security_advisories a ar:Operation ; ar:invokedThroughKind ar:GitHubMCPTool ;
     ar:mcpToolName "list_org_repository_security_advisories" ;
     ar:mcpToolset "security_advisories" ;
-    ar:targetsKind ar:GitHubSecurityAdvisoriesData ;
+    ar:targetsKind ar:GitHubSecurityAdvisory ;
     ar:requires ar:cond_mcp_github_credential, ar:cond_network_route_permitted ;
     ar:mayInitiateInternetCall ar:call_mcp_github_list_org_repository_security_advisories ;
-    ar:sourceStatus ar:MCPToolAnnotation ;
+    ar:sourceStatus ar:MCPToolSchema ;
     ar:sourceNote "List org repository security advisories: List repository security advisories for a GitHub organization." ;
-    ar:hasPotentialEffect [ a ar:PotentialEffect ; ar:effectType ar:Read ; ar:affectsKind ar:GitHubSecurityAdvisoriesData ] .
+    ar:hasPotentialEffect [ a ar:PotentialEffect ; ar:effectType ar:Read ; ar:affectsKind ar:GitHubSecurityAdvisory ] .
   ar:call_mcp_github_list_org_repository_security_advisories a ar:PotentialInternetCall ;
     ar:callInitiatorKind ar:NanoClawAgentContainer ;
     ar:callViaKind ar:GitHubMCPTool, ar:RemoteHTTPMCPTransport ;
@@ -1374,12 +1302,12 @@ ar:g_mcp_github {
   ar:op_mcp_github_list_pull_requests a ar:Operation ; ar:invokedThroughKind ar:GitHubMCPTool ;
     ar:mcpToolName "list_pull_requests" ;
     ar:mcpToolset "pull_requests" ;
-    ar:targetsKind ar:GitHubPullRequestsData ;
+    ar:targetsKind ar:GitHubPullRequest ;
     ar:requires ar:cond_mcp_github_credential, ar:cond_network_route_permitted ;
     ar:mayInitiateInternetCall ar:call_mcp_github_list_pull_requests ;
-    ar:sourceStatus ar:MCPToolAnnotation ;
+    ar:sourceStatus ar:MCPToolSchema ;
     ar:sourceNote "List pull requests: List pull requests in a GitHub repository." ;
-    ar:hasPotentialEffect [ a ar:PotentialEffect ; ar:effectType ar:Read ; ar:affectsKind ar:GitHubPullRequestsData ] .
+    ar:hasPotentialEffect [ a ar:PotentialEffect ; ar:effectType ar:Read ; ar:affectsKind ar:GitHubPullRequest ] .
   ar:call_mcp_github_list_pull_requests a ar:PotentialInternetCall ;
     ar:callInitiatorKind ar:NanoClawAgentContainer ;
     ar:callViaKind ar:GitHubMCPTool, ar:RemoteHTTPMCPTransport ;
@@ -1390,12 +1318,12 @@ ar:g_mcp_github {
   ar:op_mcp_github_list_releases a ar:Operation ; ar:invokedThroughKind ar:GitHubMCPTool ;
     ar:mcpToolName "list_releases" ;
     ar:mcpToolset "repos" ;
-    ar:targetsKind ar:GitHubReposData ;
+    ar:targetsKind ar:GitHubRelease ;
     ar:requires ar:cond_mcp_github_credential, ar:cond_network_route_permitted ;
     ar:mayInitiateInternetCall ar:call_mcp_github_list_releases ;
-    ar:sourceStatus ar:MCPToolAnnotation ;
+    ar:sourceStatus ar:MCPToolSchema ;
     ar:sourceNote "List releases: List releases in a GitHub repository" ;
-    ar:hasPotentialEffect [ a ar:PotentialEffect ; ar:effectType ar:Read ; ar:affectsKind ar:GitHubReposData ] .
+    ar:hasPotentialEffect [ a ar:PotentialEffect ; ar:effectType ar:Read ; ar:affectsKind ar:GitHubRelease ] .
   ar:call_mcp_github_list_releases a ar:PotentialInternetCall ;
     ar:callInitiatorKind ar:NanoClawAgentContainer ;
     ar:callViaKind ar:GitHubMCPTool, ar:RemoteHTTPMCPTransport ;
@@ -1406,12 +1334,13 @@ ar:g_mcp_github {
   ar:op_mcp_github_list_repository_collaborators a ar:Operation ; ar:invokedThroughKind ar:GitHubMCPTool ;
     ar:mcpToolName "list_repository_collaborators" ;
     ar:mcpToolset "repos" ;
-    ar:targetsKind ar:GitHubReposData ;
+    ar:targetsKind ar:GitHubRepositoryCollaborator, ar:GitHubUser ;
     ar:requires ar:cond_mcp_github_credential, ar:cond_network_route_permitted ;
     ar:mayInitiateInternetCall ar:call_mcp_github_list_repository_collaborators ;
-    ar:sourceStatus ar:MCPToolAnnotation ;
+    ar:sourceStatus ar:MCPToolSchema ;
     ar:sourceNote "List repository collaborators: List collaborators of a GitHub repository." ;
-    ar:hasPotentialEffect [ a ar:PotentialEffect ; ar:effectType ar:Read ; ar:affectsKind ar:GitHubReposData ] .
+    ar:hasPotentialEffect [ a ar:PotentialEffect ; ar:effectType ar:Read ; ar:affectsKind ar:GitHubRepositoryCollaborator ],
+      [ a ar:PotentialEffect ; ar:effectType ar:Read ; ar:affectsKind ar:GitHubUser ] .
   ar:call_mcp_github_list_repository_collaborators a ar:PotentialInternetCall ;
     ar:callInitiatorKind ar:NanoClawAgentContainer ;
     ar:callViaKind ar:GitHubMCPTool, ar:RemoteHTTPMCPTransport ;
@@ -1422,12 +1351,12 @@ ar:g_mcp_github {
   ar:op_mcp_github_list_repository_security_advisories a ar:Operation ; ar:invokedThroughKind ar:GitHubMCPTool ;
     ar:mcpToolName "list_repository_security_advisories" ;
     ar:mcpToolset "security_advisories" ;
-    ar:targetsKind ar:GitHubSecurityAdvisoriesData ;
+    ar:targetsKind ar:GitHubSecurityAdvisory ;
     ar:requires ar:cond_mcp_github_credential, ar:cond_network_route_permitted ;
     ar:mayInitiateInternetCall ar:call_mcp_github_list_repository_security_advisories ;
-    ar:sourceStatus ar:MCPToolAnnotation ;
+    ar:sourceStatus ar:MCPToolSchema ;
     ar:sourceNote "List repository security advisories: List repository security advisories for a GitHub repository." ;
-    ar:hasPotentialEffect [ a ar:PotentialEffect ; ar:effectType ar:Read ; ar:affectsKind ar:GitHubSecurityAdvisoriesData ] .
+    ar:hasPotentialEffect [ a ar:PotentialEffect ; ar:effectType ar:Read ; ar:affectsKind ar:GitHubSecurityAdvisory ] .
   ar:call_mcp_github_list_repository_security_advisories a ar:PotentialInternetCall ;
     ar:callInitiatorKind ar:NanoClawAgentContainer ;
     ar:callViaKind ar:GitHubMCPTool, ar:RemoteHTTPMCPTransport ;
@@ -1438,12 +1367,12 @@ ar:g_mcp_github {
   ar:op_mcp_github_list_secret_scanning_alerts a ar:Operation ; ar:invokedThroughKind ar:GitHubMCPTool ;
     ar:mcpToolName "list_secret_scanning_alerts" ;
     ar:mcpToolset "secret_protection" ;
-    ar:targetsKind ar:GitHubSecretProtectionData ;
+    ar:targetsKind ar:GitHubSecretScanningAlert ;
     ar:requires ar:cond_mcp_github_credential, ar:cond_network_route_permitted ;
     ar:mayInitiateInternetCall ar:call_mcp_github_list_secret_scanning_alerts ;
-    ar:sourceStatus ar:MCPToolAnnotation ;
+    ar:sourceStatus ar:MCPToolSchema ;
     ar:sourceNote "List secret scanning alerts: List secret scanning alerts in a GitHub repository." ;
-    ar:hasPotentialEffect [ a ar:PotentialEffect ; ar:effectType ar:Read ; ar:affectsKind ar:GitHubSecretProtectionData ] .
+    ar:hasPotentialEffect [ a ar:PotentialEffect ; ar:effectType ar:Read ; ar:affectsKind ar:GitHubSecretScanningAlert ] .
   ar:call_mcp_github_list_secret_scanning_alerts a ar:PotentialInternetCall ;
     ar:callInitiatorKind ar:NanoClawAgentContainer ;
     ar:callViaKind ar:GitHubMCPTool, ar:RemoteHTTPMCPTransport ;
@@ -1454,12 +1383,13 @@ ar:g_mcp_github {
   ar:op_mcp_github_list_starred_repositories a ar:Operation ; ar:invokedThroughKind ar:GitHubMCPTool ;
     ar:mcpToolName "list_starred_repositories" ;
     ar:mcpToolset "stargazers" ;
-    ar:targetsKind ar:GitHubStargazersData ;
+    ar:targetsKind ar:GitHubStar, ar:GitHubRepository ;
     ar:requires ar:cond_mcp_github_credential, ar:cond_network_route_permitted ;
     ar:mayInitiateInternetCall ar:call_mcp_github_list_starred_repositories ;
-    ar:sourceStatus ar:MCPToolAnnotation ;
+    ar:sourceStatus ar:MCPToolSchema ;
     ar:sourceNote "List starred repositories: List starred repositories" ;
-    ar:hasPotentialEffect [ a ar:PotentialEffect ; ar:effectType ar:Read ; ar:affectsKind ar:GitHubStargazersData ] .
+    ar:hasPotentialEffect [ a ar:PotentialEffect ; ar:effectType ar:Read ; ar:affectsKind ar:GitHubStar ],
+      [ a ar:PotentialEffect ; ar:effectType ar:Read ; ar:affectsKind ar:GitHubRepository ] .
   ar:call_mcp_github_list_starred_repositories a ar:PotentialInternetCall ;
     ar:callInitiatorKind ar:NanoClawAgentContainer ;
     ar:callViaKind ar:GitHubMCPTool, ar:RemoteHTTPMCPTransport ;
@@ -1470,12 +1400,12 @@ ar:g_mcp_github {
   ar:op_mcp_github_list_tags a ar:Operation ; ar:invokedThroughKind ar:GitHubMCPTool ;
     ar:mcpToolName "list_tags" ;
     ar:mcpToolset "repos" ;
-    ar:targetsKind ar:GitHubReposData ;
+    ar:targetsKind ar:GitHubTag ;
     ar:requires ar:cond_mcp_github_credential, ar:cond_network_route_permitted ;
     ar:mayInitiateInternetCall ar:call_mcp_github_list_tags ;
-    ar:sourceStatus ar:MCPToolAnnotation ;
+    ar:sourceStatus ar:MCPToolSchema ;
     ar:sourceNote "List tags: List git tags in a GitHub repository" ;
-    ar:hasPotentialEffect [ a ar:PotentialEffect ; ar:effectType ar:Read ; ar:affectsKind ar:GitHubReposData ] .
+    ar:hasPotentialEffect [ a ar:PotentialEffect ; ar:effectType ar:Read ; ar:affectsKind ar:GitHubTag ] .
   ar:call_mcp_github_list_tags a ar:PotentialInternetCall ;
     ar:callInitiatorKind ar:NanoClawAgentContainer ;
     ar:callViaKind ar:GitHubMCPTool, ar:RemoteHTTPMCPTransport ;
@@ -1486,15 +1416,19 @@ ar:g_mcp_github {
   ar:op_mcp_github_manage_notification_subscription a ar:Operation ; ar:invokedThroughKind ar:GitHubMCPTool ;
     ar:mcpToolName "manage_notification_subscription" ;
     ar:mcpToolset "notifications" ;
-    ar:targetsKind ar:GitHubNotificationsData ;
+    ar:targetsKind ar:GitHubNotification ;
     ar:requires ar:cond_mcp_github_credential, ar:cond_network_route_permitted ;
     ar:mayInitiateInternetCall ar:call_mcp_github_manage_notification_subscription ;
-    ar:sourceStatus ar:MCPToolAnnotation ;
+    ar:sourceStatus ar:MCPToolSchema ;
     ar:sourceNote "Manage notification subscription: Manage a notification subscription: ignore, watch, or delete a notification thread subscription." ;
-    ar:hasPotentialEffect [ a ar:PotentialEffect ; ar:effectType ar:Create ; ar:affectsKind ar:GitHubNotificationsData ],
-      [ a ar:PotentialEffect ; ar:effectType ar:Delete ; ar:affectsKind ar:GitHubNotificationsData ],
-      [ a ar:PotentialEffect ; ar:effectType ar:Transmit ; ar:affectsKind ar:GitHubNotificationsData ],
-      [ a ar:PotentialEffect ; ar:effectType ar:Update ; ar:affectsKind ar:GitHubNotificationsData ] .
+    ar:hasPotentialEffect [ a ar:PotentialEffect ; ar:effectType ar:Configure ; ar:affectsKind ar:GitHubNotification ; ar:mcpToolMethod "ignore" ],
+      [ a ar:PotentialEffect ; ar:effectType ar:Transmit ; ar:affectsKind ar:GitHubNotification ; ar:mcpToolMethod "ignore" ],
+      [ a ar:PotentialEffect ; ar:effectType ar:Update ; ar:affectsKind ar:GitHubNotification ; ar:mcpToolMethod "ignore" ],
+      [ a ar:PotentialEffect ; ar:effectType ar:Configure ; ar:affectsKind ar:GitHubNotification ; ar:mcpToolMethod "watch" ],
+      [ a ar:PotentialEffect ; ar:effectType ar:Transmit ; ar:affectsKind ar:GitHubNotification ; ar:mcpToolMethod "watch" ],
+      [ a ar:PotentialEffect ; ar:effectType ar:Update ; ar:affectsKind ar:GitHubNotification ; ar:mcpToolMethod "watch" ],
+      [ a ar:PotentialEffect ; ar:effectType ar:Delete ; ar:affectsKind ar:GitHubNotification ; ar:mcpToolMethod "delete" ],
+      [ a ar:PotentialEffect ; ar:effectType ar:Transmit ; ar:affectsKind ar:GitHubNotification ; ar:mcpToolMethod "delete" ] .
   ar:call_mcp_github_manage_notification_subscription a ar:PotentialInternetCall ;
     ar:callInitiatorKind ar:NanoClawAgentContainer ;
     ar:callViaKind ar:GitHubMCPTool, ar:RemoteHTTPMCPTransport ;
@@ -1505,15 +1439,19 @@ ar:g_mcp_github {
   ar:op_mcp_github_manage_repository_notification_subscription a ar:Operation ; ar:invokedThroughKind ar:GitHubMCPTool ;
     ar:mcpToolName "manage_repository_notification_subscription" ;
     ar:mcpToolset "notifications" ;
-    ar:targetsKind ar:GitHubNotificationsData ;
+    ar:targetsKind ar:GitHubNotification ;
     ar:requires ar:cond_mcp_github_credential, ar:cond_network_route_permitted ;
     ar:mayInitiateInternetCall ar:call_mcp_github_manage_repository_notification_subscription ;
-    ar:sourceStatus ar:MCPToolAnnotation ;
+    ar:sourceStatus ar:MCPToolSchema ;
     ar:sourceNote "Manage repository notification subscription: Manage a repository notification subscription: ignore, watch, or delete repository notifications subscription for the provided repository." ;
-    ar:hasPotentialEffect [ a ar:PotentialEffect ; ar:effectType ar:Create ; ar:affectsKind ar:GitHubNotificationsData ],
-      [ a ar:PotentialEffect ; ar:effectType ar:Delete ; ar:affectsKind ar:GitHubNotificationsData ],
-      [ a ar:PotentialEffect ; ar:effectType ar:Transmit ; ar:affectsKind ar:GitHubNotificationsData ],
-      [ a ar:PotentialEffect ; ar:effectType ar:Update ; ar:affectsKind ar:GitHubNotificationsData ] .
+    ar:hasPotentialEffect [ a ar:PotentialEffect ; ar:effectType ar:Configure ; ar:affectsKind ar:GitHubNotification ; ar:mcpToolMethod "ignore" ],
+      [ a ar:PotentialEffect ; ar:effectType ar:Transmit ; ar:affectsKind ar:GitHubNotification ; ar:mcpToolMethod "ignore" ],
+      [ a ar:PotentialEffect ; ar:effectType ar:Update ; ar:affectsKind ar:GitHubNotification ; ar:mcpToolMethod "ignore" ],
+      [ a ar:PotentialEffect ; ar:effectType ar:Configure ; ar:affectsKind ar:GitHubNotification ; ar:mcpToolMethod "watch" ],
+      [ a ar:PotentialEffect ; ar:effectType ar:Transmit ; ar:affectsKind ar:GitHubNotification ; ar:mcpToolMethod "watch" ],
+      [ a ar:PotentialEffect ; ar:effectType ar:Update ; ar:affectsKind ar:GitHubNotification ; ar:mcpToolMethod "watch" ],
+      [ a ar:PotentialEffect ; ar:effectType ar:Delete ; ar:affectsKind ar:GitHubNotification ; ar:mcpToolMethod "delete" ],
+      [ a ar:PotentialEffect ; ar:effectType ar:Transmit ; ar:affectsKind ar:GitHubNotification ; ar:mcpToolMethod "delete" ] .
   ar:call_mcp_github_manage_repository_notification_subscription a ar:PotentialInternetCall ;
     ar:callInitiatorKind ar:NanoClawAgentContainer ;
     ar:callViaKind ar:GitHubMCPTool, ar:RemoteHTTPMCPTransport ;
@@ -1524,15 +1462,13 @@ ar:g_mcp_github {
   ar:op_mcp_github_mark_all_notifications_read a ar:Operation ; ar:invokedThroughKind ar:GitHubMCPTool ;
     ar:mcpToolName "mark_all_notifications_read" ;
     ar:mcpToolset "notifications" ;
-    ar:targetsKind ar:GitHubNotificationsData ;
+    ar:targetsKind ar:GitHubNotification ;
     ar:requires ar:cond_mcp_github_credential, ar:cond_network_route_permitted ;
     ar:mayInitiateInternetCall ar:call_mcp_github_mark_all_notifications_read ;
-    ar:sourceStatus ar:MCPToolAnnotation ;
+    ar:sourceStatus ar:MCPToolSchema ;
     ar:sourceNote "Mark all notifications as read: Mark all notifications as read" ;
-    ar:hasPotentialEffect [ a ar:PotentialEffect ; ar:effectType ar:Create ; ar:affectsKind ar:GitHubNotificationsData ],
-      [ a ar:PotentialEffect ; ar:effectType ar:Delete ; ar:affectsKind ar:GitHubNotificationsData ],
-      [ a ar:PotentialEffect ; ar:effectType ar:Transmit ; ar:affectsKind ar:GitHubNotificationsData ],
-      [ a ar:PotentialEffect ; ar:effectType ar:Update ; ar:affectsKind ar:GitHubNotificationsData ] .
+    ar:hasPotentialEffect [ a ar:PotentialEffect ; ar:effectType ar:Transmit ; ar:affectsKind ar:GitHubNotification ],
+      [ a ar:PotentialEffect ; ar:effectType ar:Update ; ar:affectsKind ar:GitHubNotification ] .
   ar:call_mcp_github_mark_all_notifications_read a ar:PotentialInternetCall ;
     ar:callInitiatorKind ar:NanoClawAgentContainer ;
     ar:callViaKind ar:GitHubMCPTool, ar:RemoteHTTPMCPTransport ;
@@ -1543,15 +1479,17 @@ ar:g_mcp_github {
   ar:op_mcp_github_merge_pull_request a ar:Operation ; ar:invokedThroughKind ar:GitHubMCPTool ;
     ar:mcpToolName "merge_pull_request" ;
     ar:mcpToolset "pull_requests" ;
-    ar:targetsKind ar:GitHubPullRequestsData ;
+    ar:targetsKind ar:GitHubPullRequest, ar:GitHubCommit, ar:GitHubBranch ;
     ar:requires ar:cond_mcp_github_credential, ar:cond_network_route_permitted ;
     ar:mayInitiateInternetCall ar:call_mcp_github_merge_pull_request ;
-    ar:sourceStatus ar:MCPToolAnnotation ;
+    ar:sourceStatus ar:MCPToolSchema ;
     ar:sourceNote "Merge pull request: Merge a pull request in a GitHub repository." ;
-    ar:hasPotentialEffect [ a ar:PotentialEffect ; ar:effectType ar:Create ; ar:affectsKind ar:GitHubPullRequestsData ],
-      [ a ar:PotentialEffect ; ar:effectType ar:Delete ; ar:affectsKind ar:GitHubPullRequestsData ],
-      [ a ar:PotentialEffect ; ar:effectType ar:Transmit ; ar:affectsKind ar:GitHubPullRequestsData ],
-      [ a ar:PotentialEffect ; ar:effectType ar:Update ; ar:affectsKind ar:GitHubPullRequestsData ] .
+    ar:hasPotentialEffect [ a ar:PotentialEffect ; ar:effectType ar:Transmit ; ar:affectsKind ar:GitHubPullRequest ],
+      [ a ar:PotentialEffect ; ar:effectType ar:Update ; ar:affectsKind ar:GitHubPullRequest ],
+      [ a ar:PotentialEffect ; ar:effectType ar:Create ; ar:affectsKind ar:GitHubCommit ],
+      [ a ar:PotentialEffect ; ar:effectType ar:Transmit ; ar:affectsKind ar:GitHubCommit ],
+      [ a ar:PotentialEffect ; ar:effectType ar:Transmit ; ar:affectsKind ar:GitHubBranch ],
+      [ a ar:PotentialEffect ; ar:effectType ar:Update ; ar:affectsKind ar:GitHubBranch ] .
   ar:call_mcp_github_merge_pull_request a ar:PotentialInternetCall ;
     ar:callInitiatorKind ar:NanoClawAgentContainer ;
     ar:callViaKind ar:GitHubMCPTool, ar:RemoteHTTPMCPTransport ;
@@ -1562,12 +1500,16 @@ ar:g_mcp_github {
   ar:op_mcp_github_projects_get a ar:Operation ; ar:invokedThroughKind ar:GitHubMCPTool ;
     ar:mcpToolName "projects_get" ;
     ar:mcpToolset "projects" ;
-    ar:targetsKind ar:GitHubProjectsData ;
+    ar:targetsKind ar:GitHubProject, ar:GitHubProjectItem ;
     ar:requires ar:cond_mcp_github_credential, ar:cond_network_route_permitted ;
     ar:mayInitiateInternetCall ar:call_mcp_github_projects_get ;
-    ar:sourceStatus ar:MCPToolAnnotation ;
+    ar:sourceStatus ar:MCPToolSchema ;
     ar:sourceNote "Get details of GitHub Projects resources: Get details about specific GitHub Projects resources." ;
-    ar:hasPotentialEffect [ a ar:PotentialEffect ; ar:effectType ar:Read ; ar:affectsKind ar:GitHubProjectsData ] .
+    ar:hasPotentialEffect [ a ar:PotentialEffect ; ar:effectType ar:Read ; ar:affectsKind ar:GitHubProject ; ar:mcpToolMethod "get_project" ],
+      [ a ar:PotentialEffect ; ar:effectType ar:Read ; ar:affectsKind ar:GitHubProjectItem ; ar:mcpToolMethod "get_project_field" ],
+      [ a ar:PotentialEffect ; ar:effectType ar:Read ; ar:affectsKind ar:GitHubProjectItem ; ar:mcpToolMethod "get_project_item" ],
+      [ a ar:PotentialEffect ; ar:effectType ar:Read ; ar:affectsKind ar:GitHubProjectItem ; ar:mcpToolMethod "get_project_status_update" ],
+      [ a ar:PotentialEffect ; ar:effectType ar:Read ; ar:affectsKind ar:GitHubProjectItem ; ar:mcpToolMethod "get_project_view" ] .
   ar:call_mcp_github_projects_get a ar:PotentialInternetCall ;
     ar:callInitiatorKind ar:NanoClawAgentContainer ;
     ar:callViaKind ar:GitHubMCPTool, ar:RemoteHTTPMCPTransport ;
@@ -1578,12 +1520,16 @@ ar:g_mcp_github {
   ar:op_mcp_github_projects_list a ar:Operation ; ar:invokedThroughKind ar:GitHubMCPTool ;
     ar:mcpToolName "projects_list" ;
     ar:mcpToolset "projects" ;
-    ar:targetsKind ar:GitHubProjectsData ;
+    ar:targetsKind ar:GitHubProject, ar:GitHubProjectItem ;
     ar:requires ar:cond_mcp_github_credential, ar:cond_network_route_permitted ;
     ar:mayInitiateInternetCall ar:call_mcp_github_projects_list ;
-    ar:sourceStatus ar:MCPToolAnnotation ;
+    ar:sourceStatus ar:MCPToolSchema ;
     ar:sourceNote "List GitHub Projects resources: Tools for listing GitHub Projects resources." ;
-    ar:hasPotentialEffect [ a ar:PotentialEffect ; ar:effectType ar:Read ; ar:affectsKind ar:GitHubProjectsData ] .
+    ar:hasPotentialEffect [ a ar:PotentialEffect ; ar:effectType ar:Read ; ar:affectsKind ar:GitHubProject ; ar:mcpToolMethod "list_projects" ],
+      [ a ar:PotentialEffect ; ar:effectType ar:Read ; ar:affectsKind ar:GitHubProjectItem ; ar:mcpToolMethod "list_project_fields" ],
+      [ a ar:PotentialEffect ; ar:effectType ar:Read ; ar:affectsKind ar:GitHubProjectItem ; ar:mcpToolMethod "list_project_items" ],
+      [ a ar:PotentialEffect ; ar:effectType ar:Read ; ar:affectsKind ar:GitHubProjectItem ; ar:mcpToolMethod "list_project_status_updates" ],
+      [ a ar:PotentialEffect ; ar:effectType ar:Read ; ar:affectsKind ar:GitHubProjectItem ; ar:mcpToolMethod "list_project_views" ] .
   ar:call_mcp_github_projects_list a ar:PotentialInternetCall ;
     ar:callInitiatorKind ar:NanoClawAgentContainer ;
     ar:callViaKind ar:GitHubMCPTool, ar:RemoteHTTPMCPTransport ;
@@ -1594,15 +1540,31 @@ ar:g_mcp_github {
   ar:op_mcp_github_projects_write a ar:Operation ; ar:invokedThroughKind ar:GitHubMCPTool ;
     ar:mcpToolName "projects_write" ;
     ar:mcpToolset "projects" ;
-    ar:targetsKind ar:GitHubProjectsData ;
+    ar:targetsKind ar:GitHubProjectItem, ar:GitHubProject ;
     ar:requires ar:cond_mcp_github_credential, ar:cond_network_route_permitted ;
     ar:mayInitiateInternetCall ar:call_mcp_github_projects_write ;
-    ar:sourceStatus ar:MCPToolAnnotation ;
+    ar:sourceStatus ar:MCPToolSchema ;
     ar:sourceNote "Manage GitHub Projects: Create and manage GitHub Projects: create projects, add/update/delete items, bulk-update many items at once, manage views, create status updates, and add iteration fields." ;
-    ar:hasPotentialEffect [ a ar:PotentialEffect ; ar:effectType ar:Create ; ar:affectsKind ar:GitHubProjectsData ],
-      [ a ar:PotentialEffect ; ar:effectType ar:Delete ; ar:affectsKind ar:GitHubProjectsData ],
-      [ a ar:PotentialEffect ; ar:effectType ar:Transmit ; ar:affectsKind ar:GitHubProjectsData ],
-      [ a ar:PotentialEffect ; ar:effectType ar:Update ; ar:affectsKind ar:GitHubProjectsData ] .
+    ar:hasPotentialEffect [ a ar:PotentialEffect ; ar:effectType ar:Create ; ar:affectsKind ar:GitHubProjectItem ; ar:mcpToolMethod "add_project_item" ],
+      [ a ar:PotentialEffect ; ar:effectType ar:Transmit ; ar:affectsKind ar:GitHubProjectItem ; ar:mcpToolMethod "add_project_item" ],
+      [ a ar:PotentialEffect ; ar:effectType ar:Create ; ar:affectsKind ar:GitHubProjectItem ; ar:mcpToolMethod "create_project_status_update" ],
+      [ a ar:PotentialEffect ; ar:effectType ar:Transmit ; ar:affectsKind ar:GitHubProjectItem ; ar:mcpToolMethod "create_project_status_update" ],
+      [ a ar:PotentialEffect ; ar:effectType ar:Create ; ar:affectsKind ar:GitHubProjectItem ; ar:mcpToolMethod "create_project_view" ],
+      [ a ar:PotentialEffect ; ar:effectType ar:Transmit ; ar:affectsKind ar:GitHubProjectItem ; ar:mcpToolMethod "create_project_view" ],
+      [ a ar:PotentialEffect ; ar:effectType ar:Create ; ar:affectsKind ar:GitHubProjectItem ; ar:mcpToolMethod "create_iteration_field" ],
+      [ a ar:PotentialEffect ; ar:effectType ar:Transmit ; ar:affectsKind ar:GitHubProjectItem ; ar:mcpToolMethod "create_iteration_field" ],
+      [ a ar:PotentialEffect ; ar:effectType ar:Transmit ; ar:affectsKind ar:GitHubProjectItem ; ar:mcpToolMethod "update_project_item" ],
+      [ a ar:PotentialEffect ; ar:effectType ar:Update ; ar:affectsKind ar:GitHubProjectItem ; ar:mcpToolMethod "update_project_item" ],
+      [ a ar:PotentialEffect ; ar:effectType ar:Transmit ; ar:affectsKind ar:GitHubProjectItem ; ar:mcpToolMethod "update_project_items" ],
+      [ a ar:PotentialEffect ; ar:effectType ar:Update ; ar:affectsKind ar:GitHubProjectItem ; ar:mcpToolMethod "update_project_items" ],
+      [ a ar:PotentialEffect ; ar:effectType ar:Transmit ; ar:affectsKind ar:GitHubProjectItem ; ar:mcpToolMethod "update_project_view" ],
+      [ a ar:PotentialEffect ; ar:effectType ar:Update ; ar:affectsKind ar:GitHubProjectItem ; ar:mcpToolMethod "update_project_view" ],
+      [ a ar:PotentialEffect ; ar:effectType ar:Delete ; ar:affectsKind ar:GitHubProjectItem ; ar:mcpToolMethod "delete_project_item" ],
+      [ a ar:PotentialEffect ; ar:effectType ar:Transmit ; ar:affectsKind ar:GitHubProjectItem ; ar:mcpToolMethod "delete_project_item" ],
+      [ a ar:PotentialEffect ; ar:effectType ar:Delete ; ar:affectsKind ar:GitHubProjectItem ; ar:mcpToolMethod "delete_project_view" ],
+      [ a ar:PotentialEffect ; ar:effectType ar:Transmit ; ar:affectsKind ar:GitHubProjectItem ; ar:mcpToolMethod "delete_project_view" ],
+      [ a ar:PotentialEffect ; ar:effectType ar:Create ; ar:affectsKind ar:GitHubProject ; ar:mcpToolMethod "create_project" ],
+      [ a ar:PotentialEffect ; ar:effectType ar:Transmit ; ar:affectsKind ar:GitHubProject ; ar:mcpToolMethod "create_project" ] .
   ar:call_mcp_github_projects_write a ar:PotentialInternetCall ;
     ar:callInitiatorKind ar:NanoClawAgentContainer ;
     ar:callViaKind ar:GitHubMCPTool, ar:RemoteHTTPMCPTransport ;
@@ -1613,12 +1575,20 @@ ar:g_mcp_github {
   ar:op_mcp_github_pull_request_read a ar:Operation ; ar:invokedThroughKind ar:GitHubMCPTool ;
     ar:mcpToolName "pull_request_read" ;
     ar:mcpToolset "pull_requests" ;
-    ar:targetsKind ar:GitHubPullRequestsData ;
+    ar:targetsKind ar:GitHubPullRequest, ar:GitHubRepositoryFile, ar:GitHubCheckRun, ar:GitHubCommit, ar:GitHubReviewComment, ar:GitHubPullRequestReview, ar:GitHubIssueComment ;
     ar:requires ar:cond_mcp_github_credential, ar:cond_network_route_permitted ;
     ar:mayInitiateInternetCall ar:call_mcp_github_pull_request_read ;
-    ar:sourceStatus ar:MCPToolAnnotation ;
+    ar:sourceStatus ar:MCPToolSchema ;
     ar:sourceNote "Get details for a single pull request: Get information on a specific pull request in GitHub repository." ;
-    ar:hasPotentialEffect [ a ar:PotentialEffect ; ar:effectType ar:Read ; ar:affectsKind ar:GitHubPullRequestsData ] .
+    ar:hasPotentialEffect [ a ar:PotentialEffect ; ar:effectType ar:Read ; ar:affectsKind ar:GitHubPullRequest ; ar:mcpToolMethod "get" ],
+      [ a ar:PotentialEffect ; ar:effectType ar:Read ; ar:affectsKind ar:GitHubRepositoryFile ; ar:mcpToolMethod "get_diff" ],
+      [ a ar:PotentialEffect ; ar:effectType ar:Read ; ar:affectsKind ar:GitHubRepositoryFile ; ar:mcpToolMethod "get_files" ],
+      [ a ar:PotentialEffect ; ar:effectType ar:Read ; ar:affectsKind ar:GitHubCheckRun ; ar:mcpToolMethod "get_status" ],
+      [ a ar:PotentialEffect ; ar:effectType ar:Read ; ar:affectsKind ar:GitHubCheckRun ; ar:mcpToolMethod "get_check_runs" ],
+      [ a ar:PotentialEffect ; ar:effectType ar:Read ; ar:affectsKind ar:GitHubCommit ; ar:mcpToolMethod "get_commits" ],
+      [ a ar:PotentialEffect ; ar:effectType ar:Read ; ar:affectsKind ar:GitHubReviewComment ; ar:mcpToolMethod "get_review_comments" ],
+      [ a ar:PotentialEffect ; ar:effectType ar:Read ; ar:affectsKind ar:GitHubPullRequestReview ; ar:mcpToolMethod "get_reviews" ],
+      [ a ar:PotentialEffect ; ar:effectType ar:Read ; ar:affectsKind ar:GitHubIssueComment ; ar:mcpToolMethod "get_comments" ] .
   ar:call_mcp_github_pull_request_read a ar:PotentialInternetCall ;
     ar:callInitiatorKind ar:NanoClawAgentContainer ;
     ar:callViaKind ar:GitHubMCPTool, ar:RemoteHTTPMCPTransport ;
@@ -1629,15 +1599,21 @@ ar:g_mcp_github {
   ar:op_mcp_github_pull_request_review_write a ar:Operation ; ar:invokedThroughKind ar:GitHubMCPTool ;
     ar:mcpToolName "pull_request_review_write" ;
     ar:mcpToolset "pull_requests" ;
-    ar:targetsKind ar:GitHubPullRequestsData ;
+    ar:targetsKind ar:GitHubPullRequestReview, ar:GitHubReviewComment ;
     ar:requires ar:cond_mcp_github_credential, ar:cond_network_route_permitted ;
     ar:mayInitiateInternetCall ar:call_mcp_github_pull_request_review_write ;
-    ar:sourceStatus ar:MCPToolAnnotation ;
+    ar:sourceStatus ar:MCPToolSchema ;
     ar:sourceNote "Write operations (create, submit, delete) on pull request reviews: Create and/or submit, delete review of a pull request." ;
-    ar:hasPotentialEffect [ a ar:PotentialEffect ; ar:effectType ar:Create ; ar:affectsKind ar:GitHubPullRequestsData ],
-      [ a ar:PotentialEffect ; ar:effectType ar:Delete ; ar:affectsKind ar:GitHubPullRequestsData ],
-      [ a ar:PotentialEffect ; ar:effectType ar:Transmit ; ar:affectsKind ar:GitHubPullRequestsData ],
-      [ a ar:PotentialEffect ; ar:effectType ar:Update ; ar:affectsKind ar:GitHubPullRequestsData ] .
+    ar:hasPotentialEffect [ a ar:PotentialEffect ; ar:effectType ar:Create ; ar:affectsKind ar:GitHubPullRequestReview ; ar:mcpToolMethod "create" ],
+      [ a ar:PotentialEffect ; ar:effectType ar:Transmit ; ar:affectsKind ar:GitHubPullRequestReview ; ar:mcpToolMethod "create" ],
+      [ a ar:PotentialEffect ; ar:effectType ar:Transmit ; ar:affectsKind ar:GitHubPullRequestReview ; ar:mcpToolMethod "submit_pending" ],
+      [ a ar:PotentialEffect ; ar:effectType ar:Update ; ar:affectsKind ar:GitHubPullRequestReview ; ar:mcpToolMethod "submit_pending" ],
+      [ a ar:PotentialEffect ; ar:effectType ar:Delete ; ar:affectsKind ar:GitHubPullRequestReview ; ar:mcpToolMethod "delete_pending" ],
+      [ a ar:PotentialEffect ; ar:effectType ar:Transmit ; ar:affectsKind ar:GitHubPullRequestReview ; ar:mcpToolMethod "delete_pending" ],
+      [ a ar:PotentialEffect ; ar:effectType ar:Transmit ; ar:affectsKind ar:GitHubReviewComment ; ar:mcpToolMethod "resolve_thread" ],
+      [ a ar:PotentialEffect ; ar:effectType ar:Update ; ar:affectsKind ar:GitHubReviewComment ; ar:mcpToolMethod "resolve_thread" ],
+      [ a ar:PotentialEffect ; ar:effectType ar:Transmit ; ar:affectsKind ar:GitHubReviewComment ; ar:mcpToolMethod "unresolve_thread" ],
+      [ a ar:PotentialEffect ; ar:effectType ar:Update ; ar:affectsKind ar:GitHubReviewComment ; ar:mcpToolMethod "unresolve_thread" ] .
   ar:call_mcp_github_pull_request_review_write a ar:PotentialInternetCall ;
     ar:callInitiatorKind ar:NanoClawAgentContainer ;
     ar:callViaKind ar:GitHubMCPTool, ar:RemoteHTTPMCPTransport ;
@@ -1648,15 +1624,18 @@ ar:g_mcp_github {
   ar:op_mcp_github_push_files a ar:Operation ; ar:invokedThroughKind ar:GitHubMCPTool ;
     ar:mcpToolName "push_files" ;
     ar:mcpToolset "repos" ;
-    ar:targetsKind ar:GitHubReposData ;
+    ar:targetsKind ar:GitHubRepositoryFile, ar:GitHubCommit, ar:GitHubBranch ;
     ar:requires ar:cond_mcp_github_credential, ar:cond_network_route_permitted ;
     ar:mayInitiateInternetCall ar:call_mcp_github_push_files ;
-    ar:sourceStatus ar:MCPToolAnnotation ;
+    ar:sourceStatus ar:MCPToolSchema ;
     ar:sourceNote "Push files to repository: Push multiple files to a GitHub repository in a single commit" ;
-    ar:hasPotentialEffect [ a ar:PotentialEffect ; ar:effectType ar:Create ; ar:affectsKind ar:GitHubReposData ],
-      [ a ar:PotentialEffect ; ar:effectType ar:Delete ; ar:affectsKind ar:GitHubReposData ],
-      [ a ar:PotentialEffect ; ar:effectType ar:Transmit ; ar:affectsKind ar:GitHubReposData ],
-      [ a ar:PotentialEffect ; ar:effectType ar:Update ; ar:affectsKind ar:GitHubReposData ] .
+    ar:hasPotentialEffect [ a ar:PotentialEffect ; ar:effectType ar:Create ; ar:affectsKind ar:GitHubRepositoryFile ],
+      [ a ar:PotentialEffect ; ar:effectType ar:Transmit ; ar:affectsKind ar:GitHubRepositoryFile ],
+      [ a ar:PotentialEffect ; ar:effectType ar:Update ; ar:affectsKind ar:GitHubRepositoryFile ],
+      [ a ar:PotentialEffect ; ar:effectType ar:Create ; ar:affectsKind ar:GitHubCommit ],
+      [ a ar:PotentialEffect ; ar:effectType ar:Transmit ; ar:affectsKind ar:GitHubCommit ],
+      [ a ar:PotentialEffect ; ar:effectType ar:Transmit ; ar:affectsKind ar:GitHubBranch ],
+      [ a ar:PotentialEffect ; ar:effectType ar:Update ; ar:affectsKind ar:GitHubBranch ] .
   ar:call_mcp_github_push_files a ar:PotentialInternetCall ;
     ar:callInitiatorKind ar:NanoClawAgentContainer ;
     ar:callViaKind ar:GitHubMCPTool, ar:RemoteHTTPMCPTransport ;
@@ -1667,12 +1646,12 @@ ar:g_mcp_github {
   ar:op_mcp_github_repository_ruleset_read a ar:Operation ; ar:invokedThroughKind ar:GitHubMCPTool ;
     ar:mcpToolName "repository_ruleset_read" ;
     ar:mcpToolset "governance" ;
-    ar:targetsKind ar:GitHubGovernanceData ;
+    ar:targetsKind ar:GitHubRuleset ;
     ar:requires ar:cond_mcp_github_credential, ar:cond_network_route_permitted ;
     ar:mayInitiateInternetCall ar:call_mcp_github_repository_ruleset_read ;
-    ar:sourceStatus ar:MCPToolAnnotation ;
+    ar:sourceStatus ar:MCPToolSchema ;
     ar:sourceNote "Read repository rulesets: Read rulesets at the repository, organization, or enterprise level, and rule suites at the repository or organization level." ;
-    ar:hasPotentialEffect [ a ar:PotentialEffect ; ar:effectType ar:Read ; ar:affectsKind ar:GitHubGovernanceData ] .
+    ar:hasPotentialEffect [ a ar:PotentialEffect ; ar:effectType ar:Read ; ar:affectsKind ar:GitHubRuleset ] .
   ar:call_mcp_github_repository_ruleset_read a ar:PotentialInternetCall ;
     ar:callInitiatorKind ar:NanoClawAgentContainer ;
     ar:callViaKind ar:GitHubMCPTool, ar:RemoteHTTPMCPTransport ;
@@ -1683,15 +1662,16 @@ ar:g_mcp_github {
   ar:op_mcp_github_request_copilot_review a ar:Operation ; ar:invokedThroughKind ar:GitHubMCPTool ;
     ar:mcpToolName "request_copilot_review" ;
     ar:mcpToolset "copilot" ;
-    ar:targetsKind ar:GitHubCopilotData ;
+    ar:targetsKind ar:GitHubCopilotTask, ar:GitHubPullRequestReview ;
     ar:requires ar:cond_mcp_github_credential, ar:cond_network_route_permitted ;
     ar:mayInitiateInternetCall ar:call_mcp_github_request_copilot_review ;
-    ar:sourceStatus ar:MCPToolAnnotation ;
+    ar:sourceStatus ar:MCPToolSchema ;
     ar:sourceNote "Request Copilot review: Request a GitHub Copilot code review for a pull request." ;
-    ar:hasPotentialEffect [ a ar:PotentialEffect ; ar:effectType ar:Create ; ar:affectsKind ar:GitHubCopilotData ],
-      [ a ar:PotentialEffect ; ar:effectType ar:Delete ; ar:affectsKind ar:GitHubCopilotData ],
-      [ a ar:PotentialEffect ; ar:effectType ar:Transmit ; ar:affectsKind ar:GitHubCopilotData ],
-      [ a ar:PotentialEffect ; ar:effectType ar:Update ; ar:affectsKind ar:GitHubCopilotData ] .
+    ar:hasPotentialEffect [ a ar:PotentialEffect ; ar:effectType ar:Create ; ar:affectsKind ar:GitHubCopilotTask ],
+      [ a ar:PotentialEffect ; ar:effectType ar:Delegate ; ar:affectsKind ar:GitHubCopilotTask ],
+      [ a ar:PotentialEffect ; ar:effectType ar:Transmit ; ar:affectsKind ar:GitHubCopilotTask ],
+      [ a ar:PotentialEffect ; ar:effectType ar:Create ; ar:affectsKind ar:GitHubPullRequestReview ],
+      [ a ar:PotentialEffect ; ar:effectType ar:Transmit ; ar:affectsKind ar:GitHubPullRequestReview ] .
   ar:call_mcp_github_request_copilot_review a ar:PotentialInternetCall ;
     ar:callInitiatorKind ar:NanoClawAgentContainer ;
     ar:callViaKind ar:GitHubMCPTool, ar:RemoteHTTPMCPTransport ;
@@ -1702,12 +1682,12 @@ ar:g_mcp_github {
   ar:op_mcp_github_run_secret_scanning a ar:Operation ; ar:invokedThroughKind ar:GitHubMCPTool ;
     ar:mcpToolName "run_secret_scanning" ;
     ar:mcpToolset "copilot" ;
-    ar:targetsKind ar:GitHubCopilotData ;
+    ar:targetsKind ar:GitHubRepositoryFile ;
     ar:requires ar:cond_mcp_github_credential, ar:cond_network_route_permitted ;
     ar:mayInitiateInternetCall ar:call_mcp_github_run_secret_scanning ;
-    ar:sourceStatus ar:MCPToolAnnotation ;
+    ar:sourceStatus ar:MCPToolSchema ;
     ar:sourceNote "Run Secret Scanning: Scan files, content, or recent changes for secrets such as API keys, passwords, tokens, and credentials." ;
-    ar:hasPotentialEffect [ a ar:PotentialEffect ; ar:effectType ar:Read ; ar:affectsKind ar:GitHubCopilotData ] .
+    ar:hasPotentialEffect [ a ar:PotentialEffect ; ar:effectType ar:Read ; ar:affectsKind ar:GitHubRepositoryFile ] .
   ar:call_mcp_github_run_secret_scanning a ar:PotentialInternetCall ;
     ar:callInitiatorKind ar:NanoClawAgentContainer ;
     ar:callViaKind ar:GitHubMCPTool, ar:RemoteHTTPMCPTransport ;
@@ -1718,12 +1698,12 @@ ar:g_mcp_github {
   ar:op_mcp_github_search_code a ar:Operation ; ar:invokedThroughKind ar:GitHubMCPTool ;
     ar:mcpToolName "search_code" ;
     ar:mcpToolset "repos" ;
-    ar:targetsKind ar:GitHubReposData ;
+    ar:targetsKind ar:GitHubRepositoryFile ;
     ar:requires ar:cond_mcp_github_credential, ar:cond_network_route_permitted ;
     ar:mayInitiateInternetCall ar:call_mcp_github_search_code ;
-    ar:sourceStatus ar:MCPToolAnnotation ;
+    ar:sourceStatus ar:MCPToolSchema ;
     ar:sourceNote "Search code: Fast and precise code search across ALL GitHub repositories using GitHub's native search engine." ;
-    ar:hasPotentialEffect [ a ar:PotentialEffect ; ar:effectType ar:Read ; ar:affectsKind ar:GitHubReposData ] .
+    ar:hasPotentialEffect [ a ar:PotentialEffect ; ar:effectType ar:Read ; ar:affectsKind ar:GitHubRepositoryFile ] .
   ar:call_mcp_github_search_code a ar:PotentialInternetCall ;
     ar:callInitiatorKind ar:NanoClawAgentContainer ;
     ar:callViaKind ar:GitHubMCPTool, ar:RemoteHTTPMCPTransport ;
@@ -1734,12 +1714,12 @@ ar:g_mcp_github {
   ar:op_mcp_github_search_commits a ar:Operation ; ar:invokedThroughKind ar:GitHubMCPTool ;
     ar:mcpToolName "search_commits" ;
     ar:mcpToolset "repos" ;
-    ar:targetsKind ar:GitHubReposData ;
+    ar:targetsKind ar:GitHubCommit ;
     ar:requires ar:cond_mcp_github_credential, ar:cond_network_route_permitted ;
     ar:mayInitiateInternetCall ar:call_mcp_github_search_commits ;
-    ar:sourceStatus ar:MCPToolAnnotation ;
+    ar:sourceStatus ar:MCPToolSchema ;
     ar:sourceNote "Search commits: Search for commits across GitHub repositories using GitHub's commit search syntax." ;
-    ar:hasPotentialEffect [ a ar:PotentialEffect ; ar:effectType ar:Read ; ar:affectsKind ar:GitHubReposData ] .
+    ar:hasPotentialEffect [ a ar:PotentialEffect ; ar:effectType ar:Read ; ar:affectsKind ar:GitHubCommit ] .
   ar:call_mcp_github_search_commits a ar:PotentialInternetCall ;
     ar:callInitiatorKind ar:NanoClawAgentContainer ;
     ar:callViaKind ar:GitHubMCPTool, ar:RemoteHTTPMCPTransport ;
@@ -1750,12 +1730,12 @@ ar:g_mcp_github {
   ar:op_mcp_github_search_issues a ar:Operation ; ar:invokedThroughKind ar:GitHubMCPTool ;
     ar:mcpToolName "search_issues" ;
     ar:mcpToolset "issues" ;
-    ar:targetsKind ar:GitHubIssuesData ;
+    ar:targetsKind ar:GitHubIssue ;
     ar:requires ar:cond_mcp_github_credential, ar:cond_network_route_permitted ;
     ar:mayInitiateInternetCall ar:call_mcp_github_search_issues ;
-    ar:sourceStatus ar:MCPToolAnnotation ;
+    ar:sourceStatus ar:MCPToolSchema ;
     ar:sourceNote "Search issues: Search issues using natural-language semantic matching." ;
-    ar:hasPotentialEffect [ a ar:PotentialEffect ; ar:effectType ar:Read ; ar:affectsKind ar:GitHubIssuesData ] .
+    ar:hasPotentialEffect [ a ar:PotentialEffect ; ar:effectType ar:Read ; ar:affectsKind ar:GitHubIssue ] .
   ar:call_mcp_github_search_issues a ar:PotentialInternetCall ;
     ar:callInitiatorKind ar:NanoClawAgentContainer ;
     ar:callViaKind ar:GitHubMCPTool, ar:RemoteHTTPMCPTransport ;
@@ -1766,12 +1746,12 @@ ar:g_mcp_github {
   ar:op_mcp_github_search_orgs a ar:Operation ; ar:invokedThroughKind ar:GitHubMCPTool ;
     ar:mcpToolName "search_orgs" ;
     ar:mcpToolset "orgs" ;
-    ar:targetsKind ar:GitHubOrgsData ;
+    ar:targetsKind ar:GitHubOrganization ;
     ar:requires ar:cond_mcp_github_credential, ar:cond_network_route_permitted ;
     ar:mayInitiateInternetCall ar:call_mcp_github_search_orgs ;
-    ar:sourceStatus ar:MCPToolAnnotation ;
+    ar:sourceStatus ar:MCPToolSchema ;
     ar:sourceNote "Search organizations: Find GitHub organizations by name, location, or other organization metadata." ;
-    ar:hasPotentialEffect [ a ar:PotentialEffect ; ar:effectType ar:Read ; ar:affectsKind ar:GitHubOrgsData ] .
+    ar:hasPotentialEffect [ a ar:PotentialEffect ; ar:effectType ar:Read ; ar:affectsKind ar:GitHubOrganization ] .
   ar:call_mcp_github_search_orgs a ar:PotentialInternetCall ;
     ar:callInitiatorKind ar:NanoClawAgentContainer ;
     ar:callViaKind ar:GitHubMCPTool, ar:RemoteHTTPMCPTransport ;
@@ -1782,12 +1762,12 @@ ar:g_mcp_github {
   ar:op_mcp_github_search_pull_requests a ar:Operation ; ar:invokedThroughKind ar:GitHubMCPTool ;
     ar:mcpToolName "search_pull_requests" ;
     ar:mcpToolset "pull_requests" ;
-    ar:targetsKind ar:GitHubPullRequestsData ;
+    ar:targetsKind ar:GitHubPullRequest ;
     ar:requires ar:cond_mcp_github_credential, ar:cond_network_route_permitted ;
     ar:mayInitiateInternetCall ar:call_mcp_github_search_pull_requests ;
-    ar:sourceStatus ar:MCPToolAnnotation ;
+    ar:sourceStatus ar:MCPToolSchema ;
     ar:sourceNote "Search pull requests: Search for pull requests in GitHub repositories using issues search syntax already scoped to is:pr" ;
-    ar:hasPotentialEffect [ a ar:PotentialEffect ; ar:effectType ar:Read ; ar:affectsKind ar:GitHubPullRequestsData ] .
+    ar:hasPotentialEffect [ a ar:PotentialEffect ; ar:effectType ar:Read ; ar:affectsKind ar:GitHubPullRequest ] .
   ar:call_mcp_github_search_pull_requests a ar:PotentialInternetCall ;
     ar:callInitiatorKind ar:NanoClawAgentContainer ;
     ar:callViaKind ar:GitHubMCPTool, ar:RemoteHTTPMCPTransport ;
@@ -1798,12 +1778,12 @@ ar:g_mcp_github {
   ar:op_mcp_github_search_repositories a ar:Operation ; ar:invokedThroughKind ar:GitHubMCPTool ;
     ar:mcpToolName "search_repositories" ;
     ar:mcpToolset "repos" ;
-    ar:targetsKind ar:GitHubReposData ;
+    ar:targetsKind ar:GitHubRepository ;
     ar:requires ar:cond_mcp_github_credential, ar:cond_network_route_permitted ;
     ar:mayInitiateInternetCall ar:call_mcp_github_search_repositories ;
-    ar:sourceStatus ar:MCPToolAnnotation ;
+    ar:sourceStatus ar:MCPToolSchema ;
     ar:sourceNote "Search repositories: Find GitHub repositories by name, description, readme, topics, or other metadata." ;
-    ar:hasPotentialEffect [ a ar:PotentialEffect ; ar:effectType ar:Read ; ar:affectsKind ar:GitHubReposData ] .
+    ar:hasPotentialEffect [ a ar:PotentialEffect ; ar:effectType ar:Read ; ar:affectsKind ar:GitHubRepository ] .
   ar:call_mcp_github_search_repositories a ar:PotentialInternetCall ;
     ar:callInitiatorKind ar:NanoClawAgentContainer ;
     ar:callViaKind ar:GitHubMCPTool, ar:RemoteHTTPMCPTransport ;
@@ -1814,12 +1794,12 @@ ar:g_mcp_github {
   ar:op_mcp_github_search_users a ar:Operation ; ar:invokedThroughKind ar:GitHubMCPTool ;
     ar:mcpToolName "search_users" ;
     ar:mcpToolset "users" ;
-    ar:targetsKind ar:GitHubUsersData ;
+    ar:targetsKind ar:GitHubUser ;
     ar:requires ar:cond_mcp_github_credential, ar:cond_network_route_permitted ;
     ar:mayInitiateInternetCall ar:call_mcp_github_search_users ;
-    ar:sourceStatus ar:MCPToolAnnotation ;
+    ar:sourceStatus ar:MCPToolSchema ;
     ar:sourceNote "Search users: Find GitHub users by username, real name, or other profile information." ;
-    ar:hasPotentialEffect [ a ar:PotentialEffect ; ar:effectType ar:Read ; ar:affectsKind ar:GitHubUsersData ] .
+    ar:hasPotentialEffect [ a ar:PotentialEffect ; ar:effectType ar:Read ; ar:affectsKind ar:GitHubUser ] .
   ar:call_mcp_github_search_users a ar:PotentialInternetCall ;
     ar:callInitiatorKind ar:NanoClawAgentContainer ;
     ar:callViaKind ar:GitHubMCPTool, ar:RemoteHTTPMCPTransport ;
@@ -1829,12 +1809,12 @@ ar:g_mcp_github {
     ar:sourceNote "tools/call search_users" .
   ar:op_mcp_github_semantic_issue_similarity_search a ar:Operation ; ar:invokedThroughKind ar:GitHubMCPTool ;
     ar:mcpToolName "semantic_issue_similarity_search" ;
-    ar:targetsKind ar:GitHubData ;
+    ar:targetsKind ar:GitHubIssue ;
     ar:requires ar:cond_mcp_github_credential, ar:cond_network_route_permitted ;
     ar:mayInitiateInternetCall ar:call_mcp_github_semantic_issue_similarity_search ;
-    ar:sourceStatus ar:MCPToolAnnotation ;
+    ar:sourceStatus ar:MCPToolSchema ;
     ar:sourceNote "Semantic Issue Similarity Search: Find issues that are semantically similar to a given issue using natural language understanding." ;
-    ar:hasPotentialEffect [ a ar:PotentialEffect ; ar:effectType ar:Read ; ar:affectsKind ar:GitHubData ] .
+    ar:hasPotentialEffect [ a ar:PotentialEffect ; ar:effectType ar:Read ; ar:affectsKind ar:GitHubIssue ] .
   ar:call_mcp_github_semantic_issue_similarity_search a ar:PotentialInternetCall ;
     ar:callInitiatorKind ar:NanoClawAgentContainer ;
     ar:callViaKind ar:GitHubMCPTool, ar:RemoteHTTPMCPTransport ;
@@ -1845,15 +1825,13 @@ ar:g_mcp_github {
   ar:op_mcp_github_star_repository a ar:Operation ; ar:invokedThroughKind ar:GitHubMCPTool ;
     ar:mcpToolName "star_repository" ;
     ar:mcpToolset "stargazers" ;
-    ar:targetsKind ar:GitHubStargazersData ;
+    ar:targetsKind ar:GitHubStar ;
     ar:requires ar:cond_mcp_github_credential, ar:cond_network_route_permitted ;
     ar:mayInitiateInternetCall ar:call_mcp_github_star_repository ;
-    ar:sourceStatus ar:MCPToolAnnotation ;
+    ar:sourceStatus ar:MCPToolSchema ;
     ar:sourceNote "Star repository: Star a GitHub repository" ;
-    ar:hasPotentialEffect [ a ar:PotentialEffect ; ar:effectType ar:Create ; ar:affectsKind ar:GitHubStargazersData ],
-      [ a ar:PotentialEffect ; ar:effectType ar:Delete ; ar:affectsKind ar:GitHubStargazersData ],
-      [ a ar:PotentialEffect ; ar:effectType ar:Transmit ; ar:affectsKind ar:GitHubStargazersData ],
-      [ a ar:PotentialEffect ; ar:effectType ar:Update ; ar:affectsKind ar:GitHubStargazersData ] .
+    ar:hasPotentialEffect [ a ar:PotentialEffect ; ar:effectType ar:Create ; ar:affectsKind ar:GitHubStar ],
+      [ a ar:PotentialEffect ; ar:effectType ar:Transmit ; ar:affectsKind ar:GitHubStar ] .
   ar:call_mcp_github_star_repository a ar:PotentialInternetCall ;
     ar:callInitiatorKind ar:NanoClawAgentContainer ;
     ar:callViaKind ar:GitHubMCPTool, ar:RemoteHTTPMCPTransport ;
@@ -1864,15 +1842,13 @@ ar:g_mcp_github {
   ar:op_mcp_github_sub_issue_write a ar:Operation ; ar:invokedThroughKind ar:GitHubMCPTool ;
     ar:mcpToolName "sub_issue_write" ;
     ar:mcpToolset "issues" ;
-    ar:targetsKind ar:GitHubIssuesData ;
+    ar:targetsKind ar:GitHubIssue ;
     ar:requires ar:cond_mcp_github_credential, ar:cond_network_route_permitted ;
     ar:mayInitiateInternetCall ar:call_mcp_github_sub_issue_write ;
-    ar:sourceStatus ar:MCPToolAnnotation ;
+    ar:sourceStatus ar:MCPToolSchema ;
     ar:sourceNote "Change sub-issue: Add a sub-issue to a parent issue in a GitHub repository." ;
-    ar:hasPotentialEffect [ a ar:PotentialEffect ; ar:effectType ar:Create ; ar:affectsKind ar:GitHubIssuesData ],
-      [ a ar:PotentialEffect ; ar:effectType ar:Delete ; ar:affectsKind ar:GitHubIssuesData ],
-      [ a ar:PotentialEffect ; ar:effectType ar:Transmit ; ar:affectsKind ar:GitHubIssuesData ],
-      [ a ar:PotentialEffect ; ar:effectType ar:Update ; ar:affectsKind ar:GitHubIssuesData ] .
+    ar:hasPotentialEffect [ a ar:PotentialEffect ; ar:effectType ar:Transmit ; ar:affectsKind ar:GitHubIssue ],
+      [ a ar:PotentialEffect ; ar:effectType ar:Update ; ar:affectsKind ar:GitHubIssue ] .
   ar:call_mcp_github_sub_issue_write a ar:PotentialInternetCall ;
     ar:callInitiatorKind ar:NanoClawAgentContainer ;
     ar:callViaKind ar:GitHubMCPTool, ar:RemoteHTTPMCPTransport ;
@@ -1883,12 +1859,18 @@ ar:g_mcp_github {
   ar:op_mcp_github_ui_get a ar:Operation ; ar:invokedThroughKind ar:GitHubMCPTool ;
     ar:mcpToolName "ui_get" ;
     ar:mcpToolset "context" ;
-    ar:targetsKind ar:GitHubContextData ;
+    ar:targetsKind ar:GitHubLabel, ar:GitHubUser, ar:GitHubMilestone, ar:GitHubIssueTypeOrField, ar:GitHubBranch ;
     ar:requires ar:cond_mcp_github_credential, ar:cond_network_route_permitted ;
     ar:mayInitiateInternetCall ar:call_mcp_github_ui_get ;
-    ar:sourceStatus ar:MCPToolAnnotation ;
+    ar:sourceStatus ar:MCPToolSchema ;
     ar:sourceNote "Get UI data: Fetch UI data for MCP Apps (labels, assignees, milestones, issue types, branches, issue fields, reviewers)." ;
-    ar:hasPotentialEffect [ a ar:PotentialEffect ; ar:effectType ar:Read ; ar:affectsKind ar:GitHubContextData ] .
+    ar:hasPotentialEffect [ a ar:PotentialEffect ; ar:effectType ar:Read ; ar:affectsKind ar:GitHubLabel ; ar:mcpToolMethod "labels" ],
+      [ a ar:PotentialEffect ; ar:effectType ar:Read ; ar:affectsKind ar:GitHubUser ; ar:mcpToolMethod "assignees" ],
+      [ a ar:PotentialEffect ; ar:effectType ar:Read ; ar:affectsKind ar:GitHubUser ; ar:mcpToolMethod "reviewers" ],
+      [ a ar:PotentialEffect ; ar:effectType ar:Read ; ar:affectsKind ar:GitHubMilestone ; ar:mcpToolMethod "milestones" ],
+      [ a ar:PotentialEffect ; ar:effectType ar:Read ; ar:affectsKind ar:GitHubIssueTypeOrField ; ar:mcpToolMethod "issue_types" ],
+      [ a ar:PotentialEffect ; ar:effectType ar:Read ; ar:affectsKind ar:GitHubIssueTypeOrField ; ar:mcpToolMethod "issue_fields" ],
+      [ a ar:PotentialEffect ; ar:effectType ar:Read ; ar:affectsKind ar:GitHubBranch ; ar:mcpToolMethod "branches" ] .
   ar:call_mcp_github_ui_get a ar:PotentialInternetCall ;
     ar:callInitiatorKind ar:NanoClawAgentContainer ;
     ar:callViaKind ar:GitHubMCPTool, ar:RemoteHTTPMCPTransport ;
@@ -1899,15 +1881,13 @@ ar:g_mcp_github {
   ar:op_mcp_github_unstar_repository a ar:Operation ; ar:invokedThroughKind ar:GitHubMCPTool ;
     ar:mcpToolName "unstar_repository" ;
     ar:mcpToolset "stargazers" ;
-    ar:targetsKind ar:GitHubStargazersData ;
+    ar:targetsKind ar:GitHubStar ;
     ar:requires ar:cond_mcp_github_credential, ar:cond_network_route_permitted ;
     ar:mayInitiateInternetCall ar:call_mcp_github_unstar_repository ;
-    ar:sourceStatus ar:MCPToolAnnotation ;
+    ar:sourceStatus ar:MCPToolSchema ;
     ar:sourceNote "Unstar repository: Unstar a GitHub repository" ;
-    ar:hasPotentialEffect [ a ar:PotentialEffect ; ar:effectType ar:Create ; ar:affectsKind ar:GitHubStargazersData ],
-      [ a ar:PotentialEffect ; ar:effectType ar:Delete ; ar:affectsKind ar:GitHubStargazersData ],
-      [ a ar:PotentialEffect ; ar:effectType ar:Transmit ; ar:affectsKind ar:GitHubStargazersData ],
-      [ a ar:PotentialEffect ; ar:effectType ar:Update ; ar:affectsKind ar:GitHubStargazersData ] .
+    ar:hasPotentialEffect [ a ar:PotentialEffect ; ar:effectType ar:Delete ; ar:affectsKind ar:GitHubStar ],
+      [ a ar:PotentialEffect ; ar:effectType ar:Transmit ; ar:affectsKind ar:GitHubStar ] .
   ar:call_mcp_github_unstar_repository a ar:PotentialInternetCall ;
     ar:callInitiatorKind ar:NanoClawAgentContainer ;
     ar:callViaKind ar:GitHubMCPTool, ar:RemoteHTTPMCPTransport ;
@@ -1918,15 +1898,13 @@ ar:g_mcp_github {
   ar:op_mcp_github_update_gist a ar:Operation ; ar:invokedThroughKind ar:GitHubMCPTool ;
     ar:mcpToolName "update_gist" ;
     ar:mcpToolset "gists" ;
-    ar:targetsKind ar:GitHubGistsData ;
+    ar:targetsKind ar:GitHubGist ;
     ar:requires ar:cond_mcp_github_credential, ar:cond_network_route_permitted ;
     ar:mayInitiateInternetCall ar:call_mcp_github_update_gist ;
-    ar:sourceStatus ar:MCPToolAnnotation ;
+    ar:sourceStatus ar:MCPToolSchema ;
     ar:sourceNote "Update Gist: Update an existing gist" ;
-    ar:hasPotentialEffect [ a ar:PotentialEffect ; ar:effectType ar:Create ; ar:affectsKind ar:GitHubGistsData ],
-      [ a ar:PotentialEffect ; ar:effectType ar:Delete ; ar:affectsKind ar:GitHubGistsData ],
-      [ a ar:PotentialEffect ; ar:effectType ar:Transmit ; ar:affectsKind ar:GitHubGistsData ],
-      [ a ar:PotentialEffect ; ar:effectType ar:Update ; ar:affectsKind ar:GitHubGistsData ] .
+    ar:hasPotentialEffect [ a ar:PotentialEffect ; ar:effectType ar:Transmit ; ar:affectsKind ar:GitHubGist ],
+      [ a ar:PotentialEffect ; ar:effectType ar:Update ; ar:affectsKind ar:GitHubGist ] .
   ar:call_mcp_github_update_gist a ar:PotentialInternetCall ;
     ar:callInitiatorKind ar:NanoClawAgentContainer ;
     ar:callViaKind ar:GitHubMCPTool, ar:RemoteHTTPMCPTransport ;
@@ -1937,15 +1915,13 @@ ar:g_mcp_github {
   ar:op_mcp_github_update_issue_comment a ar:Operation ; ar:invokedThroughKind ar:GitHubMCPTool ;
     ar:mcpToolName "update_issue_comment" ;
     ar:mcpToolset "issues" ;
-    ar:targetsKind ar:GitHubIssuesData ;
+    ar:targetsKind ar:GitHubIssueComment ;
     ar:requires ar:cond_mcp_github_credential, ar:cond_network_route_permitted ;
     ar:mayInitiateInternetCall ar:call_mcp_github_update_issue_comment ;
-    ar:sourceStatus ar:MCPToolAnnotation ;
+    ar:sourceStatus ar:MCPToolSchema ;
     ar:sourceNote "Update issue comment: Update the body of an existing issue or pull request conversation comment." ;
-    ar:hasPotentialEffect [ a ar:PotentialEffect ; ar:effectType ar:Create ; ar:affectsKind ar:GitHubIssuesData ],
-      [ a ar:PotentialEffect ; ar:effectType ar:Delete ; ar:affectsKind ar:GitHubIssuesData ],
-      [ a ar:PotentialEffect ; ar:effectType ar:Transmit ; ar:affectsKind ar:GitHubIssuesData ],
-      [ a ar:PotentialEffect ; ar:effectType ar:Update ; ar:affectsKind ar:GitHubIssuesData ] .
+    ar:hasPotentialEffect [ a ar:PotentialEffect ; ar:effectType ar:Transmit ; ar:affectsKind ar:GitHubIssueComment ],
+      [ a ar:PotentialEffect ; ar:effectType ar:Update ; ar:affectsKind ar:GitHubIssueComment ] .
   ar:call_mcp_github_update_issue_comment a ar:PotentialInternetCall ;
     ar:callInitiatorKind ar:NanoClawAgentContainer ;
     ar:callViaKind ar:GitHubMCPTool, ar:RemoteHTTPMCPTransport ;
@@ -1956,15 +1932,13 @@ ar:g_mcp_github {
   ar:op_mcp_github_update_pull_request a ar:Operation ; ar:invokedThroughKind ar:GitHubMCPTool ;
     ar:mcpToolName "update_pull_request" ;
     ar:mcpToolset "pull_requests" ;
-    ar:targetsKind ar:GitHubPullRequestsData ;
+    ar:targetsKind ar:GitHubPullRequest ;
     ar:requires ar:cond_mcp_github_credential, ar:cond_network_route_permitted ;
     ar:mayInitiateInternetCall ar:call_mcp_github_update_pull_request ;
-    ar:sourceStatus ar:MCPToolAnnotation ;
+    ar:sourceStatus ar:MCPToolSchema ;
     ar:sourceNote "Edit pull request: Update an existing pull request in a GitHub repository." ;
-    ar:hasPotentialEffect [ a ar:PotentialEffect ; ar:effectType ar:Create ; ar:affectsKind ar:GitHubPullRequestsData ],
-      [ a ar:PotentialEffect ; ar:effectType ar:Delete ; ar:affectsKind ar:GitHubPullRequestsData ],
-      [ a ar:PotentialEffect ; ar:effectType ar:Transmit ; ar:affectsKind ar:GitHubPullRequestsData ],
-      [ a ar:PotentialEffect ; ar:effectType ar:Update ; ar:affectsKind ar:GitHubPullRequestsData ] .
+    ar:hasPotentialEffect [ a ar:PotentialEffect ; ar:effectType ar:Transmit ; ar:affectsKind ar:GitHubPullRequest ],
+      [ a ar:PotentialEffect ; ar:effectType ar:Update ; ar:affectsKind ar:GitHubPullRequest ] .
   ar:call_mcp_github_update_pull_request a ar:PotentialInternetCall ;
     ar:callInitiatorKind ar:NanoClawAgentContainer ;
     ar:callViaKind ar:GitHubMCPTool, ar:RemoteHTTPMCPTransport ;
@@ -1975,15 +1949,17 @@ ar:g_mcp_github {
   ar:op_mcp_github_update_pull_request_branch a ar:Operation ; ar:invokedThroughKind ar:GitHubMCPTool ;
     ar:mcpToolName "update_pull_request_branch" ;
     ar:mcpToolset "pull_requests" ;
-    ar:targetsKind ar:GitHubPullRequestsData ;
+    ar:targetsKind ar:GitHubBranch, ar:GitHubCommit, ar:GitHubPullRequest ;
     ar:requires ar:cond_mcp_github_credential, ar:cond_network_route_permitted ;
     ar:mayInitiateInternetCall ar:call_mcp_github_update_pull_request_branch ;
-    ar:sourceStatus ar:MCPToolAnnotation ;
+    ar:sourceStatus ar:MCPToolSchema ;
     ar:sourceNote "Update pull request branch: Update the branch of a pull request with the latest changes from the base branch." ;
-    ar:hasPotentialEffect [ a ar:PotentialEffect ; ar:effectType ar:Create ; ar:affectsKind ar:GitHubPullRequestsData ],
-      [ a ar:PotentialEffect ; ar:effectType ar:Delete ; ar:affectsKind ar:GitHubPullRequestsData ],
-      [ a ar:PotentialEffect ; ar:effectType ar:Transmit ; ar:affectsKind ar:GitHubPullRequestsData ],
-      [ a ar:PotentialEffect ; ar:effectType ar:Update ; ar:affectsKind ar:GitHubPullRequestsData ] .
+    ar:hasPotentialEffect [ a ar:PotentialEffect ; ar:effectType ar:Transmit ; ar:affectsKind ar:GitHubBranch ],
+      [ a ar:PotentialEffect ; ar:effectType ar:Update ; ar:affectsKind ar:GitHubBranch ],
+      [ a ar:PotentialEffect ; ar:effectType ar:Create ; ar:affectsKind ar:GitHubCommit ],
+      [ a ar:PotentialEffect ; ar:effectType ar:Transmit ; ar:affectsKind ar:GitHubCommit ],
+      [ a ar:PotentialEffect ; ar:effectType ar:Transmit ; ar:affectsKind ar:GitHubPullRequest ],
+      [ a ar:PotentialEffect ; ar:effectType ar:Update ; ar:affectsKind ar:GitHubPullRequest ] .
   ar:call_mcp_github_update_pull_request_branch a ar:PotentialInternetCall ;
     ar:callInitiatorKind ar:NanoClawAgentContainer ;
     ar:callViaKind ar:GitHubMCPTool, ar:RemoteHTTPMCPTransport ;
