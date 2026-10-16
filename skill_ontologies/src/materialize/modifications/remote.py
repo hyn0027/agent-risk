@@ -61,16 +61,15 @@ def credential_tokens(snap: Snapshot, host: str | None) -> list[str]:
 
 def host_rows(snap: Snapshot, res: str, effects: str, via: str, status: str, hosts: list[str],
               entries: list[dict], kinds: list[URIRef], facts: list[str] | None = None) -> list[tuple]:
-    """One row per (host, Cedar permit covering it); a host no permit covers is Unavailable
-    with "cedar: none"; no host at all (no granted credential) is Unavailable with "credential: none"."""
+    """One row per (host, Cedar permit covering it). Hosts no enabled permit covers get no
+    row; with no host at all (no granted credential) the row is Unavailable with "credential: none"."""
     facts = facts or []
     if not hosts:
         return [(res, "-", effects, via, "Unavailable", gate(snap, ["credential: none", *facts], *kinds))]
     rows = []
     for host in hosts:
         matching = [e for e in entries if patterns_overlap(host, e["host"])]
-        if not matching:
-            rows.append((res, f"{host}\ncedar: none", effects, via, "Unavailable", gate(snap, [*credential_tokens(snap, host), *facts], *kinds)))
+        # A host no enabled permit covers cannot be reached: no row.
         for entry in matching:
             rows.append((res, f"{host}\n{entry['where']}", effects, via, status,
                          gate(snap, [*entry["tokens"], *credential_tokens(snap, host), *facts], *kinds)))
@@ -134,7 +133,7 @@ def mcp_rows(snap: Snapshot) -> list[tuple]:
         elif result["decision"] in ("allow", "approval"):
             where, status, facts = f"{host}\ncedar: {result['policy']}", "Available", []
         else:
-            where, status, facts = f"{host}\ncedar: none", "Unavailable", []
+            continue  # denied: the server cannot be reached, so it is not shown
         rows.append(("RemoteMCPService", where, "Transmit", render_paths(paths, f"mcp_servers.{name}"), status, gate(snap, [*facts, *credential], *kinds)))
     return rows
 

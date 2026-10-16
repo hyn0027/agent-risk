@@ -124,7 +124,7 @@ def call_paths(m, op: URIRef) -> list[str]:
 def mcp_tool_rows(snap: Snapshot, res: str, effects: str, route: str, status: str, hosts: list[str], tool: str,
                   paths: list[str], kinds: list[URIRef], facts: list[str], env: Path) -> list[tuple]:
     """One row per host, placed by the gateway's own Cedar decision for the tools/call
-    request the tool sends: under the deciding permit, or Unavailable with cedar: none."""
+    request the tool sends, under the deciding permit. A denied call gets no row."""
     agent = snap.facts["onecli_agent"]
     body = json.dumps({"jsonrpc": "2.0", "id": 1, "method": "tools/call", "params": {"name": tool, "arguments": {}}})
     rows = []
@@ -137,9 +137,7 @@ def mcp_tool_rows(snap: Snapshot, res: str, effects: str, route: str, status: st
             elif result["decision"] in ("allow", "approval"):
                 extra = ["@approval: held for a human"] if result["decision"] == "approval" else []
                 rows.append((res, f"{host}\ncedar: {result['policy']}", effects, route, status, gate(snap, [*extra, *credential, *facts], *kinds)))
-            else:
-                why = f"cedar: {result['policy']} (forbid)" if result.get("policy") else "cedar: none"
-                rows.append((res, f"{host}\n{why}", effects, route, "Unavailable", gate(snap, [*credential, *facts], *kinds)))
+            # Denied (no enabled permit, or a forbid): it cannot happen, so it is not shown.
     return rows
 
 

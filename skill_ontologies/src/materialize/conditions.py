@@ -13,7 +13,7 @@ from rdflib.namespace import RDF
 from ..common.namespaces import AR, OBS
 from ..common.rdf import short
 from .constants import OBSERVED, SATISFIED, UNKNOWN, UNSATISFIED
-from .gateway_policy import applicable_rules, cedar_like, patterns_overlap, permit_labels
+from .gateway_policy import applicable_rules, cedar_like, patterns_overlap
 from .provider_tools import tool_status, tools_implementing
 from .runtime import container_command
 from .snapshot import Snapshot
@@ -56,7 +56,7 @@ def evaluate(snap: Snapshot) -> dict[str, tuple[URIRef, str]]:
 def network_route_requirement(snap: Snapshot) -> tuple[URIRef, str]:
     """Unsatisfied when lockdown forces the gateway and no Cedar permit applies to the agent."""
     agent = snap.facts["onecli_agent"]
-    permits = permit_labels(snap.facts["gateway_policy"], agent["id"] if agent else None)
+    permits = [p for p in applicable_rules(snap.facts["gateway_policy"], agent["id"] if agent else None) if p["scope"]["effect"] == "permit"]
     evidence = f"lockdown={'on' if snap.lockdown_on else 'off'}; cedar_permits={len(permits)}"
     if snap.lockdown_on and not permits:
         return UNSATISFIED, evidence

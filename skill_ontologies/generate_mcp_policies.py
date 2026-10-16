@@ -1,6 +1,7 @@
 """Generate a OneCLI Cedar policy group for an MCP server from its pinned snapshot.
 
     python3 generate_mcp_policies.py github > mcp-github.json
+    python3 generate_mcp_policies.py github --enable get_me,issue_write > mcp-github.json
     onecli-policy sync mcp-github.json
 
 Reads the same snapshot as generate_mcp_ontology.py (ontology/mcp/sources/<id>.json)
@@ -12,10 +13,11 @@ tool can be switched on or off on its own.
 - read-content: resources/read, prompts/get, completion/complete, as far as the
   server declares those capabilities
 - stream-and-session: GET and DELETE on the endpoint (streamable HTTP)
-- tool-<name>: tools/call with params.name == <name>. Read-only tools (readOnlyHint)
-  are on; other tools are off and carry @approval when destructive under the MCP
-  ToolAnnotations defaults (destructiveHint unset counts as true), so switching one
-  on still holds each call for a human.
+- tool-<name>: tools/call with params.name == <name>. Without --enable, read-only
+  tools (readOnlyHint) are on and the others off; with --enable, exactly the listed
+  tools are on (and read-content only when listed). Non-read-only tools carry @approval when destructive under the MCP
+  ToolAnnotations defaults (destructiveHint unset counts as true), so an enabled
+  write tool still holds each call for a human.
 """
 
 import json
@@ -67,8 +69,11 @@ def describe(tool: dict) -> str:
     return f"{title} ({kind}; toolset {sets})"[:500]
 
 
-def generate(server_id: str) -> dict:
+def generate(server_id: str, enable: set[str] | None = None) -> dict:
     snap = json.loads((SOURCES / f"{server_id}.json").read_text())
+    unknown = sorted((enable or set()) - {t["name"] for t in snap["tools"]} - {"read-content"})
+    if unknown:
+        sys.exit(f"unknown tools for --enable: {', '.join(unknown)}")
     url = urlparse(snap["callEndpoint"])
     host = url.hostname
     path_pattern = (url.path.rstrip("/") or "") + "*"
@@ -92,6 +97,7 @@ def generate(server_id: str) -> dict:
     ]
     if content:
         policies.append({"name": "read-content", "description": f"Server capabilities {', '.join(sorted(caps))}: " + ", ".join(content),
+                         "enabled": enable is None or "read-content" in enable,
                          "policyText": method_policy(host, path_pattern, content)})
     policies.append({"name": "stream-and-session", "description": "Server stream (GET) and session close (DELETE) of the streamable HTTP transport",
                      "policyText": f'''permit(
@@ -106,21 +112,29 @@ def generate(server_id: str) -> dict:
         policies.append({
             "name": f"tool-{tool['name']}",
             "description": describe(tool),
-            "enabled": read_only,
+            "enabled": (tool["name"] in enable) if enable is not None else read_only,
             "policyText": tool_policy(host, path_pattern, tool["name"], approval=destructive),
         })
     return {
         "name": f"mcp-{server_id}",
         "source": f"mcp:{server_id}",
-        "description": f"{title} ({snap['callEndpoint']}): protocol plus one policy per tool, generated from ontology/mcp/sources/{server_id}.json. Read-only tools on; write tools off and held for approval when destructive.",
+        "description": f"{title} ({snap['callEndpoint']}): protocol plus one policy per tool, generated from ontology/mcp/sources/{server_id}.json. "
+                       + (f"{len(enable)} tools on, the rest off; " if enable is not None else "Read-only tools on, write tools off; ")
+                       + "enabled write tools are held for approval when destructive.",
         "policies": policies,
     }
 
 
 def main() -> None:
-    if len(sys.argv) != 2:
-        sys.exit("usage: python3 generate_mcp_policies.py <server-id>  > spec.json")
-    json.dump(generate(sys.argv[1]), sys.stdout, indent=2)
+    args = sys.argv[1:]
+    enable = None
+    if "--enable" in args:
+        i = args.index("--enable")
+        enable = {t.strip() for t in args[i + 1].split(",") if t.strip()} if i + 1 < len(args) else set()
+        args = args[:i] + args[i + 2:]
+    if len(args) != 1:
+        sys.exit("usage: python3 generate_mcp_policies.py <server-id> [--enable tool,tool,...]  > spec.json")
+    json.dump(generate(args[0], enable), sys.stdout, indent=2)
     sys.stdout.write("\n")
 
 
