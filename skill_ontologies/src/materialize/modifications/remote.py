@@ -18,7 +18,7 @@ from ...common.rdf import short
 from ..constants import LOCAL_CHANNELS, UNAVAILABLE
 from ..gateway_policy import applicable_rules, host_allowed, patterns_overlap, policy_entries
 from ..snapshot import Snapshot
-from .common import endpoint_name, gate, render_paths, route_paths, step_effects, tool_label
+from .common import ancestors, credential_hosts, endpoint_name, gate, render_paths, route_paths, step_effects, tool_label
 
 # Endpoints that only send GET requests (Claude's WebFetch): omitted from policies that permit only other methods.
 GET_ONLY = {"WebFetch"}
@@ -28,9 +28,49 @@ def via_gateway(snap: Snapshot, path: list[URIRef]) -> bool:
     return any(snap.side_of(k) == AR.OneCLIGateway for k in path)
 
 
+def channel_destinations(snap: Snapshot, path: list[URIRef]) -> list[dict] | None:
+    """For a path through channel delivery, the agent's remote channel destination grants
+    (where such a message can go); None for any other path."""
+    if not any(AR.NanoClawChannelAdapterDelivery in ancestors(snap, k) for k in path):
+        return None
+    return [d for d in snap.facts["grants"] if d["target_type"] == "channel" and d.get("channel_type") not in LOCAL_CHANNELS]
+
+
+def direct_rows(snap: Snapshot, res: str, effects: str, via: str, status: str, path: list[URIRef],
+                kinds: list[URIRef], facts: list[str] | None = None) -> list[tuple]:
+    """Rows for a path that does not pass the gateway: one per channel destination for
+    channel delivery, else a single row reachable anywhere ("*")."""
+    facts = facts or []
+    dests = channel_destinations(snap, path)
+    if dests is None:
+        return [(res, "*", effects, via, status, gate(snap, facts, *kinds))]
+    if not dests:
+        return [(res, "-", effects, via, "Unavailable", gate(snap, ["destination: none", *facts], *kinds))]
+    return [(res, f"{d.get('channel_type')}: {d.get('display_name') or d['local_name']}", effects, via, status,
+             gate(snap, [f"destination: {d['local_name']}", *facts], *kinds)) for d in dests]
+
+
 def credential_tokens(snap: Snapshot, host: str | None) -> list[str]:
     hit = sorted(s["name"] for s in snap.facts["secrets"] if s.get("hostPattern") and patterns_overlap(s["hostPattern"], host))
     return [f"credential: {', '.join(hit)}"] if hit else []
+
+
+def host_rows(snap: Snapshot, res: str, effects: str, via: str, status: str, hosts: list[str],
+              entries: list[dict], kinds: list[URIRef], facts: list[str] | None = None) -> list[tuple]:
+    """One row per (host, Cedar permit covering it); a host no permit covers is Unavailable
+    with "cedar: none"; no host at all (no granted credential) is Unavailable with "credential: none"."""
+    facts = facts or []
+    if not hosts:
+        return [(res, "-", effects, via, "Unavailable", gate(snap, ["credential: none", *facts], *kinds))]
+    rows = []
+    for host in hosts:
+        matching = [e for e in entries if patterns_overlap(host, e["host"])]
+        if not matching:
+            rows.append((res, host, effects, via, "Unavailable", gate(snap, ["cedar: none", *credential_tokens(snap, host), *facts], *kinds)))
+        for entry in matching:
+            rows.append((res, f"{host}\n{entry['where']}", effects, via, status,
+                         gate(snap, [*entry["tokens"], *credential_tokens(snap, host), *facts], *kinds)))
+    return rows
 
 
 def capability_rows(snap: Snapshot) -> list[tuple]:
@@ -55,12 +95,16 @@ def capability_rows(snap: Snapshot) -> list[tuple]:
             continue
         for path in paths:
             if not via_gateway(snap, path):
-                rows.append((short(resource), "*", effects, render_paths([path], name), short(status), gate(snap, [], *kinds)))
+                rows += direct_rows(snap, short(resource), effects, render_paths([path], name), short(status), path, kinds)
+                continue
+            hosts = credential_hosts(snap, resource)
+            if hosts is not None:
+                rows += host_rows(snap, short(resource), effects, render_paths([path], name), short(status), hosts, entries, kinds)
                 continue
             for entry in entries:
                 if name in GET_ONLY and entry["methods"] is not None and "GET" not in entry["methods"]:
                     continue
-                rows.append((short(resource), entry["label"], effects, render_paths([path], name), short(status),
+                rows.append((short(resource), entry["where"], effects, render_paths([path], name), short(status),
                              gate(snap, entry["tokens"] + credential_tokens(snap, entry["host"]), *kinds)))
     return rows
 

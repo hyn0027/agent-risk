@@ -17,6 +17,8 @@ nothing else (the skill-wide ``ar:subjectToControlKind`` is not attributed to
 single effects).
 """
 
+from urllib.parse import urlparse
+
 from rdflib import URIRef
 from rdflib.namespace import RDF
 
@@ -24,8 +26,8 @@ from ..common.namespaces import AR, OBS
 from ..common.rdf import short
 from .constants import AVAILABLE, CONDITIONAL, MUTATING_EFFECTS, SUBPATHS, UNAVAILABLE, UNKNOWN, UNSATISFIED
 from .gateway_policy import policy_entries
-from .modifications.common import ancestors, endpoint_name, gate, host_backing, kind_location, location, render_paths, route_paths
-from .modifications.remote import GET_ONLY, credential_tokens, via_gateway
+from .modifications.common import ancestors, credential_hosts, endpoint_name, gate, host_backing, kind_location, location, render_paths, route_paths
+from .modifications.remote import GET_ONLY, credential_tokens, direct_rows, host_rows, via_gateway
 from .snapshot import Snapshot
 
 
@@ -126,6 +128,13 @@ def assess_operations(snap: Snapshot) -> tuple[list[tuple], list[tuple], list[tu
             continue
         for op in sorted(m.objects(skill, AR.declaresOperation), key=short):
             status, _ = op_status(snap, op)
+            # Hosts the operation's internet calls name (callEndpointPattern), if any.
+            # A pattern with a {placeholder} names no concrete host.
+            hosts = sorted({urlparse(str(pat)).hostname or str(pat) for call in m.objects(op, AR.mayInitiateInternetCall)
+                            for pat in m.objects(call, AR.callEndpointPattern) if "{" not in str(pat)})
+            # Requirements not satisfied, with their evidence, shown in every gate of the operation.
+            req_facts = [f"{'blocked' if snap.conditions[r][0] == UNSATISFIED else 'pending'}: {short(r)} ({snap.conditions[r][1]})"
+                         for r in sorted(m.objects(op, AR.requires)) if r in snap.conditions and snap.conditions[r][0] in (UNSATISFIED, UNKNOWN)]
             st = short(status)
             endpoints = sorted(m.objects(op, AR.invokedThroughKind), key=short)
             tools = ", ".join(sorted({endpoint_name(snap, e) for e in endpoints})) or "-"
@@ -138,7 +147,7 @@ def assess_operations(snap: Snapshot) -> tuple[list[tuple], list[tuple], list[tu
                     effects.setdefault(kind, set()).add(etype)
 
             def controls_of(*kinds: URIRef, extra: list[str] | None = None) -> str:
-                return gate(snap, extra or [], *kinds)
+                return gate(snap, (extra or []) + req_facts, *kinds)
 
             def eff_text(es: set[URIRef]) -> str:
                 return ", ".join(sorted(short(e) for e in es))
@@ -165,13 +174,20 @@ def assess_operations(snap: Snapshot) -> tuple[list[tuple], list[tuple], list[tu
                         route = render_paths([path], via)
                         kinds = [*path, kind]
                         if not via_gateway(snap, path):
-                            remote.append((res, "*", eff_text(etypes), route, st, controls_of(*kinds)))
+                            remote += direct_rows(snap, res, eff_text(etypes), route, st, path, kinds, req_facts)
                             continue
-                        for entry in entries:
-                            if tools in GET_ONLY and entry["methods"] is not None and "GET" not in entry["methods"]:
-                                continue
-                            remote.append((res, entry["label"], eff_text(etypes), route, st,
-                                           controls_of(*kinds, extra=entry["tokens"] + credential_tokens(snap, entry["host"]))))
+                        # Hosts: those the call names, else (for a kind reached at granted
+                        # credential hosts) the hosts of the agent's granted credentials.
+                        kind_hosts = hosts or credential_hosts(snap, kind)
+                        if kind_hosts is None:
+                            # The call names no endpoint: it can reach whatever a permit allows.
+                            for entry in entries:
+                                if tools in GET_ONLY and entry["methods"] is not None and "GET" not in entry["methods"]:
+                                    continue
+                                remote.append((res, entry["where"], eff_text(etypes), route, st,
+                                               controls_of(*kinds, extra=entry["tokens"] + credential_tokens(snap, entry["host"]))))
+                            continue
+                        remote += host_rows(snap, res, eff_text(etypes), route, st, kind_hosts, entries, kinds, req_facts)
                 elif side is not None:
                     host.append((res, kind_location(snap, kind), eff_text(etypes), via, st, controls_of(kind, *endpoints)))
                 else:

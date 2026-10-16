@@ -420,6 +420,8 @@ def policy_entries(policy: dict | None, agent_id: str | None) -> list[dict]:
         carved = [f["name"] for f in forbids if patterns_overlap(f["scope"]["host"], sc["host"])]
         entries.append({
             "name": p["name"], "label": rule_label(p), "host": sc["host"], "methods": sc["methods"], "text": p["text"],
-            "tokens": [f"cedar: {p['name']}"] + ([f"flags: {', '.join(rule_flags(p))}"] if rule_flags(p) else []) + ([f"forbid: {', '.join(carved)}"] if carved else []),
+            # Displayed: only references to policy entries; their code is printed verbatim elsewhere.
+            "where": f"cedar: {p['name']}",
+            "tokens": [f"forbid: {', '.join(carved)}"] if carved else [],
         })
     return entries

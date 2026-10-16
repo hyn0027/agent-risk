@@ -23,21 +23,10 @@ ar:g_onecli_gateway {
     ar:executesOn ar:NanoClawAgentContainer ;
     ar:routesToKind ar:NanoClawProxyAwareHTTPRequest ;
     rdfs:comment "Any proxy-honoring HTTP client in the container (curl, fetch, requests, git) used against a host the vault holds a credential for. The request carries no auth; the gateway adds it." .
-  ar:ConnectedServiceAPIEndpoint a ar:WorldSurfaceKind, ar:PublicInternetEndpointKind ;
-    ar:specializesKind ar:PublicInternetEndpoint ;
-    rdfs:comment "API of a service connected in OneCLI (e.g. Gmail, GitHub, Google Calendar, Stripe): requests to it are sent with the stored credential." .
-  ar:ConnectedServiceData a ar:WorldSurfaceKind ;
-    ar:specializesKind ar:RemoteService ;
-    rdfs:comment "The user's data and state in a connected service, reachable with the stored credential's full scope." .
   ar:OneCLIConnectLink a ar:WorldSurfaceKind ;
-    ar:specializesKind ar:RemoteWebResource ;
-    rdfs:comment "connect_url from a gateway error; opening it lets the user connect a service to the vault." .
-  ar:ConnectedServiceData ar:protectedByKind ar:RemoteServiceAuthorizationControl, ar:OneCLIGatewayPolicy .
+    ar:locatedOn ar:OneCLIGateway ;
+    rdfs:comment "connect_url from a gateway error: a page of the OneCLI dashboard where the user connects a service to the vault. The link points at the gateway's web app; what leaves the machine is the chat message carrying it." .
 
-  ar:cond_onecli_service_connected a ar:Requirement ;
-    rdfs:comment "The vault holds a credential for the service's host that applies to this agent (secret mode all, or the secret assigned)." .
-  ar:cond_onecli_request_allowed a ar:Requirement ;
-    rdfs:comment "No gateway rule blocks the request, and under deny-by-default an allow rule covers the host (credentialed requests only)." .
 
   ar:op_onecli_read_service a ar:Operation ; ar:invokedThroughKind ar:CredentialedHTTPClient ;
     ar:targetsKind ar:ConnectedServiceData ;
@@ -74,7 +63,7 @@ ar:g_onecli_gateway {
     ar:sourceStatus ar:SkillText ; ar:adaptationStatus ar:InferredForNanoClaw ;
     ar:sourceNote "On 401/403/app_not_connected, show the user the connect_url from the error, then retry after they confirm." ;
     ar:hasPotentialEffect [ a ar:PotentialEffect ; ar:effectType ar:Notify ; ar:affectsKind ar:NanoClawOutboundMessage ],
-      [ a ar:PotentialEffect ; ar:effectType ar:Transmit ; ar:affectsKind ar:OneCLIConnectLink ] .
+      [ a ar:PotentialEffect ; ar:effectType ar:Transmit ; ar:affectsKind ar:MessagingMessage ] .
 
   ar:call_onecli_connected_api a ar:PotentialInternetCall ;
     ar:callInitiatorKind ar:NanoClawAgentContainer ;

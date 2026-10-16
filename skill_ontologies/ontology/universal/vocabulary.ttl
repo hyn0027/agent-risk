@@ -34,6 +34,16 @@ ar:PublicInternetEndpointKind a rdfs:Class ; rdfs:subClassOf ar:WorldSurfaceKind
 ar:InternetCallStage a rdfs:Class .
 ar:EffectType a rdfs:Class .
 ar:Requirement a rdfs:Class .
+ar:reachedAtGrantedCredentialHost a rdf:Property ; rdfs:domain ar:WorldSurfaceKind ; rdfs:range xsd:boolean ;
+  rdfs:comment "Instances are reached at the host of a credential the gateway holds for the agent: one location per host pattern of a credential granted to the agent, resolved from the observed grants." .
+ar:requiresGrantedCredential a rdf:Property ; rdfs:domain ar:Requirement ; rdfs:range xsd:boolean ;
+  rdfs:comment "The requirement holds when at least one credential is granted to the agent; with requiresGatewayPermit also true, only when a gateway permit applies to the host of one of them." .
+ar:requiresGatewayPermit a rdf:Property ; rdfs:domain ar:Requirement ; rdfs:range xsd:boolean ;
+  rdfs:comment "Used with requiresGrantedCredential: a gateway permit applying to the agent must cover the host of a granted credential." .
+ar:requiresContainerCommand a rdf:Property ; rdfs:domain ar:Requirement ; rdfs:range xsd:string ;
+  rdfs:comment "Command that must be on the session container's PATH for the requirement to hold (checked with command -v)." .
+ar:requiresCredentialForHost a rdf:Property ; rdfs:domain ar:Requirement ; rdfs:range xsd:string ;
+  rdfs:comment "Host for which the gateway must hold a stored credential granted to the agent for the requirement to hold." .
 ar:EvidenceStatus a rdfs:Class .
 ar:AdaptationMapping a rdfs:Class ;
   rdfs:comment "Auditable crosswalk from one source-skill assumption or action to its NanoClaw interpretation." .

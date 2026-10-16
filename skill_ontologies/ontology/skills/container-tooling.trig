@@ -42,6 +42,7 @@ ar:g_container_tooling {
   ar:BrowserSiteAccount ar:protectedByKind ar:RemoteServiceAuthorizationControl .
 
   ar:cond_agent_browser_available a ar:Requirement ;
+    ar:requiresContainerCommand "agent-browser" ;
     rdfs:comment "The agent-browser CLI and Chromium are present in the agent image (true for the stock NanoClaw image)." .
   ar:cond_browser_proxy_honored a ar:Requirement ;
     rdfs:comment "Chromium sends its traffic through the gateway proxy; under egress lockdown a browser that ignores the proxy reaches nothing." .

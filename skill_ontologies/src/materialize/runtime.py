@@ -4,6 +4,7 @@ Every call is read-only.
 """
 
 import json
+import shlex
 import shutil
 import sqlite3
 import subprocess
@@ -28,6 +29,14 @@ def ncl(nanoclaw: Path, *args: str) -> object:
     if not out.get("ok"):
         raise SystemExit(f"ncl {' '.join(args)} failed: {out.get('error')}")
     return out["data"]
+
+
+def container_command(container: str, name: str) -> str:
+    """Path of ``name`` on the container's PATH (command -v), or "" when absent. Read-only."""
+    try:
+        return run([tool("docker"), "exec", container, "sh", "-c", f"command -v {shlex.quote(name)} || true"]).strip()
+    except subprocess.CalledProcessError:
+        return ""
 
 
 def docker_json(*args: str) -> object:

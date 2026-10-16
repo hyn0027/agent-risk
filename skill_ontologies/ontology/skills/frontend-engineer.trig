@@ -46,8 +46,10 @@ ar:g_frontend_engineer {
   ar:VercelDeployment ar:protectedByKind ar:RemoteServiceAuthorizationControl .
 
   ar:cond_vercel_cli_installed a ar:Requirement ;
+    ar:requiresContainerCommand "vercel" ;
     rdfs:comment "The vercel CLI is in the agent image, i.e. /add-vercel was applied (not in the stock image)." .
   ar:cond_vercel_credential a ar:Requirement ;
+    ar:requiresCredentialForHost "api.vercel.com" ;
     rdfs:comment "OneCLI holds a Vercel token for api.vercel.com that applies to this agent." .
 
   ar:op_frontend_edit_code a ar:Operation ; ar:invokedThroughKind ar:NanoClawProviderFileTool ;
@@ -136,9 +138,10 @@ ar:g_frontend_engineer {
     ar:callInitiatorKind ar:NanoClawAgentContainer ;
     ar:callViaKind ar:AgentBrowserCLI, ar:NanoClawProxyAwareHTTPRequest ;
     ar:callEndpointKind ar:UnspecifiedPublicInternetEndpoint ; ar:callStage ar:ContainerEgress ;
+    ar:callEndpointPattern "https://*.vercel.app/" ;
     ar:callConditionalOn ar:cond_browser_proxy_honored ;
     ar:sourceStatus ar:SkillText ;
-    ar:sourceNote "Loading the deployed site at its public Vercel URL." .
+    ar:sourceNote "Loading the deployed site at its public Vercel URL (*.vercel.app; a custom domain added with vercel domains is not covered by this pattern)." .
 
   ar:adapt_frontend_build_local a ar:AdaptationMapping ;
     ar:sourceAssumption "Projects are built and installed locally with pnpm." ;

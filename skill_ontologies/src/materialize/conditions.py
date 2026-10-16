@@ -13,8 +13,9 @@ from rdflib.namespace import RDF
 from ..common.namespaces import AR, OBS
 from ..common.rdf import short
 from .constants import OBSERVED, SATISFIED, UNKNOWN, UNSATISFIED
-from .gateway_policy import permit_labels
+from .gateway_policy import applicable_rules, cedar_like, patterns_overlap, permit_labels
 from .provider_tools import tool_status, tools_implementing
+from .runtime import container_command
 from .snapshot import Snapshot
 
 
@@ -86,10 +87,43 @@ def evaluate_tool_requirements(snap: Snapshot) -> dict[URIRef, tuple[URIRef, str
     return out
 
 
+def evaluate_declared(snap: Snapshot) -> dict[URIRef, tuple[URIRef, str]]:
+    """Requirements whose check the model declares: ``ar:requiresContainerCommand``
+    (command -v in the session container), ``ar:requiresCredentialForHost``
+    (a credential granted to this agent whose host pattern covers the host), and
+    ``ar:requiresGrantedCredential`` (any credential granted to the agent; with
+    ``ar:requiresGatewayPermit``, one whose host an applying Cedar permit covers).
+    A requirement with several checks holds only when all do."""
+    m, out = snap.model, {}
+    commands: dict[str, str] = {}
+    agent = snap.facts["onecli_agent"]
+    policy = snap.facts["gateway_policy"]
+    declared = set(m.subjects(AR.requiresContainerCommand, None)) | set(m.subjects(AR.requiresCredentialForHost, None)) | set(m.subjects(AR.requiresGrantedCredential, None))
+    for cond in sorted(declared):
+        results = []
+        if any(str(v).lower() == "true" for v in m.objects(cond, AR.requiresGrantedCredential)):
+            hosts = sorted({s["hostPattern"].lower() for s in snap.facts["secrets"] if s.get("hostPattern")})
+            results.append((bool(hosts), f"granted_credentials={len(snap.facts['secrets'])}"))
+            if any(str(v).lower() == "true" for v in m.objects(cond, AR.requiresGatewayPermit)):
+                permits = [p for p in applicable_rules(policy, agent["id"] if agent else None) if p["scope"]["effect"] == "permit"]
+                covered = [h for h in hosts if any(patterns_overlap(h, p["scope"]["host"]) for p in permits)]
+                results.append((bool(covered), f"permitted_credential_hosts={', '.join(covered) or 'none'}"))
+        for name in sorted(str(c) for c in m.objects(cond, AR.requiresContainerCommand)):
+            if name not in commands:
+                commands[name] = container_command(snap.facts["container_name"], name)
+            results.append((bool(commands[name]), f"{name}={commands[name] or 'absent'}"))
+        for host in sorted(str(h) for h in m.objects(cond, AR.requiresCredentialForHost)):
+            hit = sorted(s["name"] for s in snap.facts["secrets"] if s.get("hostPattern") and cedar_like(host, s["hostPattern"].lower()))
+            results.append((bool(hit), f"credential[{host}]={', '.join(hit) or 'none'}"))
+        out[cond] = (SATISFIED if all(ok for ok, _ in results) else UNSATISFIED, "; ".join(e for _, e in results))
+    return out
+
+
 def resolve_conditions(snap: Snapshot) -> None:
     for name, result in evaluate(snap).items():
         snap.conditions[AR[name]] = result
     snap.conditions.update(evaluate_tool_requirements(snap))
+    snap.conditions.update(evaluate_declared(snap))
     for cond in sorted(set(snap.model.subjects(RDF.type, AR.Requirement))):
         if cond not in snap.conditions:
             snap.conditions[cond] = (UNKNOWN, "evaluator=none")

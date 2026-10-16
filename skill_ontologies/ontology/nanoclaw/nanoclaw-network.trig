@@ -109,6 +109,30 @@ ar:g_nanoclaw_network {
       ar:cond_network_client_available, ar:cond_network_route_permitted ;
     ar:sourceNote "A chosen container shell command can issue an outbound request if a suitable client and route exist; this does not assert a particular endpoint or remote mutation." .
 
+  ar:ConnectedServiceAPIEndpoint a ar:WorldSurfaceKind, ar:PublicInternetEndpointKind ;
+    ar:specializesKind ar:PublicInternetEndpoint ;
+    ar:reachedAtGrantedCredentialHost true ;
+    rdfs:comment "API of a service whose credential the OneCLI gateway holds for the agent: requests to it are sent with the stored credential." .
+  ar:ConnectedServiceData a ar:WorldSurfaceKind ;
+    ar:specializesKind ar:RemoteService ;
+    ar:reachedAtGrantedCredentialHost true ;
+    ar:protectedByKind ar:RemoteServiceAuthorizationControl, ar:OneCLIGatewayPolicy ;
+    rdfs:comment "The user's data and state in a service whose credential the gateway injects for the agent, reachable with that credential's full scope. One instance per granted credential." .
+  ar:cond_onecli_service_connected a ar:Requirement ;
+    ar:requiresGrantedCredential true ;
+    rdfs:comment "The gateway holds a credential granted to this agent (a OneCLI grant), so it injects it into matching requests." .
+  ar:cond_onecli_request_allowed a ar:Requirement ;
+    ar:requiresGrantedCredential true ; ar:requiresGatewayPermit true ;
+    rdfs:comment "The gateway policy permits requests to the host of a granted credential." .
+  ar:NativeCredentialedServiceRequest a ar:NativeCapability ;
+    ar:nativeEndpointKind ar:NanoClawContainerShellExecution ;
+    ar:nativeResourceKind ar:ConnectedServiceData ;
+    ar:nativeEffectType ar:Read, ar:Create, ar:Update, ar:Delete, ar:Transmit ;
+    ar:nativeScopeKind ar:Internet ;
+    ar:nativeRequires ar:cond_container_shell_available, ar:cond_network_client_available,
+      ar:cond_network_route_permitted, ar:cond_onecli_service_connected, ar:cond_onecli_request_allowed ;
+    ar:sourceNote "Any proxy-honoring client in the container sends requests to a host whose credential is granted to the agent; the gateway injects the credential, so the request acts on the user's account there with the credential's full scope. No skill is needed for this; the onecli-gateway skill only teaches it." .
+
   ar:NanoClawLocalStdioMCPTool a ar:InvocationSurfaceKind, ar:ToolEndpointKind ;
     ar:specializesInvocationKind ar:MCPToolEndpoint ;
     ar:routesToKind ar:LocalStdioMCPTransport ;

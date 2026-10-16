@@ -166,6 +166,14 @@ def kind_location(snap: Snapshot, kind: URIRef) -> str:
     return short(side) if side is not None else "-"
 
 
+def credential_hosts(snap: Snapshot, kind: URIRef) -> list[str] | None:
+    """Host patterns of the credentials granted to the agent, when ``kind`` (or a kind it
+    specializes) is ``ar:reachedAtGrantedCredentialHost``; None for any other kind."""
+    if not any(str(v).lower() == "true" for a in ancestors(snap, kind) for v in snap.model.objects(a, AR.reachedAtGrantedCredentialHost)):
+        return None
+    return sorted({s["hostPattern"].lower() for s in snap.facts["secrets"] if s.get("hostPattern")})
+
+
 def step_effects(snap: Snapshot, step: URIRef) -> set[URIRef]:
     """``ar:stepEffectType`` of a step and the kinds it specializes."""
     return {e for a in ancestors(snap, step) for e in snap.model.objects(a, AR.stepEffectType)}
@@ -197,7 +205,16 @@ def route_paths(snap: Snapshot, start: URIRef, resource: URIRef, max_depth: int 
 
     if target is not None:
         walk([start])
-    return out
+    return drop_subsumed(out)
+
+
+def drop_subsumed(paths: list[list[URIRef]]) -> list[list[URIRef]]:
+    """Drop a path whose steps all appear, in order, in a longer path (a shortcut
+    edge summarizing the longer route); the detailed path carries every step's controls."""
+    def within(short_path: list[URIRef], long_path: list[URIRef]) -> bool:
+        it = iter(long_path)
+        return len(short_path) < len(long_path) and all(k in it for k in short_path)
+    return [p for p in paths if not any(within(p, q) for q in paths)]
 
 
 def render_paths(paths: list[list[URIRef]], tool: str | None = None) -> str:
