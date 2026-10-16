@@ -2,9 +2,10 @@
 
 import json
 from datetime import datetime, timezone
-from itertools import combinations, islice
+from itertools import combinations
 from pathlib import Path
-from random import shuffle
+import random
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from typing import Callable
 
 from dotenv import load_dotenv
@@ -69,6 +70,8 @@ def analyze_pairs(
     on_result: Callable[[dict, dict, dict, int, int], None] | None = None,
     extra_catalog: dict | None = None,
     pair_filter: Callable[[dict, dict], bool] | None = None,
+    seed: int | None = None,
+    workers: int = 20,
 ) -> None:
     """Shuffle resources and save up to max_pairs assessments as JSONL; zero skips.
 
@@ -78,12 +81,16 @@ def analyze_pairs(
     place the JSONL file; on_result(first, second, assessment, done, total) runs
     after each saved assessment. extra_catalog adds top-level entries (e.g.
     policies) to the shared catalog. pair_filter(first, second) keeps only the pairs it
-    accepts (e.g. one item from each side)."""
-    resources = list(resources)
-    shuffle(resources)
-    candidates = (p for p in combinations(resources, 2) if pair_filter is None or pair_filter(*p))
-    total_pairs = sum(1 for p in combinations(resources, 2) if pair_filter is None or pair_filter(*p))
-    pairs = list(islice(candidates, max_pairs))
+    accepts (e.g. one item from each side). Pairs are a uniform random sample of all
+    candidate pairs, in random order; ``seed`` makes the selection reproducible. Calls run
+    on ``workers`` threads (the first alone, to fill the prompt cache); results are saved,
+    printed, and passed to on_result as they finish, from the calling thread."""
+    seed = seed if seed is not None else random.randrange(2**32)
+    rng = random.Random(seed)
+    candidates = [p for p in combinations(resources, 2) if pair_filter is None or pair_filter(*p)]
+    total_pairs = len(candidates)
+    pairs = rng.sample(candidates, total_pairs if max_pairs is None else min(max_pairs, total_pairs))
+    pairs = [(a, b) if rng.random() < 0.5 else (b, a) for a, b in pairs]  # no fixed first/second order
 
     print_table(
         "Pair selection",
@@ -92,6 +99,7 @@ def analyze_pairs(
             ("Items (" + key + ")", str(len(resources))),
             ("Selected pairs", f"{len(pairs)} of {total_pairs}"),
             ("Assessment calls", str(len(pairs))),
+            ("Random seed", str(seed)),
         ],
         (30, 88),
     )
@@ -131,8 +139,8 @@ def analyze_pairs(
         (30, 88),
     )
 
-    joint_risks = 0
-    for index, (first, second) in enumerate(pairs, 1):
+    def assess(first: dict, second: dict) -> tuple[dict, object]:
+        """One Responses API call; runs on a worker thread (the client is thread-safe)."""
         payload = {"first": first[key], "second": second[key]}
         response = client.responses.create(
             model=model,
@@ -157,47 +165,57 @@ def analyze_pairs(
                 }
             },
         )
-        assessment = json.loads(response.output_text)
+        return json.loads(response.output_text), response.usage
+
+    joint_risks, failed, done = 0, 0, 0
+
+    def record(first: dict, second: dict, outcome: tuple | BaseException) -> None:
+        """Save, print, and report one finished pair; called on the main thread only."""
+        nonlocal joint_risks, failed, done
+        done += 1
+        if isinstance(outcome, BaseException):
+            failed += 1
+            with results_path.open("a", encoding="utf-8") as output:
+                output.write(json.dumps({"model": model, "seed": seed, "first": first, "second": second,
+                                         "error": f"{type(outcome).__name__}: {outcome}"}, ensure_ascii=False) + "\n")
+            print_table(f"Assessment {done}/{len(pairs)} failed", ("Field", "Value"),
+                        [("Pair", f"{first['label']} + {second['label']}"), ("Error", f"{type(outcome).__name__}: {outcome}"[:500])], (30, 88))
+            return
+        assessment, usage = outcome
         with results_path.open("a", encoding="utf-8") as output:
-            output.write(
-                json.dumps(
-                    {
-                        "model": model,
-                        "first": first,
-                        "second": second,
-                        "assessment": assessment,
-                    },
-                    ensure_ascii=False,
-                )
-                + "\n"
-            )
+            output.write(json.dumps({"model": model, "seed": seed, "first": first, "second": second,
+                                     "assessment": assessment}, ensure_ascii=False) + "\n")
         rows = [
             ("Pair", f"{first['label']} + {second['label']}"),
             ("First resource effects", "\n".join(describe(first))),
             ("Second resource effects", "\n".join(describe(second))),
             *render(assessment),
         ]
-        if response.usage:
-            rows.append(
-                (
-                    "Cached input tokens",
-                    str(response.usage.input_tokens_details.cached_tokens),
-                )
-            )
-        print_table(
-            f"Assessment {index}/{len(pairs)}",
-            ("Field", "Value"),
-            rows,
-            (30, 88),
-        )
+        if usage:
+            rows.append(("Cached input tokens", str(usage.input_tokens_details.cached_tokens)))
+        print_table(f"Assessment {done}/{len(pairs)}", ("Field", "Value"), rows, (30, 88))
         if assessment["joint_risk"]:
             joint_risks += 1
         if on_result:
-            on_result(first, second, assessment, index, len(pairs))
+            on_result(first, second, assessment, done, len(pairs))
+
+    def run(pair: tuple[dict, dict]) -> tuple | BaseException:
+        try:
+            return assess(*pair)
+        except Exception as error:  # recorded per pair; the others go on
+            return error
+
+    # The first call runs alone so it writes the prompt cache the others then read.
+    record(*pairs[0], run(pairs[0]))
+    with ThreadPoolExecutor(max_workers=max(1, workers)) as pool:
+        futures = {pool.submit(run, pair): pair for pair in pairs[1:]}
+        for future in as_completed(futures):
+            record(*futures[future], future.result())
 
     print_table(
         "Annotation summary",
         ("Metric", "Value"),
-        [("Model-flagged joint risks", f"{joint_risks}/{len(pairs)} pairs")],
+        [("Model-flagged joint risks", f"{joint_risks}/{len(pairs) - failed} assessed pairs"),
+         ("Failed calls", str(failed)), ("Parallel workers", str(workers))],
         (30, 88),
     )

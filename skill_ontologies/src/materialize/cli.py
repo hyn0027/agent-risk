@@ -52,6 +52,8 @@ def parse_args() -> argparse.Namespace:
                         help="skip live instance discovery (read-only GitHub/Vercel calls made from the container as the agent); NanoClaw records and credential grants are still used")
     parser.add_argument("--max-pairs", type=int, help="maximum host/downstream resource pairs to annotate with the LLM (default: all; 0: skip)")
     parser.add_argument("--cross-only", action="store_true", help="annotate only host–remote instance pairs")
+    parser.add_argument("--workers", type=int, default=20, help="parallel LLM calls for the pair annotation (default: 20)")
+    parser.add_argument("--seed", type=int, help="random seed for the pair sample (default: a fresh one, printed)")
     parser.add_argument("--model", default="gpt-6-luna", help="OpenAI model for the pair annotation (default: gpt-6-luna)")
     args = parser.parse_args()
     if args.max_pairs is not None and args.max_pairs < 0:
@@ -120,4 +122,4 @@ def run(args: argparse.Namespace, facts: dict, model, pinned_rev: str, taken_at:
         print(f"\nSnapshot written: {snapshot}")
     report = log.write_report(f"materialize: session {facts['session']['id']} at {taken_at}", snap.findings, snapshot)
     print(f"Full report (unwrapped): {report}")
-    annotate(snap, outside_rows, remote, downstream, model=args.model, max_pairs=args.max_pairs, log_dir=log.dir, cross_only=args.cross_only)
+    annotate(snap, outside_rows, remote, downstream, model=args.model, max_pairs=args.max_pairs, log_dir=log.dir, cross_only=args.cross_only, seed=args.seed, workers=args.workers)

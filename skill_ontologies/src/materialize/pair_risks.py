@@ -286,7 +286,7 @@ def write_markdown(path: Path, title: str, model: str, total: int, selected: int
 
 
 def annotate(snap: Snapshot, outside: list[tuple], remote: list[tuple], downstream: list[tuple], model: str,
-             max_pairs: int | None, log_dir: Path | None = None, cross_only: bool = False) -> None:
+             max_pairs: int | None, log_dir: Path | None = None, cross_only: bool = False, seed: int | None = None, workers: int = 20) -> None:
     ROWS.clear()
     resources = items(snap, outside, remote, downstream)
     pair_filter = (lambda a, b: a["side"] != b["side"]) if cross_only else None
@@ -304,7 +304,7 @@ def annotate(snap: Snapshot, outside: list[tuple], remote: list[tuple], downstre
     analyze_pairs(resources, model=model, max_pairs=max_pairs,
                   instructions=INSTRUCTIONS, schema=SCHEMA, schema_name="session_joint_risks",
                   cache_key="materialize-session-joint-risks-v3", extra_catalog={"kinds": kind_catalog(snap, resources), "rows": ROWS, "policies": policies(snap, resources)},
-                  results_prefix="session-assessments", pair_filter=pair_filter,
+                  results_prefix="session-assessments", pair_filter=pair_filter, seed=seed, workers=workers,
                   render=render, describe=describe, key="id",
                   results_dir=log_dir, results_name="joint-risks.jsonl" if log_dir else None, on_result=on_result)
     if log_dir and results:
