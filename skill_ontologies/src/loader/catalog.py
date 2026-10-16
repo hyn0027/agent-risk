@@ -9,7 +9,7 @@ from rdflib.namespace import RDF
 from rdflib.term import Identifier
 
 from ..common.namespaces import AR
-from ..common.paths import MANIFEST, MODEL_DIRS, ROOT, SKILLS_DIR
+from ..common.paths import MANIFEST, MCP_DIR, MODEL_DIRS, ROOT, SKILLS_DIR
 from ..common.rdf import parse_graph, required_literal
 
 
@@ -35,21 +35,23 @@ def read_manifest() -> list[str]:
 
 
 def discover_catalog() -> Catalog:
-    """Discover every graph once, keyed by its module ID or skill directory.
+    """Discover every graph once, keyed by its module ID, skill directory, or MCP server ID.
 
     A support graph under skills/ is still a module when its RDF metadata says
-    ar:OntologyModule.
+    ar:OntologyModule. MCP server graphs (ontology/mcp/) declare operations like
+    skills and are catalogued as such.
     """
     catalog: Catalog = {}
-    paths = [p for d in MODEL_DIRS for p in sorted(d.glob("*.trig"))] + sorted(SKILLS_DIR.glob("*.trig"))
+    paths = [p for d in MODEL_DIRS for p in sorted(d.glob("*.trig"))] + sorted(SKILLS_DIR.glob("*.trig")) + sorted(MCP_DIR.glob("*.trig"))
     for path in paths:
         graph = parse_graph(path)
         nodes = [(node, False) for node in graph.subjects(RDF.type, AR.OntologyModule)]
         nodes += [(node, True) for node in graph.subjects(RDF.type, AR.Skill)]
+        nodes += [(node, True) for node in graph.subjects(RDF.type, AR.MCPServer)]
         if len(nodes) != 1:
             raise SystemExit(f"Expected one module or skill in {path.relative_to(ROOT)}")
         node, is_skill = nodes[0]
-        key = AR.skillDirectory if is_skill else AR.ontologyModuleId
+        key = (AR.mcpServerId if (node, RDF.type, AR.MCPServer) in graph else AR.skillDirectory) if is_skill else AR.ontologyModuleId
         ontology_id = required_literal(graph, node, key)
         if ontology_id in catalog:
             raise SystemExit(f"Duplicate ontology ID: {ontology_id}")

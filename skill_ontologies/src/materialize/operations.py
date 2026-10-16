@@ -17,6 +17,8 @@ nothing else (the skill-wide ``ar:subjectToControlKind`` is not attributed to
 single effects).
 """
 
+import json
+from pathlib import Path
 from urllib.parse import urlparse
 
 from rdflib import URIRef
@@ -25,7 +27,7 @@ from rdflib.namespace import RDF
 from ..common.namespaces import AR, OBS
 from ..common.rdf import short
 from .constants import AVAILABLE, CONDITIONAL, MUTATING_EFFECTS, SUBPATHS, UNAVAILABLE, UNKNOWN, UNSATISFIED
-from .gateway_policy import policy_entries
+from .gateway_policy import evaluate, policy_entries
 from .modifications.common import ancestors, credential_hosts, endpoint_name, gate, host_backing, kind_location, location, render_paths, route_paths
 from .modifications.remote import GET_ONLY, credential_tokens, direct_rows, host_rows, via_gateway
 from .snapshot import Snapshot
@@ -113,6 +115,34 @@ def op_status(snap: Snapshot, op: URIRef) -> tuple[URIRef, str]:
     return status, why
 
 
+def call_paths(m, op: URIRef) -> list[str]:
+    """Request paths of an operation's internet calls (callEndpointPattern)."""
+    return sorted({urlparse(str(p)).path or "/" for call in m.objects(op, AR.mayInitiateInternetCall)
+                   for p in m.objects(call, AR.callEndpointPattern) if "{" not in str(p)}) or ["/"]
+
+
+def mcp_tool_rows(snap: Snapshot, res: str, effects: str, route: str, status: str, hosts: list[str], tool: str,
+                  paths: list[str], kinds: list[URIRef], facts: list[str], env: Path) -> list[tuple]:
+    """One row per host, placed by the gateway's own Cedar decision for the tools/call
+    request the tool sends: under the deciding permit, or Unavailable with cedar: none."""
+    agent = snap.facts["onecli_agent"]
+    body = json.dumps({"jsonrpc": "2.0", "id": 1, "method": "tools/call", "params": {"name": tool, "arguments": {}}})
+    rows = []
+    for host in hosts:
+        credential = credential_tokens(snap, host)
+        for path in paths:
+            result = evaluate(agent["id"], "POST", host, path, body, bool(credential), env) if agent else None
+            if result is None:
+                rows.append((res, f"{host}\ncedar: ?", effects, route, "Conditional", gate(snap, ["cedar: not evaluated (gateway not reachable)", *credential, *facts], *kinds)))
+            elif result["decision"] in ("allow", "approval"):
+                extra = ["@approval: held for a human"] if result["decision"] == "approval" else []
+                rows.append((res, f"{host}\ncedar: {result['policy']}", effects, route, status, gate(snap, [*extra, *credential, *facts], *kinds)))
+            else:
+                why = f"cedar: {result['policy']} (forbid)" if result.get("policy") else "cedar: none"
+                rows.append((res, f"{host}\n{why}", effects, route, "Unavailable", gate(snap, [*credential, *facts], *kinds)))
+    return rows
+
+
 def assess_operations(snap: Snapshot) -> tuple[list[tuple], list[tuple], list[tuple]]:
     """(inside, host, remote) rows for the installed skills' operations, in the
     same column layout as the native rows of those tables. The via column names
@@ -122,10 +152,13 @@ def assess_operations(snap: Snapshot) -> tuple[list[tuple], list[tuple], list[tu
     agent = snap.facts["onecli_agent"]
     entries = policy_entries(snap.facts["gateway_policy"], agent["id"] if agent else None)
     inside, host, remote = [], [], []
-    for skill in sorted(m.subjects(RDF.type, AR.Skill), key=short):
-        name = str(m.value(skill, AR.skillDirectory) or short(skill))
-        if name not in snap.facts.get("modeled_skills", []):
-            continue
+    mcp_names = {server_id: name for name, server_id in snap.facts.get("modeled_mcp", {}).items()}
+    sources = [(s, str(m.value(s, AR.skillDirectory) or short(s)), None) for s in sorted(m.subjects(RDF.type, AR.Skill), key=short)
+               if str(m.value(s, AR.skillDirectory) or short(s)) in snap.facts.get("modeled_skills", [])]
+    sources += [(s, f"mcp:{mcp_names[str(m.value(s, AR.mcpServerId))]}", mcp_names[str(m.value(s, AR.mcpServerId))])
+                for s in sorted(m.subjects(RDF.type, AR.MCPServer), key=short) if str(m.value(s, AR.mcpServerId)) in mcp_names]
+    env = Path(snap.facts["nanoclaw_root"]) / ".env"
+    for skill, name, mcp_name in sources:
         for op in sorted(m.objects(skill, AR.declaresOperation), key=short):
             status, _ = op_status(snap, op)
             # Hosts the operation's internet calls name (callEndpointPattern), if any.
@@ -137,9 +170,16 @@ def assess_operations(snap: Snapshot) -> tuple[list[tuple], list[tuple], list[tu
                          for r in sorted(m.objects(op, AR.requires)) if r in snap.conditions and snap.conditions[r][0] in (UNSATISFIED, UNKNOWN)]
             st = short(status)
             endpoints = sorted(m.objects(op, AR.invokedThroughKind), key=short)
-            tools = ", ".join(sorted({endpoint_name(snap, e) for e in endpoints})) or "-"
-            label = f"{name}/{short(op)}"
-            via = f"{label} ({tools})"
+            tool_name = m.value(op, AR.mcpToolName)
+            if mcp_name and tool_name is not None:
+                # An MCP tool: the name the agent's provider calls it by.
+                label = f"mcp__{mcp_name}__{tool_name}"
+                via = label
+                tools = label
+            else:
+                tools = ", ".join(sorted({endpoint_name(snap, e) for e in endpoints})) or "-"
+                label = f"{name}/{short(op)}"
+                via = f"{label} ({tools})"
             effects: dict[URIRef, set[URIRef]] = {}
             for eff in m.objects(op, AR.hasPotentialEffect):
                 kind, etype = m.value(eff, AR.affectsKind), m.value(eff, AR.effectType)
@@ -178,6 +218,10 @@ def assess_operations(snap: Snapshot) -> tuple[list[tuple], list[tuple], list[tu
                             continue
                         # Hosts: those the call names, else (for a kind reached at granted
                         # credential hosts) the hosts of the agent's granted credentials.
+                        if mcp_name and tool_name is not None and hosts:
+                            # Decided by the gateway itself: the tools/call request this tool sends.
+                            remote += mcp_tool_rows(snap, res, eff_text(etypes), route, st, hosts, str(tool_name), call_paths(m, op), kinds, req_facts, env)
+                            continue
                         kind_hosts = hosts or credential_hosts(snap, kind)
                         if kind_hosts is None:
                             # The call names no endpoint: it can reach whatever a permit allows.

@@ -1,12 +1,14 @@
 """Load the universal model and answer the questions the materializer asks of it."""
 
 import re
+from fnmatch import fnmatchcase
 from pathlib import Path
 
 from rdflib import Dataset, Graph, URIRef
+from rdflib.namespace import RDF
 
 from ..common.namespaces import AR
-from ..common.paths import MODEL_DIRS, SKILLS_DIR, VOCABULARY
+from ..common.paths import MCP_DIR, MODEL_DIRS, SKILLS_DIR, VOCABULARY
 
 
 def load_model() -> Graph:
@@ -46,6 +48,26 @@ def add_skill_graphs(model: Graph, installed: list[str]) -> list[str]:
                 model.add(triple)
         todo.extend(modules[m] for m in re.findall(r'"([^"]+)"', " ".join(re.findall(r'ar:requiresOntologyModule ([^;.]+)', path.read_text()))) if m in modules)
     return sorted(name for name in installed if name in skills)
+
+
+def add_mcp_graphs(model: Graph, mcp_servers: dict) -> dict[str, str]:
+    """Merge the graph of each configured MCP server whose URL matches a graph's
+    ar:mcpEndpointPattern. Returns {configured server name: graph's mcpServerId}."""
+    matched: dict[str, str] = {}
+    for path in sorted(MCP_DIR.glob("*.trig")):
+        graph = Graph()
+        for g in Dataset().parse(path, format="trig").graphs():
+            graph += g
+        for server in graph.subjects(RDF.type, AR.MCPServer):
+            patterns = [str(p) for p in graph.objects(server, AR.mcpEndpointPattern)]
+            server_id = str(graph.value(server, AR.mcpServerId))
+            for name, spec in (mcp_servers or {}).items():
+                url = spec.get("url") if isinstance(spec, dict) else None
+                if url and any(fnmatchcase(url, p) for p in patterns):
+                    matched[name] = server_id
+            if server_id in matched.values():
+                model += graph
+    return matched
 
 
 def pinned_source(model: Graph) -> tuple[Path | None, str]:

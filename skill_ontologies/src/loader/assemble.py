@@ -8,15 +8,17 @@ from rdflib import Graph, Literal
 from rdflib.namespace import RDF
 
 from ..common.namespaces import AR
-from ..common.paths import VOCABULARY
+from ..common.paths import ROOT, VOCABULARY
 from ..common.rdf import required_literal
 from .catalog import Catalog, CatalogEntry
 
 
 def check_skill_source(ontology_id: str, entry: CatalogEntry) -> None:
-    """A skill graph pins its SKILL.md by hash; a changed source means re-review."""
+    """A skill graph pins its SKILL.md (an MCP server graph its snapshot) by hash; a
+    changed source means re-review. A relative source path is relative to the repository."""
     graph, node = entry["graph"], entry["node"]
     source = Path(required_literal(graph, node, AR.sourcePath))
+    source = source if source.is_absolute() else ROOT / source
     expected_hash = required_literal(graph, node, AR.sourceSha256)
     if hashlib.sha256(source.read_bytes()).hexdigest() != expected_hash:
         raise SystemExit(f"Ontology for {ontology_id} is stale: source skill changed")

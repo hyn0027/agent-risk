@@ -25,8 +25,12 @@ results stay may-claims.
 """
 
 import json
+import os
 import re
 import subprocess
+import urllib.error
+import urllib.request
+from pathlib import Path
 
 from .runtime import tool
 
@@ -114,6 +118,50 @@ from cedar_policy_rules c;
 def read_policies(argv: list[str], grouped: bool) -> list[dict]:
     out = subprocess.run(argv, input=GROUPED_POLICIES if grouped else UNGROUPED_POLICIES, check=True, capture_output=True, text=True, timeout=30).stdout
     return json.loads(out.strip())
+
+
+GATEWAY_API = os.environ.get("ONECLI_GATEWAY_API", "http://127.0.0.1:10255")
+_evaluations: dict[tuple, dict | None] = {}
+
+
+def api_key(nanoclaw_env: Path | None = None) -> str | None:
+    """OneCLI API key: $ONECLI_API_KEY, else the NanoClaw checkout's .env. Used only to
+    authenticate to the gateway; never printed or recorded."""
+    if os.environ.get("ONECLI_API_KEY"):
+        return os.environ["ONECLI_API_KEY"]
+    env = nanoclaw_env
+    if env is None:
+        return None
+    try:
+        for line in env.read_text().splitlines():
+            if line.startswith("ONECLI_API_KEY="):
+                return line.split("=", 1)[1].strip() or None
+    except OSError:
+        return None
+    return None
+
+
+def evaluate(agent_id: str, method: str, host: str, path: str = "/", body: str | None = None,
+             has_credential: bool = False, nanoclaw_env: Path | None = None) -> dict | None:
+    """The gateway's own decision for a described request (POST /v1/cedar/evaluate):
+    {"decision": "allow" | "approval" | "deny", "policy": Cedar id or None, "reason": ...}.
+    None when the gateway cannot be asked. Nothing is forwarded or rate-counted."""
+    key = (agent_id, method, host, path, body, has_credential)
+    if key in _evaluations:
+        return _evaluations[key]
+    token = api_key(nanoclaw_env)
+    result = None
+    if token:
+        req = urllib.request.Request(f"{GATEWAY_API}/v1/cedar/evaluate", method="POST", data=json.dumps({
+            "agent_id": agent_id, "method": method, "host": host, "path": path, "body": body, "has_credential": has_credential,
+        }).encode(), headers={"Authorization": f"Bearer {token}", "Content-Type": "application/json"})
+        try:
+            with urllib.request.urlopen(req, timeout=15) as res:
+                result = json.loads(res.read())
+        except (urllib.error.URLError, ValueError, TimeoutError):
+            result = None
+    _evaluations[key] = result
+    return result
 
 
 # ── Cedar summary ────────────────────────────────────────────────────────────

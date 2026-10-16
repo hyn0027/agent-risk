@@ -11,6 +11,7 @@ UNIVERSAL_DIR = ONTOLOGY_DIR / "universal"  # generic modules, vocabulary, shape
 NANOCLAW_DIR = ONTOLOGY_DIR / "nanoclaw"  # NanoClaw harness modules
 CLAUDE_DIR = ONTOLOGY_DIR / "claude"  # Claude provider (built-in tool) modules
 SKILLS_DIR = ONTOLOGY_DIR / "skills"
+MCP_DIR = ONTOLOGY_DIR / "mcp"  # third-party MCP servers, generated from pinned snapshots
 # Always-available model modules, in discovery order (skills are separate).
 MODEL_DIRS = (UNIVERSAL_DIR, NANOCLAW_DIR, CLAUDE_DIR)
 VOCABULARY = UNIVERSAL_DIR / "vocabulary.ttl"

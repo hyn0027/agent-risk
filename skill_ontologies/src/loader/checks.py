@@ -58,7 +58,7 @@ def check_relation_types(combined: Graph, kinds: Kinds) -> None:
         ):
             raise SystemExit(f"Untyped control: {subject} -> {control}")
     for skill, control in combined.subject_objects(AR.subjectToControlKind):
-        if (skill, RDF.type, AR.Skill) not in combined or (control, RDF.type, AR.SecurityControlKind) not in combined:
+        if not ({(skill, RDF.type, AR.Skill), (skill, RDF.type, AR.MCPServer)} & set(combined.triples((skill, RDF.type, None)))) or (control, RDF.type, AR.SecurityControlKind) not in combined:
             raise SystemExit(f"Untyped skill control: {skill} -> {control}")
 
 

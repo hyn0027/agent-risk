@@ -231,6 +231,7 @@ The active model is assembled as follows:
 vocabulary.ttl
   + shared ontology graphs listed in manifest.json
   + skill graphs listed in manifest.json
+  + MCP server graphs listed in manifest.json (ontology/mcp/)
   = combined validation and reporting graph
 ```
 
@@ -594,6 +595,17 @@ ar:g_example_resources {
 ```
 
 Do not put skill operations or `ar:PotentialEffect` nodes in an always-loaded module. Always-loaded graphs describe the environment available for composition; selected skill graphs introduce claims about actions. Native endpoint affordances may be declared as `ar:NativeCapability` with endpoint, effect type, resource kind, scope, requirements, and source note, without pretending that a skill invoked them.
+
+### Add an MCP server ontology
+
+MCP server graphs live under `ontology/mcp/`, next to `ontology/skills/`. Each is generated, not hand-written, from a pinned snapshot of the server in `ontology/mcp/sources/<id>.json`: the server's own `tools/list` (tool names, descriptions, annotations), each tool's toolsets, the toolset descriptions from the server's documentation, the transport, and the endpoint pattern. `ontology/mcp/github.trig` (the GitHub remote MCP server, 102 tools in 24 documented toolsets) is the first.
+
+1. Fetch the snapshot from the live server (`tools/list` per toolset, e.g. through the OneCLI gateway as the agent) and the docs' toolset descriptions; write `ontology/mcp/sources/<id>.json`.
+2. Run `python3 generate_mcp_ontology.py <id>`. It writes one `ar:MCPServer` (`ar:mcpServerId "mcp-<id>"`, `ar:mcpEndpointPattern`, `ar:sourcePath` / `ar:sourceSha256` pinning the snapshot), a tool endpoint kind specializing NanoClaw's remote-HTTP (or stdio) MCP tool, one resource kind per documented toolset (`<Prefix><Toolset>Data`, from the docs' description) plus one for tools no toolset lists, a credential requirement for the endpoint host (`ar:requiresCredentialForHost`), and one `ar:Operation` per tool with `ar:mcpToolName`, its toolsets, and a `ar:PotentialInternetCall` to the endpoint.
+3. Effects come from the tool's MCP `ToolAnnotations` with the specification's defaults (`ar:MCPToolAnnotation`): `readOnlyHint` true gives Read; otherwise Transmit and Create, plus Update and Delete unless `destructiveHint` is explicitly false.
+4. Add `mcp-<id>` to `manifest.json`. The loader validates it like a skill graph and rejects it as stale when the snapshot changes without regenerating.
+
+In a session snapshot, `materialize.py` loads the graph of each configured MCP server whose URL matches `ar:mcpEndpointPattern`; its tools appear in the effect tables as `mcp__<server>__<tool>`. A remote MCP tool is placed by the OneCLI gateway's own Cedar decision for the `tools/call` request it sends (`POST /v1/cedar/evaluate` on the local Cedar build): under the deciding permit, held for approval, or `Unavailable` with `cedar: none`. The server row itself is decided the same way for its `initialize` request. Materialize reads the OneCLI API key from `$ONECLI_API_KEY` or the NanoClaw checkout's `.env` only to authenticate that call; it is never printed or recorded.
 
 ### Add a new skill ontology
 

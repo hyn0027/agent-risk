@@ -27,7 +27,7 @@ from .gateway_policy import deny_by_default_problem
 from .collect import collect
 from .conditions import resolve_conditions
 from .instantiate import instantiate
-from .model import add_skill_graphs, load_model, pinned_source
+from .model import add_mcp_graphs, add_skill_graphs, load_model, pinned_source
 from .modifications import assess_modifications
 from .operations import assess_operations
 from .output import check_instance_types, write_snapshot
@@ -53,6 +53,7 @@ def main() -> None:
     nanoclaw = args.nanoclaw or pinned_repo
     facts = collect(nanoclaw, args.session)
     facts["modeled_skills"] = add_skill_graphs(model, facts["container_skills"])
+    facts["modeled_mcp"] = add_mcp_graphs(model, facts["config"].get("mcp_servers") or {})
     if facts["nanoclaw_head"] != pinned_rev:
         print(f"warning: nanoclaw_head={facts['nanoclaw_head'][:12]}; modeled_revision={pinned_rev[:12]}", file=sys.stderr)
 

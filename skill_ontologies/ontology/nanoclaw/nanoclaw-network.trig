@@ -149,7 +149,7 @@ ar:g_nanoclaw_network {
     ar:routesToKind ar:RemoteHTTPMCPTransport ;
     rdfs:comment "Tool of a configured streamable-HTTP MCP server. NanoClaw accepts only stdio and streamable HTTP (SSE is rejected); URLs must be HTTPS except localhost or host.docker.internal, and must not embed credentials, but configured request headers are passed through as given." .
   ar:RemoteHTTPMCPTransport ar:routesToKind ar:NanoClawProxyAwareHTTPRequest,
-    ar:NanoClawDirectNetworkRequest, ar:RemoteMCPService ;
+    ar:NanoClawDirectNetworkRequest ;
     rdfs:comment "The client-to-MCP leg may use the gateway or direct egress. The remote MCP service's later calls are outside local OneCLI and lockdown control." .
 
   # ── Where each step runs ──

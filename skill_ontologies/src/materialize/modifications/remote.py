@@ -11,12 +11,16 @@ overlaps. Every gate also lists the model's ``protectedByKind`` controls along
 the path. Reads are included because the remote party sees the request.
 """
 
+import json
+from pathlib import Path
+from urllib.parse import urlparse
+
 from rdflib import URIRef
 
 from ...common.namespaces import AR
 from ...common.rdf import short
 from ..constants import LOCAL_CHANNELS, UNAVAILABLE
-from ..gateway_policy import applicable_rules, host_allowed, patterns_overlap, policy_entries
+from ..gateway_policy import evaluate, patterns_overlap, policy_entries
 from ..snapshot import Snapshot
 from .common import ancestors, credential_hosts, endpoint_name, gate, render_paths, route_paths, step_effects, tool_label
 
@@ -110,21 +114,28 @@ def capability_rows(snap: Snapshot) -> list[tuple]:
 
 
 def mcp_rows(snap: Snapshot) -> list[tuple]:
-    """Remote MCP servers: open when a Cedar permit applying to the agent matches the host."""
+    """Configured remote MCP servers: placed by the gateway's own Cedar decision for the
+    MCP initialize request to the server's URL."""
     agent = snap.facts["onecli_agent"]
-    agent_id = agent["id"] if agent else None
-    policy = snap.facts["gateway_policy"]
+    env = Path(snap.facts["nanoclaw_root"]) / ".env"
     paths = route_paths(snap, AR.RemoteHTTPMCPTransport, AR.RemoteMCPService)
     kinds = [k for p in paths for k in p] + [AR.RemoteMCPService]
+    body = json.dumps({"jsonrpc": "2.0", "id": 1, "method": "initialize", "params": {"protocolVersion": "2025-06-18", "capabilities": {}, "clientInfo": {"name": "materialize", "version": "0"}}})
     rows = []
     for name, spec in (snap.facts["config"].get("mcp_servers") or {}).items():
-        if isinstance(spec, dict) and spec.get("url"):
-            host = spec["url"].split("/")[2].split(":")[0] if "//" in spec["url"] else spec["url"]
-            allowed = host_allowed(policy, agent_id, host)
-            permits = sorted(p["name"] for p in applicable_rules(policy, agent_id)
-                             if p["scope"]["effect"] == "permit" and patterns_overlap(p["scope"]["host"], host))
-            where = f"{host}\ncedar: {', '.join(permits) or 'none'}"
-            rows.append(("RemoteMCPService", where, "Transmit", render_paths(paths, f"mcp_servers.{name}"), "Available" if allowed else "Unavailable", gate(snap, credential_tokens(snap, host), *kinds)))
+        if not (isinstance(spec, dict) and spec.get("url")):
+            continue
+        url = urlparse(spec["url"])
+        host = (url.hostname or spec["url"]).lower()
+        credential = credential_tokens(snap, host)
+        result = evaluate(agent["id"], "POST", host, url.path or "/", body, bool(credential), env) if agent else None
+        if result is None:
+            where, status, facts = f"{host}\ncedar: ?", "Conditional", ["cedar: not evaluated (gateway not reachable)"]
+        elif result["decision"] in ("allow", "approval"):
+            where, status, facts = f"{host}\ncedar: {result['policy']}", "Available", []
+        else:
+            where, status, facts = f"{host}\ncedar: none", "Unavailable", []
+        rows.append(("RemoteMCPService", where, "Transmit", render_paths(paths, f"mcp_servers.{name}"), status, gate(snap, [*facts, *credential], *kinds)))
     return rows
 
 

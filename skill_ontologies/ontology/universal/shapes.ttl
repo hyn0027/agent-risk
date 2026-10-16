@@ -47,6 +47,20 @@ ar:SkillShape a sh:NodeShape ;
   sh:property [ sh:path ar:governedByAdaptationPolicy ; sh:class ar:AdaptationPolicy ; sh:minCount 1 ; sh:maxCount 1 ] ;
   sh:property [ sh:path ar:declaresOperation ; sh:class ar:Operation ; sh:minCount 1 ] .
 
+ar:MCPServerShape a sh:NodeShape ;
+  sh:targetClass ar:MCPServer ;
+  sh:property [ sh:path ar:mcpServerId ; sh:datatype xsd:string ; sh:minCount 1 ; sh:maxCount 1 ] ;
+  sh:property [ sh:path ar:mcpEndpointPattern ; sh:datatype xsd:string ; sh:minCount 1 ] ;
+  sh:property [ sh:path ar:subjectToControlKind ; sh:class ar:SecurityControlKind ; sh:minCount 1 ] ;
+  sh:property [ sh:path ar:sourcePath ; sh:datatype xsd:string ; sh:minCount 1 ; sh:maxCount 1 ] ;
+  sh:property [ sh:path ar:sourceSha256 ; sh:datatype xsd:string ; sh:minCount 1 ; sh:maxCount 1 ] ;
+  sh:property [ sh:path ar:requiresOntologyModule ; sh:datatype xsd:string ] ;
+  sh:property [ sh:path ar:declaresOperation ; sh:class ar:Operation ; sh:minCount 1 ] .
+
+ar:MCPOperationShape a sh:NodeShape ;
+  sh:targetObjectsOf ar:declaresOperation ;
+  sh:property [ sh:path ar:mcpToolName ; sh:datatype xsd:string ; sh:maxCount 1 ] .
+
 ar:NanoClawMountPermissionShape a sh:NodeShape ;
   sh:targetSubjectsOf ar:mountExposesKind ;
   sh:class ar:WorldSurfaceKind ;
