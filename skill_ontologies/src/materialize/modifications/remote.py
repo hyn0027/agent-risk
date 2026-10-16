@@ -66,7 +66,7 @@ def host_rows(snap: Snapshot, res: str, effects: str, via: str, status: str, hos
     for host in hosts:
         matching = [e for e in entries if patterns_overlap(host, e["host"])]
         if not matching:
-            rows.append((res, host, effects, via, "Unavailable", gate(snap, ["cedar: none", *credential_tokens(snap, host), *facts], *kinds)))
+            rows.append((res, f"{host}\ncedar: none", effects, via, "Unavailable", gate(snap, [*credential_tokens(snap, host), *facts], *kinds)))
         for entry in matching:
             rows.append((res, f"{host}\n{entry['where']}", effects, via, status,
                          gate(snap, [*entry["tokens"], *credential_tokens(snap, host), *facts], *kinds)))
@@ -123,8 +123,8 @@ def mcp_rows(snap: Snapshot) -> list[tuple]:
             allowed = host_allowed(policy, agent_id, host)
             permits = sorted(p["name"] for p in applicable_rules(policy, agent_id)
                              if p["scope"]["effect"] == "permit" and patterns_overlap(p["scope"]["host"], host))
-            tokens = [f"cedar: {', '.join(permits) or 'none'}"] + credential_tokens(snap, host)
-            rows.append(("RemoteMCPService", host, "Transmit", render_paths(paths, f"mcp_servers.{name}"), "Available" if allowed else "Unavailable", gate(snap, tokens, *kinds)))
+            where = f"{host}\ncedar: {', '.join(permits) or 'none'}"
+            rows.append(("RemoteMCPService", where, "Transmit", render_paths(paths, f"mcp_servers.{name}"), "Available" if allowed else "Unavailable", gate(snap, credential_tokens(snap, host), *kinds)))
     return rows
 
 
