@@ -1,5 +1,6 @@
 """Load the universal model and answer the questions the materializer asks of it."""
 
+import hashlib
 import re
 from fnmatch import fnmatchcase
 from pathlib import Path
@@ -48,6 +49,23 @@ def add_skill_graphs(model: Graph, installed: list[str]) -> list[str]:
                 model.add(triple)
         todo.extend(modules[m] for m in re.findall(r'"([^"]+)"', " ".join(re.findall(r'ar:requiresOntologyModule ([^;.]+)', path.read_text()))) if m in modules)
     return sorted(name for name in installed if name in skills)
+
+
+def stale_skill_graphs(names: list[str]) -> dict[str, str]:
+    """Skill name -> why its graph no longer matches its SKILL.md (missing file or changed hash)."""
+    skills, out = skill_directories(), {}
+    for name in names:
+        text = skills[name].read_text()
+        path = re.search(r'ar:sourcePath "([^"]+)"', text)
+        pinned = re.search(r'ar:sourceSha256 "([^"]+)"', text)
+        if not (path and pinned):
+            continue
+        source = Path(path.group(1))
+        if not source.is_file():
+            out[name] = f"sourcePath={source} missing"
+        elif hashlib.sha256(source.read_bytes()).hexdigest() != pinned.group(1):
+            out[name] = f"sourceSha256 differs from {source}"
+    return out
 
 
 def add_mcp_graphs(model: Graph, mcp_servers: dict) -> dict[str, str]:

@@ -22,8 +22,6 @@ ar:g_self_customize {
 
   ar:cond_selfmod_admin_approved a ar:Requirement ;
     rdfs:comment "An admin (scoped, global, or owner) approves the held self-modification request." .
-  ar:cond_create_agent_permitted a ar:Requirement ;
-    rdfs:comment "create_agent is allowed outright under global cli_scope, otherwise held until an admin approves it." .
 
   ar:op_selfcust_edit_instructions a ar:Operation ; ar:invokedThroughKind ar:NanoClawProviderFileTool ;
     ar:targetsKind ar:NanoClawPersistentMemory, ar:NanoClawInstructionSource ;

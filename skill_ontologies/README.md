@@ -54,6 +54,7 @@ ontology/claude/*.trig               Claude provider modules (built-in tools)
 ontology/skills/<skill>.trig         operations and potential effects for one skill
 ontology/skills/git-resources.trig   shared support ontology, not a skill
 ontology/skills/container-tooling.trig  shared support for NanoClaw's container skills, not a skill
+ontology/skills/vercel.trig          shared Vercel support (CLI, API, account entities), not a skill
 ontology/universal/vocabulary.ttl    schema vocabulary
 ontology/universal/shapes.ttl        SHACL integrity constraints
 ontology/examples/*.ttl              standalone concrete observation fixtures
@@ -124,6 +125,7 @@ skill_ontologies/
     skills/
       git-resources.trig
       container-tooling.trig
+      vercel.trig
       ...one graph per skill...
     examples/            sample observation graphs for external RDF tools
 ```
@@ -253,15 +255,17 @@ The current module inventory is:
 | `claude-tools` | `ontology/claude/claude-tools.trig` | Claude built-in tools: names, the NanoClaw endpoints they implement, per-tool capabilities and refinements |
 | `git-resources` | `ontology/skills/git-resources.trig` | Reusable Git resource kinds and qualified working-tree definitions |
 | `container-tooling` | `ontology/skills/container-tooling.trig` | Shared by NanoClaw's container skills: the agent-browser CLI and browser state (pages, cookies, saved auth state, captures), and package managers with the npm registry |
+| `vercel` | `ontology/skills/vercel.trig` | Shared by `vercel-cli` and `frontend-engineer`: the `vercel` CLI, `api.vercel.com` and the calls to it, the CLI and credential requirements, the linked project directory and pulled `.env`, and the Vercel account's entities (account, project, deployment, build, environment variable, domain) with containment and what Vercel does on its own (a deployment is built; a production deployment takes over the project's domains; builds read the project's environment variables and reach the Internet outside the gateway) |
 
-`git-resources` lives under `ontology/skills/` because it is skill-oriented support vocabulary, but it is still an ontology module rather than an `ar:Skill`. It is selected because `gh-issues` requires it; `coding-agent` also requires it. Static dependency validation would reject either skill if this ontology were absent. Folder placement and loading policy are separate concerns. `container-tooling` is the same kind of support module: the agent-browser CLI and its browser state, and package managers with the npm registry, shared by `agent-browser`, `frontend-engineer`, and `self-customize`.
+`git-resources` lives under `ontology/skills/` because it is skill-oriented support vocabulary, but it is still an ontology module rather than an `ar:Skill`. It is selected because `gh-issues` requires it; `coding-agent` also requires it. Static dependency validation would reject either skill if this ontology were absent. Folder placement and loading policy are separate concerns. `container-tooling` is the same kind of support module: the agent-browser CLI and its browser state, and package managers with the npm registry, shared by `agent-browser`, `frontend-engineer`, `self-customize`, and `vercel-cli`. `vercel` likewise holds everything about Vercel that `vercel-cli` and `frontend-engineer` share, so neither skill graph redefines it; a skill graph holds only that skill's operations and adaptation notes. A `ar:PotentialInternetCall` declared in a support module may be initiated by operations of several skills.
 
 The current skill inventory is:
 
 | Skill directory | Graph file | Main modeled capability | Declared module dependencies |
 |---|---|---|---|
 | `agent-browser` | `ontology/skills/agent-browser.trig` | NanoClaw container skill: headless browsing, form interaction, site logins, uploads, saved auth state, cookies, page JS | `container-tooling`, `nanoclaw-runtime`, `nanoclaw-network` |
-| `frontend-engineer` | `ontology/skills/frontend-engineer.trig` | NanoClaw container skill: edit, install, build, dev server, browser verify, Vercel deploy (conditional on `/add-vercel`), report | `container-tooling`, `nanoclaw-runtime`, `nanoclaw-network`, `nanoclaw-messaging` |
+| `frontend-engineer` | `ontology/skills/frontend-engineer.trig` | NanoClaw container skill: edit, install, build, dev server, browser verify, Vercel deploy (conditional on `/add-vercel`), report | `container-tooling`, `vercel`, `nanoclaw-runtime`, `nanoclaw-network`, `nanoclaw-messaging` |
+| `vercel-cli` | `ontology/skills/vercel-cli.trig` | NanoClaw container skill (copied in by `/add-vercel`): `whoami`, local build, preview/production deploy, inspect/list, live-URL check with curl, `link`, `domains add`, `env pull` (decrypted values into a local `.env`), `env add`, delegating site builds to a Frontend Engineer agent (`create_agent` + `send_message`) | `vercel`, `container-tooling`, `nanoclaw-core`, `nanoclaw-runtime`, `nanoclaw-network`, `nanoclaw-control`, `nanoclaw-messaging` |
 | `onecli-gateway` | `ontology/skills/onecli-gateway.trig` | NanoClaw container skill: read and write connected services with gateway-injected credentials, credential stubs, connect links | `nanoclaw-runtime`, `nanoclaw-network`, `nanoclaw-messaging` |
 | `self-customize` | `ontology/skills/self-customize.trig` | NanoClaw container skill: edit memory/instructions, `install_packages`, `add_mcp_server`, `create_agent` builder, delegation; builder source edits unsupported (`/app/src` is read-only) | `container-tooling`, `nanoclaw-core`, `nanoclaw-runtime`, `nanoclaw-control`, `nanoclaw-messaging`, `nanoclaw-network` |
 | `welcome` | `ontology/skills/welcome.trig` | NanoClaw container skill: greeting and capability tour via messaging tools, channel addenda, first memory entries | `nanoclaw-core`, `nanoclaw-runtime`, `nanoclaw-messaging` |
@@ -278,7 +282,7 @@ The current skill inventory is:
 
 ## Static loading policy
 
-The manifest currently lists twelve shared ontologies (including `claude-tools`, `git-resources`, and `container-tooling`) and seven skill ontologies: `discord`, `gh-issues`, and the five container skills NanoClaw loads into every session (`agent-browser`, `frontend-engineer`, `onecli-gateway`, `self-customize`, `welcome`). Five shared ontologies describe NanoClaw itself: core, messaging/mailboxes, management controls, container/filesystem runtime, and network/OneCLI paths. Generic tool, filesystem, internet, and shell graphs are also selected. Git resource definitions live under `ontology/skills/` even though they are selected on every run; folder placement and load policy are separate concerns.
+The manifest currently lists thirteen shared ontologies (including `claude-tools`, `git-resources`, `container-tooling`, and `vercel`), the GitHub environment and MCP graphs, and eight skill ontologies: `discord`, `gh-issues`, and the six container skills in NanoClaw's `container/skills/` (`agent-browser`, `frontend-engineer`, `onecli-gateway`, `self-customize`, `vercel-cli`, `welcome`). Five shared ontologies describe NanoClaw itself: core, messaging/mailboxes, management controls, container/filesystem runtime, and network/OneCLI paths. Generic tool, filesystem, internet, and shell graphs are also selected. Git resource definitions live under `ontology/skills/` even though they are selected on every run; folder placement and load policy are separate concerns.
 
 Dependencies never load dynamically. Every ontology module owns its metadata in RDF:
 
@@ -321,11 +325,15 @@ During dependency preflight, the loader parses graph metadata, checks that selec
   "git-resources",
   "claude-tools",
   "container-tooling",
+  "vercel",
   "agent-browser",
   "frontend-engineer",
+  "vercel-cli",
   "onecli-gateway",
   "self-customize",
-  "welcome"
+  "welcome",
+  "github-environment",
+  "mcp-github"
 ]
 ```
 
@@ -786,7 +794,7 @@ It needs a running NanoClaw service, Docker, and the local Cedar build of OneCLI
 
 ### How it works
 
-1. **Load the model.** `vocabulary.ttl` plus every `ontology/universal/`, `ontology/nanoclaw/`, and `ontology/claude/` graph. If the checkout's `HEAD` differs from `nanoclaw-core`'s pinned `sourceRevision`, it warns that the results may be stale. Skill graphs are only consulted to match installed skills by `skillDirectory`.
+1. **Load the model.** `vocabulary.ttl` plus every `ontology/universal/`, `ontology/nanoclaw/`, and `ontology/claude/` graph. If the checkout's `HEAD` differs from `nanoclaw-core`'s pinned `sourceRevision`, it warns that the results may be stale. Skill graphs are only consulted to match installed skills by `skillDirectory`. Each skill in `container/skills/` without a graph prints `warning: skill <name> has no ontology` (its operations are then missing from every table), a matched graph whose `sourceSha256` no longer matches the `SKILL.md` prints `warning: skill <name> ontology is stale`, and each configured MCP server no `ar:mcpEndpointPattern` matches prints `warning: MCP server <name> has no ontology`. The session table repeats the unmodeled ones.
 2. **Collect facts** (`collect.py`, through the read-only wrappers in `runtime.py`), names and settings only, never secret values, tokens, or environment values:
 
    | Source | Facts |
@@ -815,7 +823,7 @@ The report prints the session header, the three effect tables, and model/runtime
 
 | Section | Meaning |
 |---|---|
-| Session snapshot | session, agent group, container, provider, `cli_scope`, lockdown, destination grants, MCP servers, gateway identity, granted credentials, gateway policy, Cedar policies in scope (permit / forbid), Claude tool-list counts |
+| Session snapshot | session, agent group, container, provider, `cli_scope`, lockdown, destination grants, container skills and those without an ontology, MCP servers and those without an ontology, gateway identity, granted credentials, gateway policy, Cedar policies in scope (permit / forbid), Claude tool-list counts |
 | Inside the container / On the host, outside the container / Off this machine (remote) | three tables with the same columns. **Resource**: the modeled kind. **Location**: inside, the container path with its mount mode and, on the next line, the host path it binds from (a write there changes the host too); on the host, the model's host path: the kind's own `hostPathPattern`, else that of the host directory its mount binds from (plus subpath), else that of the nearest containing kind on the same side (e.g. destination grants → `data/v2.db`); `{image}` is the session container's image; remote, for a path through the OneCLI gateway, the Cedar policy entry that lets it through (`cedar: <group>/<policy>`; one row per applying permit), under the host when a granted credential or the operation names one (`cedar: none` when no permit covers that host); for channel delivery, the destination. Policies are never described in the tables: in the remote table each Cedar endpoint shows the entry's code verbatim under its name. Matching rows to permits still parses the policies internally. **Effects** (reads included): from native capabilities, skill operations, or, for a host step, its `ar:stepEffectType`. **Via**: the tools; for a host step, the step with each entry point on a `← ` line; for a remote route, each tool or operation label followed by its model path, one `→ step` per line (labels sharing a path are listed together over it); skill rows read `<skill>/<operation> (<tools>)`. **Status**: one per line when merged rows differ. **Gate**: one `key: value` fact per line (`forbid`, `credential`, `destination`, `mount`, `path`, `blocked` / `pending` requirements), then `controls:` with the model's `ar:protectedByKind` kinds indented; when merged rows have different gates, each is listed under a `[...]` line naming the effects (or the via step) it applies to. Rows spanning several lines are separated by a dotted rule. |
 | Off this machine (remote): what can happen at each endpoint | one row per endpoint: the Cedar policy entry a gateway path passes (`cedar: <group>/<policy>`, with its Cedar code verbatim below the name), else the destination (`discord: …`), `*`, or `-`. **What can happen there** lists every resource reached through that entry, one `<effects> · <resource>` line each (with `@ <host>` when a granted credential or the operation names the host, and `[status]` when statuses differ), followed by `via` the tools and skill operations doing it. **Route** lists each model path once; paths sharing everything after their first step are shown as one tail under the comma-separated first steps. **Gate** is the union of the rows' facts and controls. The snapshot graph keeps one record per resource and location. |
 | Downstream in remote environments | what the remote effects may set off further, from the environment graph only. It starts from every changing effect of the remote table (Reads and transmissions do not propagate) and follows, up to four steps: **triggers** (`ar:mayTrigger` on a kind: when it undergoes `ar:onEffectType`, the environment itself causes `ar:effectType` on `ar:affectsKind`, e.g. a created commit or issue starts a workflow run (push or issues event), and an executed run may push commits, publish releases, comment, upload artifacts, report checks, and transmit to the Internet from GitHub's runners, outside the OneCLI gateway); **delete cascades** (deleting a kind deletes what it contains); then, as final steps, **contents** (a change updates the contents of the kind that directly contains it) and **dangling references** (a deleted kind leaves references in the kinds that refer to it). Each row is an influenced resource with its effects, the shortest path per effect from the tool and Cedar entry that starts it, the starters, and their status. |

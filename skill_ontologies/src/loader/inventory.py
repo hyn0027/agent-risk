@@ -56,13 +56,14 @@ def collect_skill_operations(inv: Inventory, catalog: Catalog, combined: Graph, 
                         inv.touches[resource].add(effect_type)
                         effects.add((skill, label(operation), label(effect_type), label(resource)))
             for call in graph.objects(operation, AR.mayInitiateInternetCall):
-                if (call, RDF.type, AR.PotentialInternetCall) not in graph:
+                # A call may be declared by a support module the skill requires (shared by several skills).
+                if (call, RDF.type, AR.PotentialInternetCall) not in combined:
                     raise SystemExit(f"Undeclared Internet call: {call}")
                 invoked = set(graph.objects(operation, AR.invokedThroughKind))
-                vias = set(graph.objects(call, AR.callViaKind))
+                vias = set(combined.objects(call, AR.callViaKind))
                 if not any(route_reaches(combined, invocations, source, via) for source in invoked for via in vias):
                     raise SystemExit(f"No operation-to-call route: {operation} -> {call}")
-                inv.calls.append((skill, operation, call, graph))
+                inv.calls.append((skill, operation, call, combined))
     inv.effect_rows = sorted(effects)
     inv.operation_rows.sort(key=lambda row: (row[0], str(row[1])))
     inv.calls.sort(key=lambda row: (row[0], str(row[1]), str(row[2])))

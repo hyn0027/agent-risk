@@ -166,6 +166,8 @@ ar:g_nanoclaw_control {
     rdfs:comment "The agent group's cli_scope is group or global (not disabled), so container ncl requests are dispatched." .
   ar:cond_cli_scope_global a ar:Requirement ;
     rdfs:comment "The agent group's cli_scope is global, which opens resources beyond its own group." .
+  ar:cond_create_agent_permitted a ar:Requirement ;
+    rdfs:comment "create_agent is allowed outright under global cli_scope, otherwise held until an admin approves it." .
 
   ar:NativeNclGroupStateRead a ar:NativeCapability ;
     ar:nativeEndpointKind ar:NanoClawContainerGroupAdminCLI ;

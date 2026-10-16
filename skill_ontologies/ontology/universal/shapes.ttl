@@ -26,7 +26,7 @@ ar:EffectShape a sh:NodeShape ;
 
 ar:PotentialInternetCallShape a sh:NodeShape ;
   sh:targetClass ar:PotentialInternetCall ;
-  sh:property [ sh:path [ sh:inversePath ar:mayInitiateInternetCall ] ; sh:class ar:Operation ; sh:minCount 1 ; sh:maxCount 1 ] ;
+  sh:property [ sh:path [ sh:inversePath ar:mayInitiateInternetCall ] ; sh:class ar:Operation ; sh:minCount 1 ] ;
   sh:property [ sh:path ar:callInitiatorKind ; sh:class ar:WorldSurfaceKind ; sh:minCount 1 ; sh:maxCount 1 ] ;
   sh:property [ sh:path ar:callViaKind ; sh:class ar:InvocationSurfaceKind ; sh:minCount 1 ] ;
   sh:property [ sh:path ar:callEndpointKind ; sh:class ar:PublicInternetEndpointKind ; sh:minCount 1 ; sh:maxCount 1 ] ;

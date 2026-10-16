@@ -27,7 +27,7 @@ from .gateway_policy import deny_by_default_problem
 from .collect import collect
 from .conditions import resolve_conditions
 from .instantiate import instantiate
-from .model import add_mcp_graphs, add_skill_graphs, load_model, pinned_source
+from .model import add_mcp_graphs, add_skill_graphs, load_model, pinned_source, stale_skill_graphs
 from .modifications import assess_modifications
 from .operations import assess_operations
 from .downstream import assess_downstream
@@ -55,6 +55,14 @@ def main() -> None:
     facts = collect(nanoclaw, args.session)
     facts["modeled_skills"] = add_skill_graphs(model, facts["container_skills"])
     facts["modeled_mcp"] = add_mcp_graphs(model, facts["config"].get("mcp_servers") or {})
+    for name in facts["container_skills"]:
+        if name not in facts["modeled_skills"]:
+            print(f"warning: skill {name} has no ontology (ontology/skills/*.trig with ar:skillDirectory \"{name}\"); its operations are not in the tables", file=sys.stderr)
+    for name, problem in stale_skill_graphs(facts["modeled_skills"]).items():
+        print(f"warning: skill {name} ontology is stale: {problem}", file=sys.stderr)
+    for name in facts["config"].get("mcp_servers") or {}:
+        if name not in facts["modeled_mcp"]:
+            print(f"warning: MCP server {name} has no ontology (no ontology/mcp/*.trig ar:mcpEndpointPattern matches it); its tools are not in the tables", file=sys.stderr)
     if facts["nanoclaw_head"] != pinned_rev:
         print(f"warning: nanoclaw_head={facts['nanoclaw_head'][:12]}; modeled_revision={pinned_rev[:12]}", file=sys.stderr)
 
