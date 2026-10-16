@@ -161,7 +161,12 @@ def print_findings(snap: Snapshot) -> None:
             print(f"  - {item}")
 
 
-def print_report(snap: Snapshot, inside: list[tuple], outside: list[tuple], remote: list[tuple]) -> None:
+def print_downstream(rows: list[tuple]) -> None:
+    print_table("Downstream in remote environments: what the remote effects may set off, and how",
+                ("Resource", "Influence", "Path (shortest per effect)", "Started by", "Status"), rows, (30, 22, 90, 50, 11))
+
+
+def print_report(snap: Snapshot, inside: list[tuple], outside: list[tuple], remote: list[tuple], downstream: list[tuple] = ()) -> None:
     """Session header, the three effect tables (native and skill-operation rows), and model/runtime differences.
 
     Everything else (mounts, requirements, tools, capabilities, routes, Cedar
@@ -169,4 +174,5 @@ def print_report(snap: Snapshot, inside: list[tuple], outside: list[tuple], remo
     """
     print_session(snap)
     print_modifications(snap, inside, outside, remote)
+    print_downstream(list(downstream))
     print_findings(snap)

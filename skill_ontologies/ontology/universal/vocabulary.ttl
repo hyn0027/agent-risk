@@ -157,6 +157,10 @@ ar:affectsKind a rdf:Property ; rdfs:domain ar:PotentialEffect ; rdfs:range ar:W
 ar:conditionalOn a rdf:Property ; rdfs:domain ar:PotentialEffect ; rdfs:range ar:Requirement .
 ar:mayEnable a rdf:Property ; rdfs:domain ar:Operation ; rdfs:range ar:Operation .
 ar:containsKind a rdf:Property ; rdfs:domain ar:WorldSurfaceKind ; rdfs:range ar:WorldSurfaceKind .
+ar:mayTrigger a rdf:Property ; rdfs:domain ar:WorldSurfaceKind ;
+  rdfs:comment "Event-driven reaction of the environment: when an instance of the subject kind undergoes ar:onEffectType, the environment itself may cause ar:effectType on ar:affectsKind (e.g. a pushed commit starting a workflow run). The object is an untyped node; rdfs:comment names the event." .
+ar:onEffectType a rdf:Property ; rdfs:range ar:EffectType ;
+  rdfs:comment "Effect on the subject kind that sets off an ar:mayTrigger reaction." .
 ar:referencesKind a rdf:Property ; rdfs:domain ar:WorldSurfaceKind ; rdfs:range ar:WorldSurfaceKind ;
   rdfs:comment "Possible association between resource kinds that is not containment: an instance may point to instances of the other kind (an issue to its labels, a pull request to its branches). Deleting the referring instance does not delete the referenced one." .
 ar:authoredByKind a rdf:Property ; rdfs:subPropertyOf ar:referencesKind ; rdfs:domain ar:WorldSurfaceKind ; rdfs:range ar:WorldSurfaceKind ;

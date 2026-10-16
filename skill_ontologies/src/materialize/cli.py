@@ -30,6 +30,7 @@ from .instantiate import instantiate
 from .model import add_mcp_graphs, add_skill_graphs, load_model, pinned_source
 from .modifications import assess_modifications
 from .operations import assess_operations
+from .downstream import assess_downstream
 from .output import check_instance_types, write_snapshot
 from .report import print_report
 from .routes import assess_routes
@@ -68,8 +69,9 @@ def main() -> None:
     assess_tools(snap)  # recorded in the snapshot graph only
     assess_routes(snap)  # recorded in the snapshot graph only
     inside, outside, remote = assess_modifications(snap, assess_operations(snap))
+    downstream = assess_downstream(snap, snap.raw_remote)
     check_instance_types(snap)
 
-    print_report(snap, inside, outside, remote)
+    print_report(snap, inside, outside, remote, downstream)
     if not args.no_write:
         print(f"\nSnapshot written: {write_snapshot(snap, args.out)}")

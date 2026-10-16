@@ -177,4 +177,57 @@ ar:g_github_environment {
   ar:GitHubRuleset ar:referencesKind ar:GitHubBranch, ar:GitHubTag .
   ar:GitHubCopilotTask ar:referencesKind ar:GitHubIssue, ar:GitHubPullRequest, ar:GitHubBranch .
   ar:GitHubCopilotSpace ar:referencesKind ar:GitHubRepository, ar:GitHubRepositoryFile, ar:GitHubIssue, ar:GitHubPullRequest .
+
+  # ── Event-driven reactions (ar:mayTrigger) ────────────────────────────────
+  # When the subject undergoes onEffectType, GitHub itself may cause effectType on
+  # affectsKind. Workflow runs execute the repository's workflow code on GitHub's
+  # runners with the workflow's token and secrets.
+  ar:GitHubCommit ar:mayTrigger
+    [ ar:onEffectType ar:Create ; ar:effectType ar:Create ; ar:affectsKind ar:GitHubWorkflowRun ; rdfs:comment "push event" ],
+    [ ar:onEffectType ar:Create ; ar:effectType ar:Execute ; ar:affectsKind ar:GitHubWorkflowRun ; rdfs:comment "push event" ],
+    [ ar:onEffectType ar:Create ; ar:effectType ar:Create ; ar:affectsKind ar:GitHubCheckRun ; rdfs:comment "checks on the new commit" ] .
+  ar:GitHubBranch ar:mayTrigger
+    [ ar:onEffectType ar:Create ; ar:effectType ar:Execute ; ar:affectsKind ar:GitHubWorkflowRun ; rdfs:comment "create event" ],
+    [ ar:onEffectType ar:Update ; ar:effectType ar:Execute ; ar:affectsKind ar:GitHubWorkflowRun ; rdfs:comment "push event" ] .
+  ar:GitHubRepositoryFile ar:mayTrigger
+    [ ar:onEffectType ar:Create ; ar:effectType ar:Update ; ar:affectsKind ar:GitHubWorkflow ; rdfs:comment "a file under .github/workflows defines a workflow" ],
+    [ ar:onEffectType ar:Update ; ar:effectType ar:Update ; ar:affectsKind ar:GitHubWorkflow ; rdfs:comment "a file under .github/workflows defines a workflow" ] .
+  ar:GitHubPullRequest ar:mayTrigger
+    [ ar:onEffectType ar:Create ; ar:effectType ar:Execute ; ar:affectsKind ar:GitHubWorkflowRun ; rdfs:comment "pull_request event" ],
+    [ ar:onEffectType ar:Update ; ar:effectType ar:Execute ; ar:affectsKind ar:GitHubWorkflowRun ; rdfs:comment "pull_request event" ],
+    [ ar:onEffectType ar:Create ; ar:effectType ar:Create ; ar:affectsKind ar:GitHubNotification ; rdfs:comment "reviewers and watchers notified" ],
+    [ ar:onEffectType ar:Update ; ar:effectType ar:Create ; ar:affectsKind ar:GitHubNotification ; rdfs:comment "participants notified" ] .
+  ar:GitHubIssue ar:mayTrigger
+    [ ar:onEffectType ar:Create ; ar:effectType ar:Execute ; ar:affectsKind ar:GitHubWorkflowRun ; rdfs:comment "issues event" ],
+    [ ar:onEffectType ar:Update ; ar:effectType ar:Execute ; ar:affectsKind ar:GitHubWorkflowRun ; rdfs:comment "issues event" ],
+    [ ar:onEffectType ar:Create ; ar:effectType ar:Create ; ar:affectsKind ar:GitHubNotification ; rdfs:comment "assignees, mentions, and watchers notified" ],
+    [ ar:onEffectType ar:Update ; ar:effectType ar:Create ; ar:affectsKind ar:GitHubNotification ; rdfs:comment "participants notified" ] .
+  ar:GitHubIssueComment ar:mayTrigger
+    [ ar:onEffectType ar:Create ; ar:effectType ar:Execute ; ar:affectsKind ar:GitHubWorkflowRun ; rdfs:comment "issue_comment event" ],
+    [ ar:onEffectType ar:Create ; ar:effectType ar:Create ; ar:affectsKind ar:GitHubNotification ; rdfs:comment "participants and mentions notified" ] .
+  ar:GitHubPullRequestReview ar:mayTrigger
+    [ ar:onEffectType ar:Create ; ar:effectType ar:Execute ; ar:affectsKind ar:GitHubWorkflowRun ; rdfs:comment "pull_request_review event" ],
+    [ ar:onEffectType ar:Update ; ar:effectType ar:Create ; ar:affectsKind ar:GitHubNotification ; rdfs:comment "author notified when a review is submitted" ] .
+  ar:GitHubReviewComment ar:mayTrigger
+    [ ar:onEffectType ar:Create ; ar:effectType ar:Execute ; ar:affectsKind ar:GitHubWorkflowRun ; rdfs:comment "pull_request_review_comment event" ] .
+  ar:GitHubRelease ar:mayTrigger
+    [ ar:onEffectType ar:Create ; ar:effectType ar:Execute ; ar:affectsKind ar:GitHubWorkflowRun ; rdfs:comment "release event" ],
+    [ ar:onEffectType ar:Create ; ar:effectType ar:Create ; ar:affectsKind ar:GitHubNotification ; rdfs:comment "watchers notified" ] .
+  ar:GitHubLabel ar:mayTrigger
+    [ ar:onEffectType ar:Create ; ar:effectType ar:Execute ; ar:affectsKind ar:GitHubWorkflowRun ; rdfs:comment "label event" ] .
+  ar:GitHubDiscussion ar:mayTrigger
+    [ ar:onEffectType ar:Update ; ar:effectType ar:Execute ; ar:affectsKind ar:GitHubWorkflowRun ; rdfs:comment "discussion event" ] .
+  ar:GitHubDiscussionComment ar:mayTrigger
+    [ ar:onEffectType ar:Create ; ar:effectType ar:Execute ; ar:affectsKind ar:GitHubWorkflowRun ; rdfs:comment "discussion_comment event" ],
+    [ ar:onEffectType ar:Create ; ar:effectType ar:Create ; ar:affectsKind ar:GitHubNotification ; rdfs:comment "participants notified" ] .
+  ar:GitHubCopilotTask ar:mayTrigger
+    [ ar:onEffectType ar:Delegate ; ar:effectType ar:Create ; ar:affectsKind ar:GitHubPullRequest ; rdfs:comment "Copilot coding agent opens a pull request" ],
+    [ ar:onEffectType ar:Delegate ; ar:effectType ar:Create ; ar:affectsKind ar:GitHubCommit ; rdfs:comment "Copilot coding agent pushes commits" ] .
+  ar:GitHubWorkflowRun ar:mayTrigger
+    [ ar:onEffectType ar:Execute ; ar:effectType ar:Create ; ar:affectsKind ar:GitHubCommit ; rdfs:comment "a run may push with its token" ],
+    [ ar:onEffectType ar:Execute ; ar:effectType ar:Create ; ar:affectsKind ar:GitHubRelease ; rdfs:comment "a run may publish a release" ],
+    [ ar:onEffectType ar:Execute ; ar:effectType ar:Create ; ar:affectsKind ar:GitHubIssueComment ; rdfs:comment "a run may comment" ],
+    [ ar:onEffectType ar:Execute ; ar:effectType ar:Create ; ar:affectsKind ar:GitHubWorkflowArtifact ; rdfs:comment "a run uploads artifacts" ],
+    [ ar:onEffectType ar:Execute ; ar:effectType ar:Create ; ar:affectsKind ar:GitHubCheckRun ; rdfs:comment "a run reports checks" ],
+    [ ar:onEffectType ar:Execute ; ar:effectType ar:Transmit ; ar:affectsKind ar:RemoteNetworkEndpoint ; rdfs:comment "runners reach the Internet, outside the OneCLI gateway, with the workflow's secrets" ] .
 }

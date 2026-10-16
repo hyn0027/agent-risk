@@ -31,6 +31,8 @@ class Snapshot:
         # generic capability -> provider-specific refinements loaded in the model
         self.refined_by: dict[URIRef, list[URIRef]] = {}
         self.findings: list[str] = []
+        # unmerged remote rows (set by assess_modifications), input to the downstream table
+        self.raw_remote: list[tuple] = []
 
     # ── derived facts ──
 
