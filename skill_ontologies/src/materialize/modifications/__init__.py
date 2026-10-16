@@ -9,7 +9,7 @@
 from ...common.namespaces import AR, OBS
 from ..constants import OBSERVED
 from ..snapshot import Snapshot
-from .common import dedupe
+from .common import merge_rows
 from .host import host_rows
 from .inside import inside_rows
 from .remote import remote_rows
@@ -30,6 +30,9 @@ def assess_modifications(snap: Snapshot) -> tuple[list[tuple], list[tuple], list
     inside = inside_rows(snap)
     outside, remote_via_host = host_rows(snap)
     remote = remote_rows(snap, remote_via_host)
-    inside, outside, remote = dedupe(inside, 4), dedupe(outside, 4), dedupe(remote, 4)
+    # Same resource at the same location with the same status → one row.
+    inside = merge_rows(inside, 3, effects=3, via=4, gate=6)
+    outside = merge_rows(outside, 2, effects=2, via=3, gate=5)
+    remote = merge_rows(remote, 2, effects=2, via=3, gate=5)
     record(snap, inside, outside, remote)
     return inside, outside, remote

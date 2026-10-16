@@ -23,6 +23,7 @@ from pathlib import Path
 
 from ..common.paths import OBSERVATIONS_DIR
 from .capabilities import assess_capabilities
+from .gateway_policy import deny_by_default_problem
 from .collect import collect
 from .conditions import resolve_conditions
 from .instantiate import instantiate
@@ -55,6 +56,9 @@ def main() -> None:
 
     taken_at = datetime.now(timezone.utc).isoformat(timespec="seconds").replace("+00:00", "Z")
     snap = Snapshot(facts, model, taken_at)
+    problem = deny_by_default_problem(facts["gateway_policy"], snap.lockdown_on)
+    if problem:
+        sys.exit(f"error: web egress is reported per OneCLI Cedar policy, which assumes the Cedar deny-by-default gateway with strict deny and egress lockdown on, but {problem}. Fix that and rerun.")
     instantiate(snap)
     resolve_conditions(snap)
     caps = assess_capabilities(snap)

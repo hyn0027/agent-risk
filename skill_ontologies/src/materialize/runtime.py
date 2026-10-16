@@ -30,10 +30,6 @@ def ncl(nanoclaw: Path, *args: str) -> object:
     return out["data"]
 
 
-def onecli(*args: str) -> object:
-    return json.loads(run([tool("onecli"), *args])).get("data", [])
-
-
 def docker_json(*args: str) -> object:
     return json.loads(run([tool("docker"), *args]))
 

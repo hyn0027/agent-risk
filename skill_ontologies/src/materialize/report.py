@@ -16,7 +16,8 @@ def print_session(snap: Snapshot) -> None:
     f = snap.facts
     sess, group, config, agent = f["session"], f["group"], f["config"], f["onecli_agent"]
     policy = f["gateway_policy"]
-    rules_in_scope = len(applicable_rules(policy, agent["id"] if agent else None))
+    rules = applicable_rules(policy, agent["id"] if agent else None)
+    permits = sum(p["scope"]["effect"] == "permit" for p in rules)
     mode, why = effective_mode(policy)
     print_table("Session snapshot", ("Field", "Value"), [
         ("Session", sess["id"]),
@@ -28,9 +29,10 @@ def print_session(snap: Snapshot) -> None:
         ("Egress lockdown", "on" if snap.lockdown_on else "off"),
         ("Destination grants", ", ".join(d["local_name"] for d in f["grants"]) or "none"),
         ("MCP servers (third-party)", ", ".join(config.get("mcp_servers") or {}) or "none"),
-        ("Gateway identity", f"{agent['identifier']} secretMode={agent.get('secretMode')}" if agent else "none"),
+        ("Gateway identity", agent["identifier"] if agent else "none"),
+        ("Granted credentials", ", ".join(f"{s['name']} ({s['hostPattern']})" for s in f["secrets"]) or "none"),
         ("Gateway policy", why),
-        ("Gateway rules in scope", str(rules_in_scope)),
+        ("Cedar policies in scope", f"{len(rules)} on ({permits} permit, {len(rules) - permits} forbid)"),
         ("Claude tool lists", f"{len(f['claude_tools']['allowlist'])} allowlisted, {len(f['claude_tools']['disallowed'])} disallowed (claude-config.ts)"),
         ("Instances / triples", f"{len(set(snap.graph.subjects(RDF.type, None)))} / {len(snap.graph)}"),
     ], (26, 90))

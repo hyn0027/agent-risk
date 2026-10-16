@@ -6,7 +6,7 @@ from rdflib.namespace import XSD
 from ..common.namespaces import AR, OBS
 from ..common.rdf import short
 from .constants import FROM_CONFIG, OBSERVED
-from .gateway_policy import applicable_rules, effective_mode, rule_label
+from .gateway_policy import applicable_rules, effective_mode, invalid_policies, rule_label
 from .model import mount_kind
 from .snapshot import Snapshot
 
@@ -120,18 +120,21 @@ def add_gateway(snap: Snapshot, grp: URIRef) -> None:
     agent = f["onecli_agent"]
     if not agent:
         return
-    identity = snap.add(snap.node("onecli_identity"), AR.OneCLIAgentIdentity, OBSERVED, agent["name"] or agent["identifier"], identifier=agent["identifier"], secretMode=agent.get("secretMode"), identifies=grp)
+    identity = snap.add(snap.node("onecli_identity"), AR.OneCLIAgentIdentity, OBSERVED, agent["name"] or agent["identifier"], identifier=agent["identifier"], identifies=grp)
     for s in f["secrets"]:
-        snap.add(snap.node(f"secret_{s['name']}"), AR.Credential, OBSERVED, s["name"], hostPattern=s.get("hostPattern"), secretType=s.get("type"), injectableFor=identity if agent.get("secretMode") == "all" else None)
+        snap.add(snap.node(f"secret_{s['name']}"), AR.Credential, OBSERVED, s["name"], hostPattern=s.get("hostPattern"), pathPattern=s.get("pathPattern"), secretType=s.get("type"), grantedBy=s.get("grant"), injectableFor=identity)
     policy = f["gateway_policy"]
     rules = applicable_rules(policy, agent["id"])
     mode, why = effective_mode(policy)
-    control = snap.add(snap.node("control_gateway_policy"), AR.OneCLIGatewayPolicy, OBSERVED, "gateway policy", ruleCount=len(rules), mode=mode, strict=bool(policy and policy.get("strict")), reason=why, appliesTo=identity)
-    for r in rules:
-        rule = snap.add(snap.node(f"gateway_rule_{r['name']}"), AR.OneCLIPolicyRule, OBSERVED, r["name"], action=r["action"], matches=rule_label(r), scope=r.get("scope"), forAllAgents=not r.get("agentId"))
+    control = snap.add(snap.node("control_gateway_policy"), AR.OneCLIGatewayPolicy, OBSERVED, "gateway policy", engine="cedar", ruleCount=len(rules), mode=mode, strict=bool(policy and policy.get("strict")), reason=why, appliesTo=identity)
+    for p in rules:
+        sc = p["scope"]
+        rule = snap.add(snap.node(f"gateway_rule_{p['name']}"), AR.OneCLIPolicyRule, OBSERVED, p["name"], action=sc["effect"], matches=rule_label(p), methods=sc["methods"], hostPattern=sc["host"], pathPattern=sc["path"], requiresApproval=sc["approval"] or None, rateLimit=sc["rate_limit"], conditional=sc["conditional"], policyText=p["text"], description=p.get("description"))
         snap.graph.add((control, OBS.hasRule, rule))
-    if mode == "deny" and not policy.get("strict"):
-        snap.findings.append("OneCLI deny-by-default only covers credentialed requests to non-LLM hosts; uncredentialed web traffic still passes unless a block rule matches it.")
+    if not any(p["scope"]["effect"] == "permit" for p in rules):
+        snap.findings.append("No enabled Cedar permit policy applies to this agent: the gateway blocks every request, the model API included.")
+    for name in invalid_policies(policy, agent["id"]):
+        snap.findings.append(f"Cedar policy '{name}' could not be read; if the gateway cannot parse it either, it denies every request.")
 
 
 def add_mcp_servers(snap: Snapshot, grp: URIRef) -> None:

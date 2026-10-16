@@ -1,43 +1,64 @@
-"""OneCLI gateway policy: mode and rules, and what is actually enforced.
+"""OneCLI gateway policy: the workspace's Cedar policies and credential grants.
 
-The OneCLI CLI lists project rules but not the organization's policy mode, so
-both are read (read-only) from OneCLI's own Postgres database. Semantics follow
-the OneCLI gateway source (1.41 `forward.rs`, 2.x `policy-engine`): explicit
-block rules apply to every request, but deny-by-default only applies to
-*credentialed* requests (the gateway would inject a stored secret for the host)
-to non-LLM hosts. Uncredentialed traffic is never default-denied, and LLM hosts
-(anthropic.com, openai.com, ...) always bypass the default.
+Targets the local OneCLI 2.14 build (branch `local-2.14.0`), where Cedar is the
+gateway's only decision engine. A request passes when at least one enabled
+`permit` policy in the agent's workspace matches and no enabled `forbid` does;
+everything else is denied, credentialed or not, LLM hosts included, and
+requests without an agent identity are refused. Each policy is one Cedar
+statement stored as its own row (`cedar_policy_rules`). The action is exactly
+the HTTP method (`OneCLI::Action::"GET"`), the resource the host
+(`OneCLI::Host::"<host>"`). OneCLI's own `policy_rules_v2` rules only decide
+which stored secrets the gateway injects for which agents (grants); they never
+allow a request.
 
-The local OneCLI build adds strict deny (`GATEWAY_STRICT_DENY=true` on the
-gateway container): deny-by-default then covers every request, credentialed or
-not and LLM hosts included, and requests without an agent token are refused.
+Everything is read (read-only) from OneCLI's Postgres: the 2.14 CLI needs a
+user login and no longer lists rules. Secret values, 1Password references, and
+agent access tokens are never selected.
+
+Policies are summarized, not evaluated: the policy head and the common `when`
+clauses (`resource.name like`, `context.path like`, `context.method ==`,
+`principal.identifier ==`) are parsed into a host/method/path label; any other
+condition marks the policy "conditional" and is treated as applying, so the
+results stay may-claims.
 """
 
-import fnmatch
 import json
+import re
 import subprocess
 
 from .runtime import tool
 
 POSTGRES_CONTAINER = "onecli-postgres-1"
-GATEWAY_CONTAINER = "onecli"
-
-# Hosts the gateway treats as LLM providers (policy crate `is_llm_host`): they bypass deny-by-default.
-LLM_HOST_MARKERS = ("anthropic.com", "openai.com", "chatgpt.com", "deepseek.com", "groq.com", "openrouter.ai", "moonshot.cn", "generativelanguage.googleapis.com")
+GATEWAY_CONTAINER = "onecli-gateway"
 
 POLICY_QUERY = """
 select json_build_object(
-  'mode', o.policy_mode,
-  'subscription', o.subscription_status,
-  'rules', coalesce((
-    select json_agg(json_build_object(
-      'name', r.name, 'action', r.action, 'host', r.host_pattern, 'path', r.path_pattern,
-      'method', r.method, 'agentId', r.agent_id, 'enabled', r.enabled, 'scope', r.scope,
-      'conditions', r.conditions, 'rateLimit', r.rate_limit, 'window', r.rate_limit_window))
-    from policy_rules r
-    where r.organization_id = o.id or r.project_id in (select p.id from projects p where p.organization_id = o.id)
-  ), '[]'::json))
-from organizations o limit 1;
+  'cedarTable', to_regclass('public.cedar_policy_rules') is not null,
+  'agents', coalesce((select json_agg(json_build_object(
+      'id', a.id, 'name', a.name, 'identifier', a.identifier, 'workspaceId', a.workspace_id))
+    from agents a), '[]'::json),
+  'secrets', coalesce((select json_agg(json_build_object(
+      'id', s.id, 'name', s.name, 'type', s.type, 'hostPattern', s.host_pattern, 'pathPattern', s.path_pattern,
+      'scope', s.scope, 'workspaceId', s.workspace_id, 'organizationId', s.organization_id))
+    from secrets s), '[]'::json),
+  'grants', coalesce((select json_agg(json_build_object(
+      'name', r.name, 'workspaceId', r.workspace_id, 'organizationId', r.organization_id,
+      'agentIds', (select coalesce(json_agg(i.agent_id), '[]'::json) from policy_rule_identities i where i.rule_id = r.id and i.agent_id is not null),
+      'viaUserOrGroup', exists(select 1 from policy_rule_identities i where i.rule_id = r.id and (i.user_id is not null or i.group_id is not null)),
+      'targets', (select coalesce(json_agg(json_build_object(
+          'kind', t.kind, 'secretId', t.secret_id, 'secretScope', t.secret_scope, 'appProvider', t.app_provider)), '[]'::json)
+        from policy_rule_targets t where t.rule_id = r.id)))
+    from policy_rules_v2 r
+    where r.status = 'published' and r.enabled and not r.is_default and r.action = 'allow'
+      and r.generation = (select max(generation) from policy_rules_v2 g
+                          where g.status = 'published' and g.scope = r.scope
+                            and g.workspace_id is not distinct from r.workspace_id
+                            and g.organization_id is not distinct from r.organization_id)), '[]'::json),
+  'policies', case when to_regclass('public.cedar_policy_rules') is null then '[]'::json else
+    coalesce((select json_agg(json_build_object(
+        'name', c.name, 'description', c.description, 'text', c.policy_text, 'enabled', c.enabled,
+        'workspaceId', c.workspace_id) order by c.position, c.created_at)
+      from cedar_policy_rules c), '[]'::json) end);
 """
 
 
@@ -53,7 +74,10 @@ def read_strict_deny() -> bool:
 
 
 def read_gateway_policy() -> dict | None:
-    """{"mode", "subscription", "strict", "rules": [...]}, or None when the database is unreachable."""
+    """{"cedarTable", "strict", "agents", "secrets", "grants", "policies"}, or None when the database is unreachable.
+
+    Each policy carries its parsed ``scope`` (see ``parse_policy``).
+    """
     argv = [
         tool("docker"), "exec", "-i", POSTGRES_CONTAINER, "sh", "-c",
         'psql -U "${POSTGRES_USER:-postgres}" -d "${POSTGRES_DB:-onecli}" -At -v ON_ERROR_STOP=1',
@@ -64,85 +88,318 @@ def read_gateway_policy() -> dict | None:
     except (subprocess.CalledProcessError, subprocess.TimeoutExpired, json.JSONDecodeError, OSError):
         return None
     policy["strict"] = read_strict_deny()
+    for p in policy["policies"]:
+        p["scope"] = parse_policy(p["text"])
     return policy
 
 
+# ── Cedar summary ────────────────────────────────────────────────────────────
+
+STRING = r'"((?:[^"\\]|\\.)*)"'
+ENTITY = lambda kind: rf'OneCLI::{kind}::{STRING}'  # noqa: E731
+
+
+def strip_comments(text: str) -> str:
+    """Drop // comments outside string literals."""
+    out, in_str, i = [], False, 0
+    while i < len(text):
+        c = text[i]
+        if in_str:
+            out.append(c)
+            if c == "\\" and i + 1 < len(text):
+                out.append(text[i + 1])
+                i += 1
+            elif c == '"':
+                in_str = False
+        elif c == '"':
+            in_str = True
+            out.append(c)
+        elif text.startswith("//", i):
+            while i < len(text) and text[i] != "\n":
+                i += 1
+            continue
+        else:
+            out.append(c)
+        i += 1
+    return "".join(out)
+
+
+def split_top(text: str, sep: str = ",") -> list[str]:
+    """Split on ``sep`` outside brackets, braces, parentheses, and strings."""
+    parts, depth, in_str, cur, i = [], 0, False, [], 0
+    while i < len(text):
+        c = text[i]
+        if in_str:
+            if c == "\\":
+                cur.append(text[i:i + 2])
+                i += 2
+                continue
+            in_str = c != '"'
+        elif c == '"':
+            in_str = True
+        elif c in "([{":
+            depth += 1
+        elif c in ")]}":
+            depth -= 1
+        elif depth == 0 and text.startswith(sep, i):
+            parts.append("".join(cur).strip())
+            cur, i = [], i + len(sep)
+            continue
+        cur.append(c)
+        i += 1
+    parts.append("".join(cur).strip())
+    return parts
+
+
+def matching_close(text: str, start: int) -> int:
+    """Index of the bracket closing the one at ``start``."""
+    depth, in_str, i = 0, False, start
+    while i < len(text):
+        c = text[i]
+        if in_str:
+            if c == "\\":
+                i += 1
+            elif c == '"':
+                in_str = False
+        elif c == '"':
+            in_str = True
+        elif c in "([{":
+            depth += 1
+        elif c in ")]}":
+            depth -= 1
+            if depth == 0:
+                return i
+        i += 1
+    return len(text)
+
+
+def parse_policy(text: str) -> dict:
+    """Summary of one Cedar statement.
+
+    {"effect", "approval", "rate_limit", "methods" (None = any), "host" (Cedar `like`
+    pattern, None = any), "path", "agent_ids", "identifiers", "workspace", "conditional",
+    "parsed"}. ``parsed`` is False when the statement could not be read at all.
+    """
+    s = strip_comments(text).strip()
+    scope = {"effect": None, "approval": False, "rate_limit": None, "methods": None, "host": None, "path": None,
+             "agent_ids": [], "identifiers": [], "workspace": None, "conditional": False, "parsed": False}
+    for name, arg in re.findall(rf'@(\w+)(?:\(\s*{STRING}\s*\))?', s):
+        if name == "approval":
+            scope["approval"] = True
+        elif name == "rate_limit":
+            scope["rate_limit"] = arg
+    m = re.search(r'\b(permit|forbid)\s*\(', s)
+    if not m:
+        return scope
+    scope["effect"] = m.group(1)
+    close = matching_close(s, m.end() - 1)
+    head = split_top(s[m.end():close])
+    if len(head) != 3:
+        return scope
+    principal, action, resource = head
+    if (pm := re.fullmatch(rf'principal\s*==\s*{ENTITY("Agent")}', principal)):
+        scope["agent_ids"].append(pm.group(1))
+    elif (pm := re.fullmatch(rf'principal\s+in\s+{ENTITY("Workspace")}', principal)):
+        scope["workspace"] = pm.group(1)
+    elif principal != "principal":
+        scope["conditional"] = True
+    if (am := re.fullmatch(rf'action\s*==\s*{ENTITY("Action")}', action)):
+        scope["methods"] = [am.group(1)]
+    elif (am := re.fullmatch(r'action\s+in\s*\[(.*)\]', action, re.S)):
+        scope["methods"] = re.findall(ENTITY("Action"), am.group(1))
+    elif action != "action":
+        scope["conditional"] = True
+    if (rm := re.fullmatch(rf'resource\s*==\s*{ENTITY("Host")}', resource)):
+        scope["host"] = rm.group(1)
+    elif resource != "resource":
+        scope["conditional"] = True
+
+    rest = s[close + 1:].strip().rstrip(";").strip()
+    while rest:
+        cm = re.match(r'(when|unless)\s*\{', rest)
+        if not cm:
+            scope["conditional"] = True
+            break
+        end = matching_close(rest, cm.end() - 1)
+        body, rest = rest[cm.end():end], rest[end + 1:].strip()
+        if cm.group(1) == "unless" or "||" in body:
+            scope["conditional"] = True
+            continue
+        for clause in split_top(body, "&&"):
+            if not clause:
+                continue
+            if (h := re.fullmatch(rf'(?:resource\.name|context\.host)\s*(==|like)\s*{STRING}', clause)) and scope["host"] is None:
+                scope["host"] = h.group(2)
+            elif (p := re.fullmatch(rf'context\.path\s*(==|like)\s*{STRING}', clause)) and scope["path"] is None:
+                scope["path"] = p.group(2)
+            elif (mm := re.fullmatch(rf'context\.method\s*==\s*{STRING}', clause)) and scope["methods"] is None:
+                scope["methods"] = [mm.group(1)]
+            elif (i := re.fullmatch(rf'principal\.identifier\s*==\s*{STRING}', clause)):
+                scope["identifiers"].append(i.group(1))
+            elif (i := re.fullmatch(rf'principal\.id\s*==\s*{STRING}', clause)):
+                scope["agent_ids"].append(i.group(1))
+            else:
+                scope["conditional"] = True
+    scope["parsed"] = True
+    return scope
+
+
+def cedar_like(value: str, pattern: str) -> bool:
+    """Cedar `like`: `*` matches any characters, everything else is literal."""
+    return re.fullmatch(".*".join(re.escape(part) for part in pattern.split("*")), value, re.S) is not None
+
+
+def patterns_overlap(a: str | None, b: str | None) -> bool:
+    """Whether two host patterns (None = any host) can match a common host."""
+    if a is None or b is None:
+        return True
+    return cedar_like(a, b) or cedar_like(b, a) or ("*" in a and "*" in b)
+
+
+# ── What applies to this agent ───────────────────────────────────────────────
+
+def agent_record(policy: dict | None, agent_id: str | None) -> dict | None:
+    if not policy or not agent_id:
+        return None
+    return next((a for a in policy["agents"] if a["id"] == agent_id), None)
+
+
+def applies_to(p: dict, agent: dict) -> bool:
+    sc = p["scope"]
+    return (p["workspaceId"] == agent["workspaceId"]
+            and (not sc["agent_ids"] or agent["id"] in sc["agent_ids"])
+            and (not sc["identifiers"] or agent["identifier"] in sc["identifiers"])
+            and (not sc["workspace"] or sc["workspace"] == agent["workspaceId"]))
+
+
 def applicable_rules(policy: dict | None, agent_id: str | None) -> list[dict]:
-    """Enabled rules that apply to this OneCLI agent (agent-scoped or for all agents)."""
-    if not policy:
+    """Enabled Cedar policies of the agent's workspace whose principal can be this agent."""
+    agent = agent_record(policy, agent_id)
+    if not agent:
         return []
-    return [r for r in policy["rules"] if r.get("enabled") and (not r.get("agentId") or r.get("agentId") == agent_id)]
+    return [p for p in policy["policies"] if p["enabled"] and applies_to(p, agent)]
 
 
-def is_llm_host(host: str) -> bool:
-    return any(marker in host for marker in LLM_HOST_MARKERS)
+def invalid_policies(policy: dict | None, agent_id: str | None) -> list[str]:
+    """Enabled policies the summary could not read (the gateway rejects unparseable ones and then denies everything)."""
+    return [p["name"] for p in applicable_rules(policy, agent_id) if not p["scope"]["parsed"]]
 
 
-def effective_mode(policy: dict | None) -> tuple[str, str]:
-    """(mode: "allow" | "deny" | "unknown", explanation)."""
-    if not policy:
-        return "unknown", "OneCLI database not readable"
-    if (policy.get("mode") or "allow") == "deny":
-        if policy.get("strict"):
-            return "deny", "strict deny-by-default: every request needs an allow rule (credentialed or not, LLM hosts included); requests without an agent token are refused"
-        return "deny", "deny-by-default: credentialed, non-LLM requests need an allow rule; other requests pass unless blocked"
-    return "allow", "allow-by-default: every request passes unless a rule blocks it"
+def granted_secrets(policy: dict | None, agent_id: str | None) -> list[dict]:
+    """Stored secrets the gateway injects for this agent: targets of published grants naming it.
+
+    Grants to a user or group are counted too (their agents cannot be resolved here).
+    """
+    agent = agent_record(policy, agent_id)
+    if not agent:
+        return []
+    granted: dict[str, dict] = {}
+    for g in policy["grants"]:
+        if g["workspaceId"] not in (None, agent["workspaceId"]) or not (agent["id"] in g["agentIds"] or g["viaUserOrGroup"]):
+            continue
+        for t in g["targets"]:
+            if t["kind"] != "secret":
+                continue
+            for s in policy["secrets"]:
+                if (s["id"] == t["secretId"]) if t["secretId"] else (s["scope"] == t["secretScope"] and s["workspaceId"] in (None, agent["workspaceId"])):
+                    granted[s["id"]] = {**s, "grant": g["name"]}
+    return sorted(granted.values(), key=lambda s: s["name"])
 
 
-def credentialed_hosts(secrets: list[dict]) -> list[str]:
-    """Host patterns the gateway injects a stored secret for."""
-    return sorted({s["hostPattern"] for s in secrets if s.get("hostPattern")})
-
-
-def rule_label(rule: dict) -> str:
-    target = rule["host"] + (rule.get("path") or "")
-    if rule.get("method"):
-        target = f"{rule['method']} {target}"
-    if rule.get("conditions"):
+def rule_label(p: dict) -> str:
+    sc = p["scope"]
+    if not sc["parsed"]:
+        return "(unreadable policy)"
+    target = (sc["host"] or "any host") + (sc["path"] or "")
+    target = f"{','.join(sc['methods'])} {target}" if sc["methods"] else f"any method {target}"
+    if sc["identifiers"] or sc["agent_ids"]:
+        target += " (this agent only)"
+    if sc["conditional"]:
         target += " (conditional)"
     return target
 
 
-def reachability(policy: dict | None, agent_id: str | None, secrets: list[dict]) -> tuple[str, str, bool]:
+def effective_mode(policy: dict | None) -> tuple[str, str]:
+    """(mode: "deny" | "unknown", explanation)."""
+    if not policy:
+        return "unknown", "OneCLI database not readable"
+    if not policy.get("cedarTable"):
+        return "unknown", "OneCLI database has no Cedar policies table: not the local Cedar build"
+    return "deny", "Cedar deny-by-default: a request passes only if an enabled permit policy matches and no enabled forbid does (credentialed or not, LLM hosts included); requests without an agent identity are refused"
+
+
+def reachability(policy: dict | None, agent_id: str | None, secrets: list[dict] | None = None) -> tuple[str, str, bool]:
     """(where requests can go, gate text, anything reachable at all) for this agent."""
     mode, why = effective_mode(policy)
+    if mode == "unknown":
+        return "unknown", why, True
     rules = applicable_rules(policy, agent_id)
-    by_action: dict[str, list[str]] = {}
-    for r in rules:
-        by_action.setdefault(r["action"], []).append(rule_label(r))
-    extras = []
-    if by_action.get("manual_approval"):
-        extras.append("needs approval: " + ", ".join(by_action["manual_approval"]))
-    if by_action.get("rate_limit"):
-        extras.append("rate-limited: " + ", ".join(by_action["rate_limit"]))
-    blocked = list(by_action.get("block", []))
-    if mode == "deny" and policy.get("strict"):
-        allowed = sorted({rule_label(r) for r in rules if r["action"] in ("allow", "rate_limit")})
-        where = "only " + ", ".join(allowed) if allowed else "nothing"
-        if blocked:
-            where += " (blocked: " + ", ".join(blocked) + ")"
-        return where, "; ".join([why, *extras]), bool(allowed)
-    if mode == "deny":
-        allowed = [r["host"] for r in rules if r["action"] == "allow"]
-        for host in credentialed_hosts(secrets):
-            if not is_llm_host(host) and not any(fnmatch.fnmatch(host, a) for a in allowed):
-                blocked.append(f"{host} (credentialed, no allow rule)")
-    where = "any public host" + (" except " + ", ".join(blocked) if blocked else "")
-    return where, "; ".join([why, *extras]), True
+    if invalid_policies(policy, agent_id):
+        return "nothing", why + "; an enabled policy is unreadable, so the gateway denies everything", False
+    permits = sorted({rule_label(p) for p in rules if p["scope"]["effect"] == "permit"})
+    forbids = sorted({rule_label(p) for p in rules if p["scope"]["effect"] == "forbid"})
+    extras = [f"needs approval: {rule_label(p)}" for p in rules if p["scope"]["approval"]]
+    extras += [f"rate-limited {p['scope']['rate_limit']}: {rule_label(p)}" for p in rules if p["scope"]["rate_limit"]]
+    where = "only " + ", ".join(permits) if permits else "nothing"
+    if forbids:
+        where += " (forbidden: " + ", ".join(forbids) + ")"
+    return where, "; ".join([why, *extras]), bool(permits)
 
 
-def host_allowed(policy: dict | None, agent_id: str | None, host: str, credentialed: bool) -> bool | None:
-    """Whether one request to ``host`` passes the policy (None when the policy is unknown).
+def host_allowed(policy: dict | None, agent_id: str | None, host: str, credentialed: bool = False, method: str | None = None) -> bool | None:
+    """Whether a request to ``host`` passes (None when the policy is unknown).
 
-    Conditional and path-specific rules are treated as applying to the host.
+    Conditional and path-specific policies are treated as applying to the host;
+    a forbid counts only when it is unconditional.
     """
     mode, _ = effective_mode(policy)
     if mode == "unknown":
         return None
     rules = applicable_rules(policy, agent_id)
-    hit = lambda action: any(r["action"] == action and fnmatch.fnmatch(host, r["host"]) for r in rules)  # noqa: E731
-    if hit("block"):
+    if invalid_policies(policy, agent_id):
         return False
-    if mode == "deny" and (policy.get("strict") or (credentialed and not is_llm_host(host))):
-        return hit("allow")
-    return True
+
+    def hit(p: dict) -> bool:
+        sc = p["scope"]
+        return ((sc["host"] is None or cedar_like(host.lower(), sc["host"]))
+                and (method is None or sc["methods"] is None or method in sc["methods"]))
+
+    if any(p["scope"]["effect"] == "forbid" and not p["scope"]["conditional"] and not p["scope"]["path"] and hit(p) for p in rules):
+        return False
+    return any(p["scope"]["effect"] == "permit" and hit(p) for p in rules)
+
+
+def deny_by_default_problem(policy: dict | None, lockdown_on: bool) -> str | None:
+    """Why the policy entries do not bound this session's web egress, or None when they do.
+
+    The Cedar policies are a complete allowlist when the gateway is the local
+    Cedar build (deny-by-default for every request), runs with strict deny, and
+    egress lockdown leaves the gateway as the only way out.
+    """
+    if not policy:
+        return "the OneCLI policy could not be read from its database"
+    if not policy.get("cedarTable"):
+        return "OneCLI's database has no cedar_policy_rules table, so the gateway is not the local Cedar build and is not deny-by-default"
+    if not policy.get("strict"):
+        return f"GATEWAY_STRICT_DENY is off on the {GATEWAY_CONTAINER} container"
+    if not lockdown_on:
+        return "egress lockdown is off: the container can reach the Internet directly, bypassing the gateway policy"
+    return None
+
+
+def policy_entries(policy: dict | None, agent_id: str | None) -> list[dict]:
+    """Permit policies that let requests through, each with the forbid policies that can carve exceptions out of it."""
+    if invalid_policies(policy, agent_id):
+        return []
+    rules = applicable_rules(policy, agent_id)
+    forbids = [p for p in rules if p["scope"]["effect"] == "forbid"]
+    entries = []
+    for p in sorted((p for p in rules if p["scope"]["effect"] == "permit"), key=lambda p: (p["scope"]["host"] or "", p["name"])):
+        sc = p["scope"]
+        how = "held for approval per request" if sc["approval"] else f"allowed, rate-limited {sc['rate_limit']}" if sc["rate_limit"] else "allowed"
+        carved = [f"{f['name']} ({rule_label(f)})" for f in forbids if patterns_overlap(f["scope"]["host"], sc["host"])]
+        entries.append({
+            "name": p["name"], "label": rule_label(p), "host": sc["host"], "methods": sc["methods"], "text": p["text"],
+            "gate": f"{how} by Cedar policy '{p['name']}'" + (f"; except forbidden: {', '.join(carved)}" if carved else ""),
+        })
+    return entries

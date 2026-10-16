@@ -79,12 +79,47 @@ def tool_label(kind: URIRef) -> str:
     return local.replace("NanoClaw", "")
 
 
-def dedupe(rows: list[tuple], width: int) -> list[tuple]:
-    """Drop rows repeating (resource, ...first ``width`` columns)."""
-    seen, out = set(), []
+def _split(text: str) -> list[str]:
+    return [p.strip() for p in text.split(",") if p.strip()]
+
+
+def _union(values: list[str]) -> str:
+    """Comma lists merge item by item; structured texts (routes, arrows) join whole."""
+    if any(mark in v for v in values for mark in ("←", "▸", ":", "(")):
+        return "; ".join(dict.fromkeys(values))
+    return ", ".join(sorted({item for v in values for item in _split(v)}))
+
+
+def merge_rows(rows: list[tuple], key_width: int, effects: int, via: int, gate: int) -> list[tuple]:
+    """Combine rows for the same resource at the same location (first ``key_width`` columns).
+
+    Effects and via are unioned. When the merged rows differ in status or gate,
+    each gate is prefixed with the effects (and status) it applies to, so no
+    gate or status is misattributed.
+    """
+    status = gate - 1
+    groups: dict[tuple, list[tuple]] = {}
     for row in rows:
-        key = (row[0].strip(" └"),) + tuple(row[1:width])
-        if key not in seen:
-            seen.add(key)
-            out.append(row)
+        groups.setdefault((row[0].strip(" └"),) + tuple(row[1:key_width]), []).append(row)
+    out = []
+    for group in groups.values():
+        if len(group) == 1:
+            out.append(group[0])
+            continue
+        merged = list(group[0])
+        merged[effects] = ", ".join(sorted({e for r in group for e in _split(r[effects])}))
+        merged[via] = _union([r[via] for r in group])
+        statuses = list(dict.fromkeys(r[status] for r in group))
+        merged[status] = ", ".join(statuses)
+        if len({(r[effects], r[status], r[gate]) for r in group}) == len({r[gate] for r in group}) == 1 or (
+            len(statuses) == 1 and len({r[effects] for r in group}) == 1
+        ):
+            merged[gate] = "; ".join(dict.fromkeys(r[gate] for r in group))
+        else:
+            parts: dict[str, list[str]] = {}
+            for r in group:
+                label = r[effects] + (f" ({r[status]})" if len(statuses) > 1 else "")
+                parts.setdefault(label, []).append(r[gate])
+            merged[gate] = "; ".join(f"{label}: {' / '.join(dict.fromkeys(g))}" for label, g in parts.items())
+        out.append(tuple(merged))
     return out

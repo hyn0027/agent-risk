@@ -1,8 +1,9 @@
 """What this session can reach or change beyond the local machine.
 
 Rows: (resource, remote location, effects, path off the machine, status, gate).
-Container-originated requests leave through the OneCLI gateway (and directly
-when lockdown is off); messages leave through the host's channel adapter;
+Container-originated web requests leave only through the OneCLI gateway (the
+CLI refuses to run unless the gateway is the Cedar deny-by-default build and
+lockdown holds), so they are listed once per Cedar permit policy that lets them through; messages leave through the host's channel adapter;
 provider web search runs at the model provider. Reads are included because the
 remote party sees the request. Model-provider traffic is out of scope.
 """
@@ -13,7 +14,7 @@ from ...common.namespaces import AR
 from ...common.rdf import short
 from ..constants import LOCAL_CHANNELS, UNAVAILABLE
 from ..snapshot import Snapshot
-from ..gateway_policy import reachability
+from ..gateway_policy import host_allowed, patterns_overlap, policy_entries
 from .common import endpoint_name, tool_label
 
 ENDPOINT_NAMES = {
@@ -23,20 +24,19 @@ ENDPOINT_NAMES = {
 }
 
 
-def network_route(snap: Snapshot) -> tuple[str, str, str]:
-    """(path off the machine, gate, reachable hosts) for container-originated requests."""
-    agent = snap.facts["onecli_agent"]
-    where, why, _ = reachability(snap.facts["gateway_policy"], agent["id"] if agent else None, snap.facts["secrets"])
-    lockdown = snap.lockdown_on
-    leave = "container ▸ OneCLI gateway ▸ Internet" if lockdown else "container ▸ OneCLI gateway or direct ▸ Internet"
-    gate = f"{why}; credentials injected per host" + ("; direct route blocked" if lockdown else "; direct route open (bypasses the policy)")
-    return leave, gate, where
+# Endpoints that can only send GET requests: they cannot use a policy that permits only other methods.
+GET_ONLY = {"WebFetch", "web fetch"}
+
+LEAVE = "container ▸ OneCLI gateway ▸ Internet"
 
 
 def capability_rows(snap: Snapshot) -> list[tuple]:
+    """Provider-side search as is; gateway-routed web capabilities once per policy entry that lets them through."""
     m = snap.model
-    leave, gate, where = network_route(snap)
-    rows = []
+    agent = snap.facts["onecli_agent"]
+    entries = policy_entries(snap.facts["gateway_policy"], agent["id"] if agent else None)
+    provider_rows = []
+    by_entry: dict[tuple, set[str]] = {}  # (entry index, resource, effects, status) → endpoint names
     for cap, status in sorted(snap.cap_status.items(), key=lambda kv: short(kv[0])):
         resource = m.value(cap, AR.nativeResourceKind)
         if cap in snap.refined_by or status == UNAVAILABLE or snap.side_of(resource) != AR.ExternalNetwork:
@@ -45,19 +45,36 @@ def capability_rows(snap: Snapshot) -> list[tuple]:
         effects = ", ".join(sorted(short(e) for e in m.objects(cap, AR.nativeEffectType)))
         name = ENDPOINT_NAMES.get(endpoint) or endpoint_name(snap, endpoint)
         if snap.side_of(endpoint) == AR.ExternalNetwork:
-            rows.append((short(resource), "search results (any site)", effects, f"{name}: query sent inside the model request ▸ OneCLI gateway ▸ model provider, which runs the search", short(status), "local controls see only the model request, not the searches or sites; disable via the tool allowlist"))
-        else:
-            rows.append((short(resource), where, effects, f"{name}: {leave}", short(status), gate))
-    return rows
+            provider_rows.append((short(resource), "search results (any site)", effects, f"{name}: query sent inside the model request ▸ OneCLI gateway ▸ model provider, which runs the search", short(status), "not gated by OneCLI policy: the provider runs the searches; disable via the tool allowlist"))
+            continue
+        for i, entry in enumerate(entries):
+            if name in GET_ONLY and entry["methods"] is not None and "GET" not in entry["methods"]:
+                continue
+            by_entry.setdefault((i, short(resource), effects, short(status)), set()).add(name)
+    secrets = snap.facts["secrets"]
+
+    def credential_note(entry: dict) -> str:
+        hit = [f"{s['name']} on {s['hostPattern']}" for s in secrets if s.get("hostPattern") and patterns_overlap(s["hostPattern"], entry["host"])]
+        return f"; granted credential injected ({', '.join(hit)})" if hit else "; no granted credential"
+
+    rows = [
+        (resource, entries[i]["label"], effects, f"{', '.join(sorted(names))}: {LEAVE}", status, entries[i]["gate"] + credential_note(entries[i]))
+        for (i, resource, effects, status), names in sorted(by_entry.items())
+    ]
+    return rows + provider_rows
 
 
 def mcp_rows(snap: Snapshot) -> list[tuple]:
-    leave, gate, _ = network_route(snap)
+    """Remote MCP servers; each needs a Cedar permit policy for its host."""
+    agent = snap.facts["onecli_agent"]
+    agent_id = agent["id"] if agent else None
     rows = []
     for name, spec in (snap.facts["config"].get("mcp_servers") or {}).items():
         if isinstance(spec, dict) and spec.get("url"):
-            host = spec["url"].split("/")[2] if "//" in spec["url"] else spec["url"]
-            rows.append(("RemoteMCPService", host, "Transmit", f"MCP server '{name}': {leave}", "Available", gate + "; the service's own calls happen remotely"))
+            host = spec["url"].split("/")[2].split(":")[0] if "//" in spec["url"] else spec["url"]
+            allowed = host_allowed(snap.facts["gateway_policy"], agent_id, host)
+            gate = "permitted by a Cedar policy" if allowed else "no Cedar policy permits this host"
+            rows.append(("RemoteMCPService", host, "Transmit", f"MCP server '{name}': {LEAVE}", "Available" if allowed else "Unavailable", gate + "; the service's own calls happen remotely"))
     return rows
 
 
