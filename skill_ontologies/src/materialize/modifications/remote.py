@@ -21,6 +21,7 @@ from ...common.namespaces import AR
 from ...common.rdf import short
 from ..constants import LOCAL_CHANNELS, UNAVAILABLE
 from ..gateway_policy import evaluate, patterns_overlap, policy_entries
+from ..audience import destination_location
 from ..snapshot import Snapshot
 from .common import ancestors, credential_hosts, endpoint_name, gate, render_paths, route_paths, step_effects, tool_label
 
@@ -50,7 +51,7 @@ def direct_rows(snap: Snapshot, res: str, effects: str, via: str, status: str, p
         return [(res, "*", effects, via, status, gate(snap, facts, *kinds))]
     if not dests:
         return [(res, "-", effects, via, "Unavailable", gate(snap, ["destination: none", *facts], *kinds))]
-    return [(res, f"{d.get('channel_type')}: {d.get('display_name') or d['local_name']}", effects, via, status,
+    return [(res, destination_location(snap, d), effects, via, status,
              gate(snap, [f"destination: {d['local_name']}", *facts], *kinds)) for d in dests]
 
 
@@ -146,7 +147,7 @@ def message_rows(snap: Snapshot, via_host: dict[URIRef, set[URIRef]]) -> list[tu
     via = render_paths(paths, tools)
     effects = ", ".join(sorted(short(e) for e in step_effects(snap, AR.NanoClawChannelAdapterDelivery))) or "-"
     return [
-        ("MessagingMessage", f"{d.get('channel_type')}: {d.get('display_name') or d['local_name']}", effects, via, "Available",
+        ("MessagingMessage", destination_location(snap, d), effects, via, "Available",
          gate(snap, [f"destination: {d['local_name']}"], AR.NanoClawHostDeliveryInvocation, AR.NanoClawChannelAdapterDelivery))
         for d in snap.facts["grants"]
         if d["target_type"] == "channel" and d.get("channel_type") not in LOCAL_CHANNELS

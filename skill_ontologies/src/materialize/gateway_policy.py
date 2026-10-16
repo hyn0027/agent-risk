@@ -45,7 +45,8 @@ select json_build_object(
     from agents a), '[]'::json),
   'secrets', coalesce((select json_agg(json_build_object(
       'id', s.id, 'name', s.name, 'type', s.type, 'hostPattern', s.host_pattern, 'pathPattern', s.path_pattern,
-      'scope', s.scope, 'workspaceId', s.workspace_id, 'organizationId', s.organization_id))
+      'scope', s.scope, 'workspaceId', s.workspace_id, 'organizationId', s.organization_id,
+      'createdAt', s.created_at, 'updatedAt', s.updated_at))
     from secrets s), '[]'::json),
   'grants', coalesce((select json_agg(json_build_object(
       'name', r.name, 'workspaceId', r.workspace_id, 'organizationId', r.organization_id,

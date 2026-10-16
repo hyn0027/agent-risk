@@ -16,6 +16,7 @@ from ...common.namespaces import AR
 from ...common.rdf import short
 from ..constants import LOCAL_CHANNELS
 from ..provider_tools import tool_status
+from ..audience import destination_location, destination_lines
 from ..snapshot import Snapshot
 from .common import gate, kind_location, merge, reported_capabilities, step_effects, tool_label, via_steps
 
@@ -85,7 +86,10 @@ def route_rows(snap: Snapshot, reached: dict[URIRef, set[URIRef]]) -> list[tuple
             if snap.side_of(res) not in (AR.NanoClawHostProcess, None):
                 continue
             effects = ", ".join(sorted(short(e) for e in step_effects(snap, step))) or resource_effects(snap, res)
-            rows.append((short(res), kind_location(snap, res), effects, via_steps(short(step), sources), status, gate(snap, [], step, res)))
+            location = kind_location(snap, res)
+            if step == AR.NanoClawAgentRouteInvocation:  # which agent groups, and who is behind them
+                location = "\n".join([location, *[f"→ {d['local_name']}" + "".join(f"\n  {l}" for l in destination_lines(snap, d)) for d in agent_grants]])
+            rows.append((short(res), location, effects, via_steps(short(step), sources), status, gate(snap, [], step, res)))
     return rows
 
 
@@ -108,7 +112,7 @@ def local_delivery_rows(snap: Snapshot, reached: dict[URIRef, set[URIRef]]) -> l
     cell = gate(snap, [], AR.NanoClawChannelAdapterDelivery, AR.NanoClawHostDeliveryInvocation)
     via = via_steps("NanoClawChannelAdapterDelivery", sorted(tool_label(e) for e in reached[AR.NanoClawChannelAdapterDelivery]))
     return [
-        ("MessagingMessage", f"{d.get('channel_type')}: {d.get('display_name') or d['local_name']}", ", ".join(sorted(short(e) for e in step_effects(snap, AR.NanoClawChannelAdapterDelivery))) or "-", via, "Available", cell)
+        ("MessagingMessage", destination_location(snap, d), ", ".join(sorted(short(e) for e in step_effects(snap, AR.NanoClawChannelAdapterDelivery))) or "-", via, "Available", cell)
         for d in snap.facts["grants"]
         if d["target_type"] == "channel" and d.get("channel_type") in LOCAL_CHANNELS
     ]

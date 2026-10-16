@@ -33,6 +33,10 @@ class Snapshot:
         self.findings: list[str] = []
         # unmerged remote rows (set by assess_modifications), input to the downstream table
         self.raw_remote: list[tuple] = []
+        # concrete instances behind the kinds (set by instances.discover)
+        self.instances = None
+        # (kind, effect) -> instances.Target list, per downstream effect (set by assess_downstream)
+        self.downstream_targets: dict = {}
 
     # ── derived facts ──
 

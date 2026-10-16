@@ -65,16 +65,27 @@ def collect_gateway(group_id: str) -> dict:
 
 
 def collect_central(nanoclaw: Path, group_id: str, sessions: list[dict]) -> dict:
-    """Group, config, wirings, destination grants, roles, and members via host ncl."""
+    """Group, config, wirings, destination grants, roles, and members via host ncl, plus
+    the install-wide entities that say who is behind a destination (users, their DM
+    chats, every group's wirings and members)."""
+    groups = ncl(nanoclaw, "groups", "list")
+    all_wirings = ncl(nanoclaw, "wirings", "list")
+    all_members = ncl(nanoclaw, "members", "list")
     return {
-        "group": next(g for g in ncl(nanoclaw, "groups", "list") if g["id"] == group_id),
+        "group": next(g for g in groups if g["id"] == group_id),
+        "all_groups": groups,
+        "all_wirings": all_wirings,
+        "all_members": all_members,
+        "users": ncl(nanoclaw, "users", "list"),
+        "user_dms": ncl(nanoclaw, "user-dms", "list"),
+        "tasks": [t for t in ncl(nanoclaw, "tasks", "list") if t.get("agent_group_id") == group_id],
         "config": ncl(nanoclaw, "groups", "config", "get", "--id", group_id),
         "group_sessions": [s for s in sessions if s["agent_group_id"] == group_id],
         "messaging_groups": ncl(nanoclaw, "messaging-groups", "list"),
-        "wirings": [w for w in ncl(nanoclaw, "wirings", "list") if w["agent_group_id"] == group_id],
+        "wirings": [w for w in all_wirings if w["agent_group_id"] == group_id],
         "grants": [d for d in ncl(nanoclaw, "destinations", "list") if d["agent_group_id"] == group_id],
         "roles": ncl(nanoclaw, "roles", "list"),
-        "members": [m for m in ncl(nanoclaw, "members", "list") if m.get("agent_group_id") == group_id],
+        "members": [m for m in all_members if m.get("agent_group_id") == group_id],
     }
 
 

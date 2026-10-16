@@ -115,7 +115,52 @@ def merge_routes(routes: list[str]) -> list[str]:
     return [", ".join(heads) + (f"\n{tail}" if tail else "") for tail, heads in tails.items()]
 
 
-def by_endpoint(rows: list[tuple], policy_text: dict[str, str] | None = None) -> list[tuple]:
+INSTANCE = "▸ "
+INSTANCES_SHOWN = 5
+
+
+def compact(cell: str, limit: int = INSTANCES_SHOWN) -> str:
+    """Terminal form of a cell: each run of instance lines ("▸ ...") cut to ``limit``."""
+    out, run = [], 0
+    lines = cell.splitlines()
+    for i, line in enumerate(lines):
+        if line.lstrip().startswith(INSTANCE):
+            run += 1
+            if run <= limit:
+                out.append(line)
+            nxt = lines[i + 1] if i + 1 < len(lines) else ""
+            if run > limit and not nxt.lstrip().startswith(INSTANCE):
+                out.append(f"{line[:len(line) - len(line.lstrip())]}{INSTANCE}+{run - limit} more (all in report.md)")
+        else:
+            run = 0
+            out.append(line)
+    return "\n".join(out)
+
+
+def print_full(title: str, headers: tuple, rows: list[tuple], widths: tuple) -> None:
+    """Terminal shows compacted instance lists; the run log records the full rows."""
+    print_table(title, headers, [tuple(compact(c) for c in row) for row in rows], widths, record_rows=rows)
+
+
+def instance_lines(resolver, res: str, effects: set[str], loc: str) -> tuple[list[str], set[str]]:
+    """(instance lines, effects that can happen) for a resource: lines once when every
+    effect lands on the same instances, else per effect. The resolver returns None for an
+    effect every target of which is ruled out (e.g. by a declared token scope); such
+    effects are left out."""
+    if resolver is None:
+        return [], effects
+    by_lines: dict[tuple, list[str]] = {}
+    for e in sorted(effects):
+        found = resolver(res, e, loc)
+        if found is not None:
+            by_lines.setdefault(tuple(found), []).append(e)
+    kept = {e for effs in by_lines.values() for e in effs}
+    if len(by_lines) <= 1:
+        return [f"  {INSTANCE}{l}" for l in next(iter(by_lines), ())], kept
+    return [x for lines, effs in by_lines.items() for x in [f"  {', '.join(effs)}:", *[f"    {INSTANCE}{l}" for l in lines]]], kept
+
+
+def by_endpoint(rows: list[tuple], policy_text: dict[str, str] | None = None, resolver=None) -> list[tuple]:
     """One row per endpoint (the Cedar policy entry a gateway path passes, else the
     location: a destination, "*", "-"): every resource reached there with its effects,
     the host when one is known, and the tools or operations doing it; each distinct
@@ -129,19 +174,27 @@ def by_endpoint(rows: list[tuple], policy_text: dict[str, str] | None = None) ->
         statuses = list(dict.fromkeys(st for r in items for st in r[4].splitlines()))
         what: dict[tuple[str, str], set[str]] = {}
         effects: dict[tuple[str, str], set[str]] = {}
+        locs: dict[tuple[str, str], str] = {}
         routes: list[str] = []
         for res, loc, eff, via, status, _gate in items:
             labels, paths = parse_via(via)
             host = endpoint_key(loc)[1]
             key = (res.strip(" └") + (f" @ {host}" if host else ""), status.replace("\n", ", "))
             what.setdefault(key, set()).update(labels)
+            locs.setdefault(key, loc)
             effects.setdefault(key, set()).update(e.strip() for e in eff.split(",") if e.strip())
             routes += [p for p in paths if p not in routes]
         lines = []
         for (res, status), labels in sorted(what.items()):
             tag = f"  [{status}]" if len(statuses) > 1 else ""
-            lines.append(f"{', '.join(sorted(effects[(res, status)]))} · {res}{tag}")
+            shown, kept = instance_lines(resolver, res.split(" @ ")[0], effects[(res, status)], locs[(res, status)])
+            if not kept:
+                continue  # every target ruled out: it cannot happen, so it is not shown
+            lines.append(f"{', '.join(sorted(kept))} · {res}{tag}")
+            lines += shown
             lines.append(f"  via {', '.join(sorted(labels))}")
+        if not lines:
+            continue
         name = where[len("cedar: "):] if where.startswith("cedar: ") else None
         code = (policy_text or {}).get(name or "")
         endpoint = f"{where}\n" + "\n".join("  " + l for l in code.strip().splitlines()) if code else where
@@ -150,11 +203,30 @@ def by_endpoint(rows: list[tuple], policy_text: dict[str, str] | None = None) ->
 
 
 def print_modifications(snap: Snapshot, inside: list[tuple], outside: list[tuple], remote: list[tuple]) -> None:
-    print_table("Inside the container: read or changed", COLUMNS, inside, WIDTHS)
-    print_table("On the host, outside the container: read or changed", COLUMNS, outside, WIDTHS)
+    print_full("Inside the container: read or changed", COLUMNS, inside, WIDTHS)
+    print_full("On the host, outside the container: read or changed", COLUMNS, outside, WIDTHS)
     policy = snap.facts["gateway_policy"] or {}
     texts = {p["name"]: p["text"] for p in policy.get("policies", [])}
-    print_table("Off this machine (remote): what can happen at each endpoint", REMOTE_COLUMNS, by_endpoint(remote, texts), REMOTE_WIDTHS)
+    resolver = None
+    if snap.instances is not None:
+        from .instances import resolve
+        from .instances import targets
+
+        def resolver(res: str, effect: str, loc: str) -> list[str] | None:
+            found = targets(snap, res, effect, loc)
+            shown = [t.label for t in found if t.status != "excluded"]
+            return None if found and not shown else shown
+    print_full("Off this machine (remote): what can happen at each endpoint", REMOTE_COLUMNS, by_endpoint(remote, texts, resolver), REMOTE_WIDTHS)
+
+
+def print_instances(snap: Snapshot) -> None:
+    inst = snap.instances
+    if inst is None:
+        return
+    kinds = sorted(inst.discovered | set(inst.notes))
+    rows = [(k, "\n".join(f"{INSTANCE}{i.label}" for i in inst.by_kind.get(k, [])) or "none",
+             "\n".join(x for x in (inst.sources.get(k), inst.notes.get(k)) if x)) for k in kinds]
+    print_full("Discovered instances: what the kinds below stand for in this session", ("Kind", "Instances", "Source / note"), rows, (26, 90, 60))
 
 
 def print_findings(snap: Snapshot) -> None:
@@ -164,9 +236,22 @@ def print_findings(snap: Snapshot) -> None:
             print(f"  - {item}")
 
 
+STARTERS_SHOWN = 6
+
+
+DOWNSTREAM_COLUMNS = ("Resource", "Influence", "Path (shortest per effect)", "Started by", "Status", "Where it starts", "Instances (narrowed along the path)")
+
+
 def print_downstream(rows: list[tuple]) -> None:
+    """The terminal shows the first STARTERS_SHOWN starters and INSTANCES_SHOWN instances per
+    cell; the run log gets them all."""
+    def short_starters(cell: str) -> str:
+        who = cell.splitlines()
+        return "\n".join(who[:STARTERS_SHOWN] + ([f"+{len(who) - STARTERS_SHOWN} more (all in report.md)"] if len(who) > STARTERS_SHOWN else []))
+    shown = [tuple(compact(c) for c in (*row[:3], short_starters(row[3]), *row[4:])) for row in rows]
     print_table("Downstream in remote environments: what the remote effects may set off, and how",
-                ("Resource", "Influence", "Path (shortest per effect)", "Started by", "Status"), rows, (30, 22, 90, 50, 11))
+                DOWNSTREAM_COLUMNS, shown, (26, 18, 70, 40, 11, 44, 60), record_rows=rows)
+
 
 
 def print_report(snap: Snapshot, inside: list[tuple], outside: list[tuple], remote: list[tuple], downstream: list[tuple] = ()) -> None:
@@ -176,6 +261,7 @@ def print_report(snap: Snapshot, inside: list[tuple], outside: list[tuple], remo
     policies) is recorded in the snapshot graph, not printed.
     """
     print_session(snap)
+    print_instances(snap)
     print_modifications(snap, inside, outside, remote)
     print_downstream(list(downstream))
     print_findings(snap)

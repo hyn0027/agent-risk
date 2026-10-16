@@ -161,6 +161,10 @@ ar:mayTrigger a rdf:Property ; rdfs:domain ar:WorldSurfaceKind ;
   rdfs:comment "Event-driven reaction of the environment: when an instance of the subject kind undergoes ar:onEffectType, the environment itself may cause ar:effectType on ar:affectsKind (e.g. a pushed commit starting a workflow run). The object is an untyped node; rdfs:comment names the event." .
 ar:onEffectType a rdf:Property ; rdfs:range ar:EffectType ;
   rdfs:comment "Effect on the subject kind that sets off an ar:mayTrigger reaction." .
+ar:triggerEvent a rdf:Property ; rdfs:range xsd:string ;
+  rdfs:comment "On an ar:mayTrigger node: the event name the reaction is subscribed by (e.g. GitHub's 'issues'). With ar:triggerHandlerKind, the reaction happens only where an instance of the handler kind lists this event." .
+ar:triggerHandlerKind a rdf:Property ; rdfs:range ar:WorldSurfaceKind ;
+  rdfs:comment "On an ar:mayTrigger node: the kind whose instances subscribe to ar:triggerEvent (e.g. GitHubWorkflow); materialize narrows the reaction to the discovered instances that do." .
 ar:referencesKind a rdf:Property ; rdfs:domain ar:WorldSurfaceKind ; rdfs:range ar:WorldSurfaceKind ;
   rdfs:comment "Possible association between resource kinds that is not containment: an instance may point to instances of the other kind (an issue to its labels, a pull request to its branches). Deleting the referring instance does not delete the referenced one." .
 ar:authoredByKind a rdf:Property ; rdfs:subPropertyOf ar:referencesKind ; rdfs:domain ar:WorldSurfaceKind ; rdfs:range ar:WorldSurfaceKind ;
