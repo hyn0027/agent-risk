@@ -17,6 +17,8 @@ nothing observed rules it out, not that it was exercised or will succeed.
 """
 
 import argparse
+
+from table_output import set_table_width
 import sys
 from datetime import datetime, timezone
 from pathlib import Path
@@ -47,6 +49,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--session", help="session id (default: most recently active running session)")
     parser.add_argument("--nanoclaw", type=Path, help="NanoClaw checkout (default: nanoclaw-core sourceRepositoryPath)")
     parser.add_argument("--out", type=Path, default=OBSERVATIONS_DIR, help="snapshot directory; run logs go to <out>/runs/")
+    parser.add_argument("--width", type=int, help="fit printed tables into this many characters (default: the terminal width, or 160 when output is redirected)")
     parser.add_argument("--no-write", action="store_true", help="print the report without writing a snapshot file")
     parser.add_argument("--no-discovery", action="store_true",
                         help="skip live instance discovery (read-only GitHub/Vercel calls made from the container as the agent); NanoClaw records and credential grants are still used")
@@ -63,6 +66,7 @@ def parse_args() -> argparse.Namespace:
 
 def main() -> None:
     args = parse_args()
+    set_table_width(args.width)
     model = load_model()
     pinned_repo, pinned_rev = pinned_source(model)
     nanoclaw = args.nanoclaw or pinned_repo

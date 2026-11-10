@@ -2,6 +2,8 @@
 
 import argparse
 
+from table_output import set_table_width
+
 from llm_annotation import analyze_pairs
 
 from .annotation_input import annotation_resources
@@ -14,6 +16,7 @@ from .report import print_report
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--width", type=int, help="fit printed tables into this many characters (default: the terminal width, or 160 when output is redirected)")
     parser.add_argument("--max-pairs", type=int, help="Maximum pairs to annotate (default: all; 0: skip)")
     parser.add_argument("--model", default="gpt-6-luna", help="OpenAI model (default: gpt-6-luna)")
     parser.add_argument("--workers", type=int, default=20, help="parallel LLM calls (default: 20)")
@@ -27,6 +30,7 @@ def parse_args() -> argparse.Namespace:
 def main() -> None:
     """Load and validate selected ontologies, report effects, and annotate pairs."""
     args = parse_args()
+    set_table_width(args.width)
     manifest = read_manifest()
     catalog = discover_catalog()
     check_selection(manifest, catalog)
